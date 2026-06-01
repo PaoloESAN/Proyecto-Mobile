@@ -102,7 +102,7 @@ fun AppNav() {
 
     NavHost(
         navController = navController,
-        startDestination = "offerDetail/OFF001"
+        startDestination = Destination.Debug.route
     ) {
         appDestinations.forEach { destination ->
             composable(destination.route) {
