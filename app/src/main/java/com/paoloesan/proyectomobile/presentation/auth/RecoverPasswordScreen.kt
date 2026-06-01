@@ -50,6 +50,8 @@ fun RecoverPasswordScreen(navController: NavController) {
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
+    val registeredEmails = listOf("admin@test.com", "user@test.com", "paolo@test.com")
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
@@ -85,7 +87,7 @@ fun RecoverPasswordScreen(navController: NavController) {
             OutlinedTextField(
                 value = email,
                 onValueChange = { email = it },
-                label = { Text("Correo Electrónico") },
+                label = { Text("Correo electrónico") },
                 placeholder = { Text("ejemplo@correo.com") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                 leadingIcon = {
@@ -107,25 +109,28 @@ fun RecoverPasswordScreen(navController: NavController) {
 
             Button(
                 onClick = {
-                    if (email.isBlank() || !android.util.Patterns.EMAIL_ADDRESS.matcher(email)
-                            .matches()
-                    ) {
+                    val isValidFormat = android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()
+                    if (email.isBlank() || !isValidFormat) {
                         scope.launch {
                             snackbarHostState.showSnackbar("Por favor ingresa un correo electrónico válido")
+                        }
+                    } else if (email !in registeredEmails) {
+                        scope.launch {
+                            snackbarHostState.showSnackbar("El correo ingresado no se encuentra registrado")
                         }
                     } else {
                         scope.launch {
                             isSending = true
                             delay(2000) // Simulación de envío
                             isSending = false
-                            snackbarHostState.showSnackbar("Enlace enviado a $email")
+                            snackbarHostState.showSnackbar("Se envió un enlace de recuperación")
                         }
                     }
                 },
                 enabled = !isSending && email.isNotBlank(),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Enviar Enlace de Recuperación")
+                Text("Enviar enlace")
             }
 
             Spacer(modifier = Modifier.height(8.dp))
