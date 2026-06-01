@@ -7,6 +7,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.paoloesan.proyectomobile.presentation.debug.DebugScreen
 import com.paoloesan.proyectomobile.presentation.verification.IdentityVerificationScreen
+import com.paoloesan.proyectomobile.presentation.auth.RecoverPasswordScreen
+import com.paoloesan.proyectomobile.presentation.auth.ResetPasswordScreen
 
 sealed class Destination(
     val route: String,
@@ -23,13 +25,25 @@ sealed class Destination(
         route = "identity_verification",
         title = "Verificación de DNI",
         content = { navController -> IdentityVerificationScreen(navController) }
+    object RecoverPassword : Destination(
+        route = "recover_password",
+        title = "Recuperar Contraseña",
+        content = { navController -> RecoverPasswordScreen(navController) }
+    )
+
+    object ResetPassword : Destination(
+        route = "reset_password",
+        title = "Restablecer Contraseña",
+        content = { navController -> ResetPasswordScreen(navController) }
     )
 }
 
 //Luego agregalo a la lista
 val appDestinations = listOf(
     Destination.Debug,
-    Destination.IdentityVerification
+    Destination.IdentityVerification,
+    Destination.RecoverPassword,
+    Destination.ResetPassword,
 )
 
 @Composable
