@@ -7,6 +7,10 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.paoloesan.proyectomobile.presentation.debug.DebugScreen
 import com.paoloesan.proyectomobile.presentation.p2p.MarketplaceScreen
+import com.paoloesan.proyectomobile.presentation.p2p.PublishOfferScreen
+import com.paoloesan.proyectomobile.presentation.verification.IdentityVerificationScreen
+import com.paoloesan.proyectomobile.presentation.auth.RecoverPasswordScreen
+import com.paoloesan.proyectomobile.presentation.auth.ResetPasswordScreen
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -71,13 +75,41 @@ sealed class Destination(
         title = "Detalle de Transacción",
         content = { navController -> TransactionDetailScreen(navController) }
     )
+    
+    object PublishOffer : Destination(
+        route = "publish_offer",
+        title = "Publicar Oferta",
+        content = { navController -> PublishOfferScreen(navController) }
+    )
+    
+    object IdentityVerification : Destination(
+        route = "identity_verification",
+        title = "Verificación de DNI",
+        content = { navController -> IdentityVerificationScreen(navController) }
+    )
+    
+    object RecoverPassword : Destination(
+        route = "recover_password",
+        title = "Recuperar Contraseña",
+        content = { navController -> RecoverPasswordScreen(navController) }
+    )
+
+    object ResetPassword : Destination(
+        route = "reset_password",
+        title = "Restablecer Contraseña",
+        content = { navController -> ResetPasswordScreen(navController) }
+    )
 }
 
 //Luego agregalo a la lista
 val appDestinations = listOf(
     Destination.Debug,
     Destination.Marketplace,
-    Destination.TransactionDetail
+    Destination.TransactionDetail,
+    Destination.PublishOffer,
+    Destination.IdentityVerification,
+    Destination.RecoverPassword,
+    Destination.ResetPassword,
 )
 
 @Composable
