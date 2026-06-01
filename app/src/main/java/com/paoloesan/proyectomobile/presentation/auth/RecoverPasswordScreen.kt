@@ -2,6 +2,7 @@ package com.paoloesan.proyectomobile.presentation.auth
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -87,7 +88,12 @@ fun RecoverPasswordScreen(navController: NavController) {
                 label = { Text("Correo Electrónico") },
                 placeholder = { Text("ejemplo@correo.com") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                leadingIcon = { Icon(imageVector = Icons.Default.Email, contentDescription = null) },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Email,
+                        contentDescription = null
+                    )
+                },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 enabled = !isSending
@@ -101,7 +107,9 @@ fun RecoverPasswordScreen(navController: NavController) {
 
             Button(
                 onClick = {
-                    if (email.isBlank() || !android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+                    if (email.isBlank() || !android.util.Patterns.EMAIL_ADDRESS.matcher(email)
+                            .matches()
+                    ) {
                         scope.launch {
                             snackbarHostState.showSnackbar("Por favor ingresa un correo electrónico válido")
                         }

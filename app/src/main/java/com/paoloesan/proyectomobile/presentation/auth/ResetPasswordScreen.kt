@@ -106,13 +106,20 @@ fun ResetPasswordScreen(navController: NavController) {
 
             Button(
                 onClick = {
+                    val hasLetter = password.any { it.isLetter() }
+                    val hasDigit = password.any { it.isDigit() }
+
                     if (password.isBlank() || confirmPassword.isBlank()) {
                         scope.launch {
                             snackbarHostState.showSnackbar("Por favor completa ambos campos")
                         }
-                    } else if (password.length < 6) {
+                    } else if (password.length < 8) {
                         scope.launch {
-                            snackbarHostState.showSnackbar("La contraseña debe tener al menos 6 caracteres")
+                            snackbarHostState.showSnackbar("La contraseña debe tener al menos 8 caracteres")
+                        }
+                    } else if (!hasLetter || !hasDigit) {
+                        scope.launch {
+                            snackbarHostState.showSnackbar("La contraseña debe contener letras y números")
                         }
                     } else if (password != confirmPassword) {
                         scope.launch {
