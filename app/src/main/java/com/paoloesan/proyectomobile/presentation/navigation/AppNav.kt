@@ -6,6 +6,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.paoloesan.proyectomobile.presentation.debug.DebugScreen
+import com.paoloesan.proyectomobile.presentation.p2p.PublishOfferScreen
 
 sealed class Destination(
     val route: String,
@@ -17,20 +18,18 @@ sealed class Destination(
         title = "Pantalla de Debug",
         content = { navController -> DebugScreen(navController) }
     )
-    // Para añadir una pantalla nueva, añadelo aqui
-    /*
-    object Home : Destination(
-        route = "home",
-        title = "Pantalla de home",
-        content = { /* Aquí llamarás a tu HomeScreen() */ }
-    )*/
-
+    
+    object PublishOffer : Destination(
+        route = "publish_offer",
+        title = "Publicar Oferta",
+        content = { navController -> PublishOfferScreen(navController) }
+    )
 }
 
 //Luego agregalo a la lista
 val appDestinations = listOf(
     Destination.Debug,
-    //Destination.Home
+    Destination.PublishOffer
 )
 
 @Composable
