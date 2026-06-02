@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.material3.MaterialTheme
+import com.paoloesan.proyectomobile.presentation.transaction.ConfirmPaymentScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -99,6 +100,11 @@ sealed class Destination(
         title = "Restablecer Contraseña",
         content = { navController -> ResetPasswordScreen(navController) }
     )
+    object ConfirmPayment : Destination(
+        route = "confirm_payment",
+        title = "Confirmar Pago",
+        content = { navController -> ConfirmPaymentScreen(navController) }
+    )
 }
 
 //Luego agregalo a la lista
@@ -110,6 +116,7 @@ val appDestinations = listOf(
     Destination.IdentityVerification,
     Destination.RecoverPassword,
     Destination.ResetPassword,
+    Destination.ConfirmPayment,
 )
 
 @Composable
