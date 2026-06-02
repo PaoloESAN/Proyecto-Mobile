@@ -118,7 +118,7 @@ val appDestinations = listOf(
     Destination.ResetPassword,
     Destination.Chat,
 )
-
+//agregado campo destination.Chat
 @Composable
 fun AppNav() {
     val navController = rememberNavController()
