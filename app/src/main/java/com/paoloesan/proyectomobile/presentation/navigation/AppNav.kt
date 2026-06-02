@@ -11,6 +11,7 @@ import com.paoloesan.proyectomobile.presentation.p2p.PublishOfferScreen
 import com.paoloesan.proyectomobile.presentation.verification.IdentityVerificationScreen
 import com.paoloesan.proyectomobile.presentation.auth.RecoverPasswordScreen
 import com.paoloesan.proyectomobile.presentation.auth.ResetPasswordScreen
+import com.paoloesan.proyectomobile.presentation.p2p.MatchScreen
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -26,6 +27,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.material3.MaterialTheme
 import com.paoloesan.proyectomobile.presentation.transaction.ConfirmPaymentScreen
+import com.paoloesan.proyectomobile.presentation.transaction.ChatScreen
+import com.paoloesan.proyectomobile.presentation.p2p.MyOffersScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -64,7 +67,7 @@ sealed class Destination(
         title = "Pantalla de Debug",
         content = { navController -> DebugScreen(navController) }
     )
-    
+
     object Marketplace : Destination(
         route = "marketplace",
         title = "Mercado P2P",
@@ -76,19 +79,19 @@ sealed class Destination(
         title = "Detalle de Transacción",
         content = { navController -> TransactionDetailScreen(navController) }
     )
-    
+
     object PublishOffer : Destination(
         route = "publish_offer",
         title = "Publicar Oferta",
         content = { navController -> PublishOfferScreen(navController) }
     )
-    
+
     object IdentityVerification : Destination(
         route = "identity_verification",
         title = "Verificación de DNI",
         content = { navController -> IdentityVerificationScreen(navController) }
     )
-    
+
     object RecoverPassword : Destination(
         route = "recover_password",
         title = "Recuperar Contraseña",
@@ -100,14 +103,32 @@ sealed class Destination(
         title = "Restablecer Contraseña",
         content = { navController -> ResetPasswordScreen(navController) }
     )
+    
     object ConfirmPayment : Destination(
         route = "confirm_payment",
         title = "Confirmar Pago",
         content = { navController -> ConfirmPaymentScreen(navController) }
     )
+    
+    object Chat : Destination(
+        route = "chat",
+        title = "Chat de Transacción",
+        content = { navController -> ChatScreen(navController) }
+    )
+    
+    object MyOffers : Destination(
+        route = "my_offers",
+        title = "Mis Ofertas",
+        content = { navController -> MyOffersScreen(navController) }
+    )
+    
+    object Matches : Destination(
+        route = "matches",
+        title = "Coincidencias Automáticas",
+        content = { navController -> MatchScreen(navController) }
+    )
 }
 
-//Luego agregalo a la lista
 val appDestinations = listOf(
     Destination.Debug,
     Destination.Marketplace,
@@ -117,6 +138,9 @@ val appDestinations = listOf(
     Destination.RecoverPassword,
     Destination.ResetPassword,
     Destination.ConfirmPayment,
+    Destination.Chat,
+    Destination.MyOffers,
+    Destination.Matches,
 )
 
 @Composable
