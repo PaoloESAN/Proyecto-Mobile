@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.material3.MaterialTheme
+import com.paoloesan.proyectomobile.presentation.transaction.ConfirmPaymentScreen
 import com.paoloesan.proyectomobile.presentation.transaction.ChatScreen
 import com.paoloesan.proyectomobile.presentation.p2p.MyOffersScreen
 
@@ -103,6 +104,12 @@ sealed class Destination(
         content = { navController -> ResetPasswordScreen(navController) }
     )
     
+    object ConfirmPayment : Destination(
+        route = "confirm_payment",
+        title = "Confirmar Pago",
+        content = { navController -> ConfirmPaymentScreen(navController) }
+    )
+    
     object Chat : Destination(
         route = "chat",
         title = "Chat de Transacción",
@@ -130,6 +137,7 @@ val appDestinations = listOf(
     Destination.IdentityVerification,
     Destination.RecoverPassword,
     Destination.ResetPassword,
+    Destination.ConfirmPayment,
     Destination.Chat,
     Destination.MyOffers,
     Destination.Matches,
