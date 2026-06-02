@@ -11,6 +11,7 @@ import com.paoloesan.proyectomobile.presentation.p2p.PublishOfferScreen
 import com.paoloesan.proyectomobile.presentation.verification.IdentityVerificationScreen
 import com.paoloesan.proyectomobile.presentation.auth.RecoverPasswordScreen
 import com.paoloesan.proyectomobile.presentation.auth.ResetPasswordScreen
+import com.paoloesan.proyectomobile.presentation.p2p.MatchScreen
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -64,7 +65,7 @@ sealed class Destination(
         title = "Pantalla de Debug",
         content = { navController -> DebugScreen(navController) }
     )
-    
+
     object Marketplace : Destination(
         route = "marketplace",
         title = "Mercado P2P",
@@ -76,19 +77,19 @@ sealed class Destination(
         title = "Detalle de Transacción",
         content = { navController -> TransactionDetailScreen(navController) }
     )
-    
+
     object PublishOffer : Destination(
         route = "publish_offer",
         title = "Publicar Oferta",
         content = { navController -> PublishOfferScreen(navController) }
     )
-    
+
     object IdentityVerification : Destination(
         route = "identity_verification",
         title = "Verificación de DNI",
         content = { navController -> IdentityVerificationScreen(navController) }
     )
-    
+
     object RecoverPassword : Destination(
         route = "recover_password",
         title = "Recuperar Contraseña",
@@ -105,9 +106,13 @@ sealed class Destination(
         title = "Mis Ofertas",
         content = { navController -> MyOffersScreen(navController) }
     )
+    object Matches : Destination(
+        route = "matches",
+        title = "Coincidencias Automáticas",
+        content = { navController -> MatchScreen(navController) }
+    )
 }
 
-//Luego agregalo a la lista
 val appDestinations = listOf(
     Destination.Debug,
     Destination.Marketplace,
@@ -117,8 +122,9 @@ val appDestinations = listOf(
     Destination.RecoverPassword,
     Destination.ResetPassword,
     Destination.MyOffers,
+    Destination.Matches,
 )
-
+//arreglo del Matches y el nombre de la rama
 @Composable
 fun AppNav() {
     val navController = rememberNavController()
