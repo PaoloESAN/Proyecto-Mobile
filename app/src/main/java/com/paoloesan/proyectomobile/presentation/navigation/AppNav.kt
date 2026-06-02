@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.material3.MaterialTheme
+import com.paoloesan.proyectomobile.presentation.transaction.ChatScreen
 import com.paoloesan.proyectomobile.presentation.p2p.MyOffersScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -101,11 +102,19 @@ sealed class Destination(
         title = "Restablecer Contraseña",
         content = { navController -> ResetPasswordScreen(navController) }
     )
+    
+    object Chat : Destination(
+        route = "chat",
+        title = "Chat de Transacción",
+        content = { navController -> ChatScreen(navController) }
+    )
+    
     object MyOffers : Destination(
         route = "my_offers",
         title = "Mis Ofertas",
         content = { navController -> MyOffersScreen(navController) }
     )
+    
     object Matches : Destination(
         route = "matches",
         title = "Coincidencias Automáticas",
@@ -121,10 +130,11 @@ val appDestinations = listOf(
     Destination.IdentityVerification,
     Destination.RecoverPassword,
     Destination.ResetPassword,
+    Destination.Chat,
     Destination.MyOffers,
     Destination.Matches,
 )
-//arreglo del Matches y el nombre de la rama
+
 @Composable
 fun AppNav() {
     val navController = rememberNavController()
