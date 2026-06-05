@@ -33,6 +33,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -76,6 +77,29 @@ fun PublishOfferScreen(navController: NavController) {
 
     val paymentMethods = listOf("BCP", "Yape", "Interbank")
     val currencies = listOf("USD", "PEN")
+
+    val isMinMaxError by remember {
+        derivedStateOf {
+            val min = minAmount.toDoubleOrNull()
+            val max = maxAmount.toDoubleOrNull()
+            minAmount.isNotBlank() && maxAmount.isNotBlank() &&
+                min != null && max != null && min > max
+        }
+    }
+
+    val canPublish by remember {
+        derivedStateOf {
+            val min = minAmount.toDoubleOrNull()
+            val max = maxAmount.toDoubleOrNull()
+            minAmount.isNotBlank() && maxAmount.isNotBlank() &&
+                amount.isNotBlank() && rate.isNotBlank() &&
+                (amount.toDoubleOrNull() ?: 0.0) > 0 &&
+                (rate.toDoubleOrNull() ?: 0.0) > 0 &&
+                min != null && min > 0 &&
+                max != null && max > 0 &&
+                !isMinMaxError
+        }
+    }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -193,6 +217,7 @@ fun PublishOfferScreen(navController: NavController) {
 
             // Input de Monto Mínimo (Solo números)
             item {
+                val isMinZero = minAmount.isNotBlank() && (minAmount.toDoubleOrNull() ?: -1.0) <= 0
                 OutlinedTextField(
                     value = minAmount,
                     onValueChange = { input ->
@@ -201,6 +226,14 @@ fun PublishOfferScreen(navController: NavController) {
                         }
                     },
                     label = { Text("Monto mínimo") },
+                    isError = isMinMaxError || isMinZero,
+                    supportingText = {
+                        if (isMinMaxError) {
+                            Text("El monto mínimo no puede ser mayor al máximo")
+                        } else if (isMinZero) {
+                            Text("El monto debe ser mayor a 0")
+                        }
+                    },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
@@ -209,6 +242,7 @@ fun PublishOfferScreen(navController: NavController) {
 
             // Input de Monto Máximo (Solo números)
             item {
+                val isMaxZero = maxAmount.isNotBlank() && (maxAmount.toDoubleOrNull() ?: -1.0) <= 0
                 OutlinedTextField(
                     value = maxAmount,
                     onValueChange = { input ->
@@ -217,6 +251,12 @@ fun PublishOfferScreen(navController: NavController) {
                         }
                     },
                     label = { Text("Monto máximo") },
+                    isError = isMinMaxError || isMaxZero,
+                    supportingText = {
+                        if (isMaxZero && !isMinMaxError) {
+                            Text("El monto debe ser mayor a 0")
+                        }
+                    },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
@@ -260,51 +300,25 @@ fun PublishOfferScreen(navController: NavController) {
             // Botón Publicar Oferta
             item {
                 Button(
+                    enabled = canPublish,
                     onClick = {
-                        val amountVal = amount.toDoubleOrNull()
-                        val rateVal = rate.toDoubleOrNull()
-                        val minVal = minAmount.toDoubleOrNull()
-                        val maxVal = maxAmount.toDoubleOrNull()
-
-                        if (amount.isBlank() || rate.isBlank() || minAmount.isBlank() || maxAmount.isBlank()) {
-                            scope.launch {
-                                snackbarHostState.showSnackbar("Todos los campos son obligatorios")
-                            }
-                        } else if (amountVal == null || amountVal <= 0) {
-                            scope.launch {
-                                snackbarHostState.showSnackbar("El monto debe ser mayor a 0")
-                            }
-                        } else if (rateVal == null || rateVal <= 0) {
-                            scope.launch {
-                                snackbarHostState.showSnackbar("El tipo de cambio debe ser mayor a 0")
-                            }
-                        } else if (minVal == null || maxVal == null) {
-                            scope.launch {
-                                snackbarHostState.showSnackbar("Por favor ingresa montos límites válidos")
-                            }
-                        } else if (minVal > maxVal) {
-                            scope.launch {
-                                snackbarHostState.showSnackbar("El monto mínimo no puede ser mayor al máximo")
-                            }
-                        } else {
-                            scope.launch {
-                                snackbarHostState.showSnackbar("Oferta publicada correctamente")
-                                val newOffer = LocalOffer(
-                                    type = type,
-                                    currency = currency,
-                                    amount = amount,
-                                    rate = rate,
-                                    minAmount = minAmount,
-                                    maxAmount = maxAmount,
-                                    paymentMethod = paymentMethod
-                                )
-                                publishedOffers = publishedOffers + newOffer
-                                // Limpiar campos
-                                amount = ""
-                                rate = ""
-                                minAmount = ""
-                                maxAmount = ""
-                            }
+                        scope.launch {
+                            snackbarHostState.showSnackbar("Oferta publicada correctamente")
+                            val newOffer = LocalOffer(
+                                type = type,
+                                currency = currency,
+                                amount = amount,
+                                rate = rate,
+                                minAmount = minAmount,
+                                maxAmount = maxAmount,
+                                paymentMethod = paymentMethod
+                            )
+                            publishedOffers = publishedOffers + newOffer
+                            // Limpiar campos
+                            amount = ""
+                            rate = ""
+                            minAmount = ""
+                            maxAmount = ""
                         }
                     },
                     modifier = Modifier.fillMaxWidth()
