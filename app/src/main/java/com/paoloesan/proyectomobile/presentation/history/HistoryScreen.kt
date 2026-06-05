@@ -44,7 +44,9 @@ fun HistoryScreen(navController: NavController) {
             HistoryItem(5, "01/06/2026", "Compra", 1000.0, 3.71, "Pendiente"),
             HistoryItem(6, "31/05/2026", "Venta", 420.0, 3.74, "Finalizado"),
             HistoryItem(7, "30/05/2026", "Compra", 800.0, 3.69, "Finalizado"),
-            HistoryItem(8, "29/05/2026", "Venta", 1500.0, 3.76, "Pendiente")
+            HistoryItem(8, "29/05/2026", "Venta", 1500.0, 3.76, "Pendiente"),
+            HistoryItem(9, "28/05/2026", "Compra", 350.0, 3.72, "Finalizado"),
+            HistoryItem(10, "27/05/2026", "Venta", 620.0, 3.75, "Finalizado")
 
         )
     }
