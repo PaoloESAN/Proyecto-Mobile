@@ -44,7 +44,14 @@ fun DebugScreen(navController: NavController) {
                     modifier = Modifier.fillMaxWidth(),
                     elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
                     onClick = {
-                        navController.navigate(destination.route)
+                        val routeToNavigate = when (destination.route) {
+                            "offerDetail/{offerId}" -> "offerDetail/OFF001"
+                            "transactionStatus/{transactionId}" -> "transactionStatus/TX001"
+                            "bankDetails/{transactionId}" -> "bankDetails/TX001"
+                            "uploadVoucher/{transactionId}" -> "uploadVoucher/TX001"
+                            else -> destination.route
+                        }
+                        navController.navigate(routeToNavigate)
                     }
                 ) {
                     Column(
