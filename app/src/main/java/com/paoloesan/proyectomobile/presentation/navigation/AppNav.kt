@@ -29,6 +29,7 @@ import androidx.compose.material3.MaterialTheme
 import com.paoloesan.proyectomobile.presentation.transaction.ConfirmPaymentScreen
 import com.paoloesan.proyectomobile.presentation.transaction.ChatScreen
 import com.paoloesan.proyectomobile.presentation.p2p.MyOffersScreen
+import com.paoloesan.proyectomobile.presentation.history.HistoryScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -127,6 +128,11 @@ sealed class Destination(
         title = "Coincidencias Automáticas",
         content = { navController -> MatchScreen(navController) }
     )
+    object History : Destination(
+        route = "history",
+        title = "Historial",
+        content = { navController -> HistoryScreen(navController) }
+    )
 }
 
 val appDestinations = listOf(
@@ -141,6 +147,7 @@ val appDestinations = listOf(
     Destination.Chat,
     Destination.MyOffers,
     Destination.Matches,
+    Destination.History
 )
 
 @Composable
