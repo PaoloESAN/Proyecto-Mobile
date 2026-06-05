@@ -30,6 +30,12 @@ import com.paoloesan.proyectomobile.presentation.transaction.ConfirmPaymentScree
 import com.paoloesan.proyectomobile.presentation.transaction.ChatScreen
 import com.paoloesan.proyectomobile.presentation.p2p.MyOffersScreen
 import com.paoloesan.proyectomobile.presentation.history.HistoryScreen
+import com.paoloesan.proyectomobile.presentation.disputa.DisputaDetalleScreen
+import com.paoloesan.proyectomobile.presentation.disputa.DisputaListaScreen
+import com.paoloesan.proyectomobile.presentation.disputa.DisputaViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
+
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,7 +46,10 @@ fun TransactionDetailScreen(navController: NavController) {
                 title = { Text("Detalle de Transacción") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Regresar")
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Regresar"
+                        )
                     }
                 }
             )
@@ -133,6 +142,23 @@ sealed class Destination(
         title = "Historial",
         content = { navController -> HistoryScreen(navController) }
     )
+    object DisputaLista : Destination(
+        route = "disputas",
+        title = "Disputas",
+        content = { navController ->
+            // Se sobreescribe en NavHost para pasar el ViewModel
+            Text("Error: Use AppNav parameter")
+        }
+    )
+
+    object DisputaDetalle : Destination(
+        route = "detalle_disputa/{disputaId}",
+        title = "Detalle de Disputa",
+        content = { navController ->
+            // Se sobreescribe en NavHost para pasar el ViewModel
+            Text("Error: Use AppNav parameter")
+        }
+    )
 }
 
 val appDestinations = listOf(
@@ -147,12 +173,14 @@ val appDestinations = listOf(
     Destination.Chat,
     Destination.MyOffers,
     Destination.Matches,
-    Destination.History
+    Destination.History,
+    Destination.DisputaLista
 )
 
 @Composable
 fun AppNav() {
     val navController = rememberNavController()
+    val disputaViewModel: DisputaViewModel = viewModel()
 
     NavHost(
         navController = navController,
@@ -160,7 +188,19 @@ fun AppNav() {
     ) {
         appDestinations.forEach { destination ->
             composable(destination.route) {
-                destination.content(navController)
+                if (destination == Destination.DisputaLista) {
+                    DisputaListaScreen(navController, disputaViewModel)
+                } else {
+                    destination.content(navController)
+                }
+            }
+        }
+
+        // DisputaDetalle NO está en appDestinations pero sí en el NavHost
+        composable(Destination.DisputaDetalle.route) { backStackEntry ->
+            val disputaId = backStackEntry.arguments?.getString("disputaId")?.toIntOrNull()
+            if (disputaId != null) {
+                DisputaDetalleScreen(navController, disputaViewModel, disputaId)
             }
         }
     }
