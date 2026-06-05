@@ -20,6 +20,7 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.paoloesan.proyectomobile.presentation.alert.AlertScreen
 import com.paoloesan.proyectomobile.presentation.auth.RecoverPasswordScreen
 import com.paoloesan.proyectomobile.presentation.auth.ResetPasswordScreen
 import com.paoloesan.proyectomobile.presentation.debug.DebugScreen
@@ -225,10 +226,17 @@ sealed class Destination(
             )
         }
     )
+
+    object Alerts : Destination(
+        route = "alerts",
+        title = "Alertas de Tipo de Cambio",
+        content = { navController -> AlertScreen(navController) }
+    )
 }
 
 val appDestinations = listOf(
     Destination.Debug,
+    Destination.Alerts,
     Destination.Marketplace,
     Destination.TransactionDetail,
     Destination.PublishOffer,
