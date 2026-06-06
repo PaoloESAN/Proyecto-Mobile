@@ -1,6 +1,7 @@
 package com.paoloesan.proyectomobile.presentation.navigation
 
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
@@ -10,7 +11,6 @@ import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -250,27 +250,27 @@ sealed class Destination(
 
 val appDestinations = listOf(
     Destination.Debug,
-    Destination.Alerts,
-    Destination.Marketplace,
-    Destination.PublishOffer,
-    Destination.IdentityVerification,
-    Destination.RecoverPassword,
-    Destination.Registro,
     Destination.Login,
-    Destination.Dashboard,
+    Destination.Registro,
+    Destination.RecoverPassword,
     Destination.ResetPassword,
-    Destination.ConfirmPayment,
-    Destination.Chat,
+    Destination.IdentityVerification,
+    Destination.Dashboard,
+    Destination.Marketplace,
     Destination.MyOffers,
+    Destination.PublishOffer,
     Destination.Matches,
     Destination.History,
     Destination.Profile,
-    Destination.AdminUsers,
-    Destination.DisputaLista,
+    Destination.Alerts,
     Destination.OfferDetail,
     Destination.TransactionStatus,
     Destination.BankDetails,
-    Destination.UploadVoucher
+    Destination.UploadVoucher,
+    Destination.ConfirmPayment,
+    Destination.Chat,
+    Destination.DisputaLista,
+    Destination.AdminUsers
 )
 
 val bottomBarDestinations = listOf(
@@ -291,40 +291,11 @@ fun AppNav() {
 
     val showBottomBar = bottomBarDestinations.any { it.route == currentRoute }
 
-    Scaffold(
-        bottomBar = {
-            if (showBottomBar) {
-                NavigationBar {
-                    bottomBarDestinations.forEach { dest ->
-                        NavigationBarItem(
-                            selected = currentRoute == dest.route,
-                            onClick = {
-                                if (currentRoute != dest.route) {
-                                    navController.navigate(dest.route) {
-                                        popUpTo(navController.graph.findStartDestination().id) {
-                                            saveState = true
-                                        }
-                                        launchSingleTop = true
-                                        restoreState = true
-                                    }
-                                }
-                            },
-                            icon = {
-                                dest.icon?.let {
-                                    Icon(it, contentDescription = dest.title)
-                                }
-                            },
-                            label = { Text(dest.title) }
-                        )
-                    }
-                }
-            }
-        }
-    ) { innerPadding ->
+    Column(modifier = Modifier.fillMaxSize()) {
         NavHost(
             navController = navController,
             startDestination = Destination.Debug.route,
-            modifier = Modifier.padding(innerPadding)
+            modifier = Modifier.weight(1f)
         ) {
             appDestinations.forEach { destination ->
                 composable(destination.route) {
@@ -340,6 +311,33 @@ fun AppNav() {
                 val disputaId = backStackEntry.arguments?.getString("disputaId")?.toIntOrNull()
                 if (disputaId != null) {
                     DisputaDetalleScreen(navController, disputaViewModel, disputaId)
+                }
+            }
+        }
+
+        if (showBottomBar) {
+            NavigationBar {
+                bottomBarDestinations.forEach { dest ->
+                    NavigationBarItem(
+                        selected = currentRoute == dest.route,
+                        onClick = {
+                            if (currentRoute != dest.route) {
+                                navController.navigate(dest.route) {
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
+                            }
+                        },
+                        icon = {
+                            dest.icon?.let {
+                                Icon(it, contentDescription = dest.title)
+                            }
+                        },
+                        label = { Text(dest.title) }
+                    )
                 }
             }
         }
