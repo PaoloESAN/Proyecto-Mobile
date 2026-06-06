@@ -21,9 +21,11 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.paoloesan.proyectomobile.presentation.alert.AlertScreen
+import com.paoloesan.proyectomobile.presentation.auth.LoginScreen
 import com.paoloesan.proyectomobile.presentation.auth.RecoverPasswordScreen
 import com.paoloesan.proyectomobile.presentation.auth.RegistroScreen
 import com.paoloesan.proyectomobile.presentation.auth.ResetPasswordScreen
+import com.paoloesan.proyectomobile.presentation.dashboard.DashboardScreen
 import com.paoloesan.proyectomobile.presentation.debug.DebugScreen
 import com.paoloesan.proyectomobile.presentation.disputa.DisputaDetalleScreen
 import com.paoloesan.proyectomobile.presentation.disputa.DisputaListaScreen
@@ -116,6 +118,18 @@ sealed class Destination(
         route = "registro",
         title = "Registro de Usuario",
         content = { navController -> RegistroScreen(navController) }
+    )
+
+    object Login : Destination(
+        route = "login",
+        title = "Iniciar Sesión",
+        content = { navController -> LoginScreen(navController) }
+    )
+
+    object Dashboard : Destination(
+        route = "dashboard",
+        title = "Dashboard Principal",
+        content = { navController -> DashboardScreen(navController) }
     )
 
     object ResetPassword : Destination(
@@ -250,6 +264,8 @@ val appDestinations = listOf(
     Destination.IdentityVerification,
     Destination.RecoverPassword,
     Destination.Registro,
+    Destination.Login,
+    Destination.Dashboard,
     Destination.ResetPassword,
     Destination.ConfirmPayment,
     Destination.Chat,
