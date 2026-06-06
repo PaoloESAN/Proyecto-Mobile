@@ -1,20 +1,7 @@
 package com.paoloesan.proyectomobile.presentation.navigation
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
@@ -45,36 +32,6 @@ import com.paoloesan.proyectomobile.presentation.transaction.TransactionStatusSc
 import com.paoloesan.proyectomobile.presentation.transaction.UploadVoucherScreen
 import com.paoloesan.proyectomobile.presentation.verification.IdentityVerificationScreen
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun TransactionDetailScreen(navController: NavController) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Detalle de Transacción") },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Regresar"
-                        )
-                    }
-                }
-            )
-        }
-    ) { innerPadding ->
-        Box(
-            modifier = Modifier.fillMaxSize().padding(innerPadding),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = "Pantalla de Detalle de Transacción (Demo)",
-                style = MaterialTheme.typography.titleLarge
-            )
-        }
-    }
-}
-
 sealed class Destination(
     val route: String,
     val title: String,
@@ -90,12 +47,6 @@ sealed class Destination(
         route = "marketplace",
         title = "Mercado P2P",
         content = { navController -> MarketplaceScreen(navController) }
-    )
-
-    object TransactionDetail : Destination(
-        route = "transaction_detail",
-        title = "Detalle de Transacción",
-        content = { navController -> TransactionDetailScreen(navController) }
     )
 
     object PublishOffer : Destination(
@@ -273,7 +224,6 @@ val appDestinations = listOf(
     Destination.Debug,
     Destination.Alerts,
     Destination.Marketplace,
-    Destination.TransactionDetail,
     Destination.PublishOffer,
     Destination.IdentityVerification,
     Destination.RecoverPassword,

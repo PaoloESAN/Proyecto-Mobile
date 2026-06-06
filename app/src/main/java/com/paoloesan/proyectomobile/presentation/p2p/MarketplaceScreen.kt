@@ -93,9 +93,6 @@ fun MarketplaceScreen(
                     .fillMaxWidth()
                     .padding(vertical = 8.dp),
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                )
             ) {
                 Column(
                     modifier = Modifier.padding(12.dp),
@@ -288,7 +285,7 @@ fun MarketplaceScreen(
                         OfferCard(
                             offer = offer,
                             onSelect = {
-                                navController.navigate("transaction_detail")
+                                navController.navigate("offerDetail/1")
                             }
                         )
                     }
