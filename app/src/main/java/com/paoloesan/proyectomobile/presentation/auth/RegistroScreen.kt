@@ -231,7 +231,7 @@ fun RegistroScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             val loginLinkInteractionListener = LinkInteractionListener {
-                navController.popBackStack()
+                navController.navigate("login")
             }
             Text(
                 text = buildAnnotatedString {

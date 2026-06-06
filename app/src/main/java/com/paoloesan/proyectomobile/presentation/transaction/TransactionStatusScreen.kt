@@ -34,6 +34,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
@@ -60,7 +61,9 @@ import androidx.compose.ui.unit.sp
 @Composable
 fun TransactionStatusScreen(
     onBack: () -> Unit,
-    onViewBankDetails: () -> Unit
+    onViewBankDetails: () -> Unit,
+    onChat: () -> Unit = {},
+    onConfirmPayment: () -> Unit = {}
 ) {
     Scaffold(
         topBar = {
@@ -138,6 +141,39 @@ fun TransactionStatusScreen(
                         fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold
                     )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(0.9f),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = onChat,
+                        modifier = Modifier.weight(1f).height(50.dp),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text(
+                            text = "Chat",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+
+                    OutlinedButton(
+                        onClick = onConfirmPayment,
+                        modifier = Modifier.weight(1f).height(50.dp),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text(
+                            text = "Confirmar pago",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))

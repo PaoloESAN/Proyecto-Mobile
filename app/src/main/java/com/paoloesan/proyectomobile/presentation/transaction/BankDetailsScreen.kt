@@ -29,6 +29,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
@@ -55,7 +56,8 @@ import androidx.compose.ui.unit.sp
 @Composable
 fun BankDetailsScreen(
     onBack: () -> Unit,
-    onContinueToVoucher: () -> Unit
+    onContinueToVoucher: () -> Unit,
+    onChat: () -> Unit = {}
 ) {
     Scaffold(
         topBar = {
@@ -122,6 +124,24 @@ fun BankDetailsScreen(
                     Text(
                         text = "Continuar",
                         fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+
+            item {
+                OutlinedButton(
+                    onClick = onChat,
+                    modifier = Modifier
+                        .fillMaxWidth(0.9f)
+                        .height(50.dp),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text(
+                        text = "Abrir chat con la contraparte",
+                        fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold
                     )
                 }

@@ -110,7 +110,7 @@ sealed class Destination(
     )
 
     object Chat : Destination(
-        route = "chat",
+        route = "chat/{transactionId}",
         title = "Chat de Transacción",
         content = { navController -> ChatScreen(navController) }
     )
@@ -178,6 +178,12 @@ sealed class Destination(
                 },
                 onViewBankDetails = {
                     navController.navigate("bankDetails/TX001")
+                },
+                onChat = {
+                    navController.navigate("chat/TX001")
+                },
+                onConfirmPayment = {
+                    navController.navigate("confirm_payment")
                 }
             )
         }
@@ -193,6 +199,9 @@ sealed class Destination(
                 },
                 onContinueToVoucher = {
                     navController.navigate("uploadVoucher/TX001")
+                },
+                onChat = {
+                    navController.navigate("chat/TX001")
                 }
             )
         }

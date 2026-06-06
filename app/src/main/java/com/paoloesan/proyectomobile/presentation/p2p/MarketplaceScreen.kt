@@ -14,10 +14,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Payment
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.SwapHoriz
@@ -76,6 +78,17 @@ fun MarketplaceScreen(
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Regresar")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { navController.navigate("matches") }) {
+                        Icon(imageVector = Icons.Default.SwapHoriz, contentDescription = "Coincidencias")
+                    }
+                    IconButton(onClick = { navController.navigate("alerts") }) {
+                        Icon(imageVector = Icons.Default.Notifications, contentDescription = "Alertas")
+                    }
+                    IconButton(onClick = { navController.navigate("publish_offer") }) {
+                        Icon(imageVector = Icons.Default.Add, contentDescription = "Publicar oferta")
                     }
                 }
             )

@@ -86,6 +86,9 @@ fun HistoryScreen(navController: NavController) {
                     onCalificarClick = {
                         operacionSeleccionada = item.id
                         mostrarDialogo = true
+                    },
+                    onCardClick = {
+                        navController.navigate("transactionStatus/TX${item.id.toString().padStart(3, '0')}")
                     }
                 )
             }
@@ -164,9 +167,11 @@ fun HistoryScreen(navController: NavController) {
 fun HistoryItemCard(
     item: HistoryItem,
     isRated: Boolean,
-    onCalificarClick: () -> Unit
+    onCalificarClick: () -> Unit,
+    onCardClick: () -> Unit = {}
 ) {
     Card(
+        onClick = onCardClick,
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         colors = CardDefaults.cardColors(
