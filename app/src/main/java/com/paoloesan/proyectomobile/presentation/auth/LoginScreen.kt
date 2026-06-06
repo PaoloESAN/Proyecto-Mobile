@@ -79,7 +79,7 @@ fun LoginScreen(
     LaunchedEffect(uiState.isSuccess) {
         if (uiState.isSuccess) {
             viewModel.consumeSuccess()
-            navController.navigate(Destination.Dashboard.route) {
+            navController.navigate(Destination.Marketplace.route) {
                 popUpTo(Destination.Login.route) { inclusive = true }
             }
         }

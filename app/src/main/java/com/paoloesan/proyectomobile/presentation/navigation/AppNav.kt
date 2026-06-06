@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material.icons.filled.SwapHoriz
@@ -29,7 +28,6 @@ import com.paoloesan.proyectomobile.presentation.auth.LoginScreen
 import com.paoloesan.proyectomobile.presentation.auth.RecoverPasswordScreen
 import com.paoloesan.proyectomobile.presentation.auth.RegistroScreen
 import com.paoloesan.proyectomobile.presentation.auth.ResetPasswordScreen
-import com.paoloesan.proyectomobile.presentation.dashboard.DashboardScreen
 import com.paoloesan.proyectomobile.presentation.debug.DebugScreen
 import com.paoloesan.proyectomobile.presentation.disputa.DisputaDetalleScreen
 import com.paoloesan.proyectomobile.presentation.disputa.DisputaListaScreen
@@ -97,14 +95,6 @@ sealed class Destination(
         route = "login",
         title = "Iniciar Sesión",
         content = { navController -> LoginScreen(navController) }
-    )
-
-    object Dashboard : Destination(
-        route = "dashboard",
-        title = "Inicio",
-        icon = Icons.Default.Home,
-        showInBottomBar = true,
-        content = { navController -> DashboardScreen(navController) }
     )
 
     object ResetPassword : Destination(
@@ -255,7 +245,6 @@ val appDestinations = listOf(
     Destination.RecoverPassword,
     Destination.ResetPassword,
     Destination.IdentityVerification,
-    Destination.Dashboard,
     Destination.Marketplace,
     Destination.MyOffers,
     Destination.PublishOffer,
@@ -274,7 +263,6 @@ val appDestinations = listOf(
 )
 
 val bottomBarDestinations = listOf(
-    Destination.Dashboard,
     Destination.Marketplace,
     Destination.MyOffers,
     Destination.History,
