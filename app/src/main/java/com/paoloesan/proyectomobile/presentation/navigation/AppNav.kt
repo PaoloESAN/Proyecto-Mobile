@@ -1,11 +1,27 @@
 package com.paoloesan.proyectomobile.presentation.navigation
 
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Receipt
+import androidx.compose.material.icons.filled.SwapHoriz
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.paoloesan.proyectomobile.presentation.admin.AdminUsersScreen
 import com.paoloesan.proyectomobile.presentation.alert.AlertScreen
@@ -35,6 +51,8 @@ import com.paoloesan.proyectomobile.presentation.verification.IdentityVerificati
 sealed class Destination(
     val route: String,
     val title: String,
+    val icon: ImageVector? = null,
+    val showInBottomBar: Boolean = false,
     val content: @Composable (NavController) -> Unit
 ) {
     object Debug : Destination(
@@ -46,6 +64,8 @@ sealed class Destination(
     object Marketplace : Destination(
         route = "marketplace",
         title = "Mercado P2P",
+        icon = Icons.Default.SwapHoriz,
+        showInBottomBar = true,
         content = { navController -> MarketplaceScreen(navController) }
     )
 
@@ -81,7 +101,9 @@ sealed class Destination(
 
     object Dashboard : Destination(
         route = "dashboard",
-        title = "Dashboard Principal",
+        title = "Inicio",
+        icon = Icons.Default.Home,
+        showInBottomBar = true,
         content = { navController -> DashboardScreen(navController) }
     )
 
@@ -90,25 +112,27 @@ sealed class Destination(
         title = "Restablecer Contraseña",
         content = { navController -> ResetPasswordScreen(navController) }
     )
-    
+
     object ConfirmPayment : Destination(
         route = "confirm_payment",
         title = "Confirmar Pago",
         content = { navController -> ConfirmPaymentScreen(navController) }
     )
-    
+
     object Chat : Destination(
         route = "chat",
         title = "Chat de Transacción",
         content = { navController -> ChatScreen(navController) }
     )
-    
+
     object MyOffers : Destination(
         route = "my_offers",
         title = "Mis Ofertas",
+        icon = Icons.Default.Receipt,
+        showInBottomBar = true,
         content = { navController -> MyOffersScreen(navController) }
     )
-    
+
     object Matches : Destination(
         route = "matches",
         title = "Coincidencias Automáticas",
@@ -118,6 +142,8 @@ sealed class Destination(
     object History : Destination(
         route = "history",
         title = "Historial",
+        icon = Icons.Default.History,
+        showInBottomBar = true,
         content = { navController -> HistoryScreen(navController) }
     )
 
@@ -210,6 +236,8 @@ sealed class Destination(
     object Profile : Destination(
         route = "profile",
         title = "Mi Perfil",
+        icon = Icons.Default.Person,
+        showInBottomBar = true,
         content = { navController -> ProfileScreen(navController) }
     )
 
@@ -245,29 +273,74 @@ val appDestinations = listOf(
     Destination.UploadVoucher
 )
 
+val bottomBarDestinations = listOf(
+    Destination.Dashboard,
+    Destination.Marketplace,
+    Destination.MyOffers,
+    Destination.History,
+    Destination.Profile
+)
+
 @Composable
 fun AppNav() {
     val navController = rememberNavController()
     val disputaViewModel: DisputaViewModel = viewModel()
 
-    NavHost(
-        navController = navController,
-        startDestination = Destination.Debug.route
-    ) {
-        appDestinations.forEach { destination ->
-            composable(destination.route) {
-                if (destination == Destination.DisputaLista) {
-                    DisputaListaScreen(navController, disputaViewModel)
-                } else {
-                    destination.content(navController)
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+
+    val showBottomBar = bottomBarDestinations.any { it.route == currentRoute }
+
+    Scaffold(
+        bottomBar = {
+            if (showBottomBar) {
+                NavigationBar {
+                    bottomBarDestinations.forEach { dest ->
+                        NavigationBarItem(
+                            selected = currentRoute == dest.route,
+                            onClick = {
+                                if (currentRoute != dest.route) {
+                                    navController.navigate(dest.route) {
+                                        popUpTo(navController.graph.findStartDestination().id) {
+                                            saveState = true
+                                        }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
+                                }
+                            },
+                            icon = {
+                                dest.icon?.let {
+                                    Icon(it, contentDescription = dest.title)
+                                }
+                            },
+                            label = { Text(dest.title) }
+                        )
+                    }
                 }
             }
         }
+    ) { innerPadding ->
+        NavHost(
+            navController = navController,
+            startDestination = Destination.Debug.route,
+            modifier = Modifier.padding(innerPadding)
+        ) {
+            appDestinations.forEach { destination ->
+                composable(destination.route) {
+                    if (destination == Destination.DisputaLista) {
+                        DisputaListaScreen(navController, disputaViewModel)
+                    } else {
+                        destination.content(navController)
+                    }
+                }
+            }
 
-        composable(Destination.DisputaDetalle.route) { backStackEntry ->
-            val disputaId = backStackEntry.arguments?.getString("disputaId")?.toIntOrNull()
-            if (disputaId != null) {
-                DisputaDetalleScreen(navController, disputaViewModel, disputaId)
+            composable(Destination.DisputaDetalle.route) { backStackEntry ->
+                val disputaId = backStackEntry.arguments?.getString("disputaId")?.toIntOrNull()
+                if (disputaId != null) {
+                    DisputaDetalleScreen(navController, disputaViewModel, disputaId)
+                }
             }
         }
     }
