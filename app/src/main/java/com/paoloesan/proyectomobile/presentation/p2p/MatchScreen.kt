@@ -52,7 +52,7 @@ fun MatchScreen(navController: NavController) {
             confirmButton = {
                 Button(onClick = {
                     showDialog = false
-                    navController.navigate("transaction_detail")
+                    navController.navigate("transactionStatus/TX001")
                 }) {
                     Text("Confirmar")
                 }
