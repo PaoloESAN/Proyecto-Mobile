@@ -20,6 +20,7 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.paoloesan.proyectomobile.presentation.admin.AdminUsersScreen
 import com.paoloesan.proyectomobile.presentation.alert.AlertScreen
 import com.paoloesan.proyectomobile.presentation.auth.LoginScreen
 import com.paoloesan.proyectomobile.presentation.auth.RecoverPasswordScreen
@@ -260,6 +261,12 @@ sealed class Destination(
         title = "Mi Perfil",
         content = { navController -> ProfileScreen(navController) }
     )
+
+    object AdminUsers : Destination(
+        route = "admin_users",
+        title = "Administración de Usuarios",
+        content = { navController -> AdminUsersScreen(navController) }
+    )
 }
 
 val appDestinations = listOf(
@@ -280,6 +287,7 @@ val appDestinations = listOf(
     Destination.Matches,
     Destination.History,
     Destination.Profile,
+    Destination.AdminUsers,
     Destination.DisputaLista,
     Destination.OfferDetail,
     Destination.TransactionStatus,
