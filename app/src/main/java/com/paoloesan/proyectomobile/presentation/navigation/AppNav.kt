@@ -22,6 +22,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.paoloesan.proyectomobile.presentation.alert.AlertScreen
 import com.paoloesan.proyectomobile.presentation.auth.RecoverPasswordScreen
+import com.paoloesan.proyectomobile.presentation.auth.RegistroScreen
 import com.paoloesan.proyectomobile.presentation.auth.ResetPasswordScreen
 import com.paoloesan.proyectomobile.presentation.debug.DebugScreen
 import com.paoloesan.proyectomobile.presentation.disputa.DisputaDetalleScreen
@@ -109,6 +110,12 @@ sealed class Destination(
         route = "recover_password",
         title = "Recuperar Contraseña",
         content = { navController -> RecoverPasswordScreen(navController) }
+    )
+
+    object Registro : Destination(
+        route = "registro",
+        title = "Registro de Usuario",
+        content = { navController -> RegistroScreen(navController) }
     )
 
     object ResetPassword : Destination(
@@ -242,6 +249,7 @@ val appDestinations = listOf(
     Destination.PublishOffer,
     Destination.IdentityVerification,
     Destination.RecoverPassword,
+    Destination.Registro,
     Destination.ResetPassword,
     Destination.ConfirmPayment,
     Destination.Chat,
