@@ -32,6 +32,7 @@ import com.paoloesan.proyectomobile.presentation.disputa.DisputaListaScreen
 import com.paoloesan.proyectomobile.presentation.disputa.DisputaViewModel
 import com.paoloesan.proyectomobile.presentation.history.HistoryScreen
 import com.paoloesan.proyectomobile.presentation.p2p.MarketplaceScreen
+import com.paoloesan.proyectomobile.presentation.profile.ProfileScreen
 import com.paoloesan.proyectomobile.presentation.p2p.MatchScreen
 import com.paoloesan.proyectomobile.presentation.p2p.MyOffersScreen
 import com.paoloesan.proyectomobile.presentation.p2p.PublishOfferScreen
@@ -253,6 +254,12 @@ sealed class Destination(
         title = "Alertas de Tipo de Cambio",
         content = { navController -> AlertScreen(navController) }
     )
+
+    object Profile : Destination(
+        route = "profile",
+        title = "Mi Perfil",
+        content = { navController -> ProfileScreen(navController) }
+    )
 }
 
 val appDestinations = listOf(
@@ -272,6 +279,7 @@ val appDestinations = listOf(
     Destination.MyOffers,
     Destination.Matches,
     Destination.History,
+    Destination.Profile,
     Destination.DisputaLista,
     Destination.OfferDetail,
     Destination.TransactionStatus,
