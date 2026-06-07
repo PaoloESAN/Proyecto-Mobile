@@ -47,6 +47,8 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)
+    implementation(libs.rikkaui.components.android)
+    implementation(libs.rikkaui.foundation.android)
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.compose.ui.tooling)
     testImplementation(libs.junit)
