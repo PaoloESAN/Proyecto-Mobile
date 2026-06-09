@@ -1,62 +1,53 @@
 package com.paoloesan.proyectomobile.presentation.transaction
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CurrencyExchange
 import androidx.compose.material.icons.filled.HourglassEmpty
-import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Schedule
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import zed.rainxch.rikkaui.components.ui.button.Button
+import zed.rainxch.rikkaui.components.ui.button.ButtonSize
+import zed.rainxch.rikkaui.components.ui.button.ButtonVariant
+import zed.rainxch.rikkaui.components.ui.card.Card
+import zed.rainxch.rikkaui.components.ui.icon.RikkaIcons
+import zed.rainxch.rikkaui.components.ui.text.Text
+import zed.rainxch.rikkaui.components.ui.text.TextVariant
+import zed.rainxch.rikkaui.foundation.RikkaTheme
 
-/**
- * TransactionStatusScreen
- * 
- * Pantalla de visualización de estados de transacción
- * Relacionada con US-14: Visualización de estados de transacción
- *
- * Permite al usuario ver el estado actualizado de sus transacciones,
- * incluyendo el progreso detallado y el historial de operación.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TransactionStatusScreen(
@@ -65,434 +56,356 @@ fun TransactionStatusScreen(
     onChat: () -> Unit = {},
     onConfirmPayment: () -> Unit = {}
 ) {
-    Scaffold(
-        topBar = {
-            CenterAlignedTopAppBar(
-                title = {
-                    Text(
-                        text = "Estado de Transacción",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Volver",
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { /* TODO: Implementar menú */ }) {
-                        Icon(
-                            imageVector = Icons.Default.MoreVert,
-                            contentDescription = "Más opciones",
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
-            )
-        },
-        modifier = Modifier.fillMaxSize()
-    ) { innerPadding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .background(MaterialTheme.colorScheme.background),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            item {
-                Spacer(modifier = Modifier.height(16.dp))
+    val focusManager = LocalFocusManager.current
 
-                // Card de estado actual
-                TransactionStatusCard()
-
-                Spacer(modifier = Modifier.height(20.dp))
-            }
-
-            item {
-                // Card de historial
-                TransactionHistoryCard()
-
-                Spacer(modifier = Modifier.height(20.dp))
-            }
-
-            item {
-                // Botón Ver datos bancarios
-                Button(
-                    onClick = onViewBankDetails,
-                    modifier = Modifier
-                        .fillMaxWidth(0.9f)
-                        .height(50.dp),
-                    shape = RoundedCornerShape(8.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary
-                    )
-                ) {
-                    Text(
-                        text = "Ver datos bancarios",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-            }
-
-            item {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(RikkaTheme.colors.background)
+    ) {
+        Scaffold(
+            containerColor = RikkaTheme.colors.background,
+            topBar = {
                 Row(
-                    modifier = Modifier.fillMaxWidth(0.9f),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .statusBarsPadding()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    OutlinedButton(
-                        onClick = onChat,
-                        modifier = Modifier.weight(1f).height(50.dp),
-                        shape = RoundedCornerShape(8.dp)
+                    Button(
+                        onClick = onBack,
+                        variant = ButtonVariant.Ghost,
+                        size = ButtonSize.Icon,
                     ) {
-                        Text(
-                            text = "Chat",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.SemiBold
+                        androidx.compose.material3.Icon(
+                            imageVector = RikkaIcons.ArrowLeft,
+                            contentDescription = "Regresar",
+                            tint = RikkaTheme.colors.onBackground
                         )
                     }
 
-                    OutlinedButton(
-                        onClick = onConfirmPayment,
-                        modifier = Modifier.weight(1f).height(50.dp),
-                        shape = RoundedCornerShape(8.dp)
+                    Text(
+                        text = "Estado de Transaccion",
+                        color = RikkaTheme.colors.onBackground,
+                        variant = TextVariant.Large,
+                    )
+
+                    Button(
+                        onClick = { /* Menu */ },
+                        variant = ButtonVariant.Ghost,
+                        size = ButtonSize.Icon,
                     ) {
-                        Text(
-                            text = "Confirmar pago",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.SemiBold
+                        androidx.compose.material3.Icon(
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = "Mas opciones",
+                            tint = RikkaTheme.colors.onBackground
                         )
                     }
                 }
-
-                Spacer(modifier = Modifier.height(24.dp))
             }
-        }
-    }
-}
-
-/**
- * TransactionStatusCard
- *
- * Componente que muestra el estado actual de la transacción.
- */
-@Composable
-private fun TransactionStatusCard() {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth(0.9f)
-            .padding(vertical = 8.dp),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            // Estado actual con ícono
-            Row(
+        ) { innerPadding ->
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        color = Color(0xFFFFF8E1),
-                        shape = RoundedCornerShape(8.dp)
-                    )
-                    .padding(12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) {
+                        focusManager.clearFocus()
+                    }
             ) {
-                Icon(
-                    imageVector = Icons.Default.Schedule,
-                    contentDescription = "En proceso",
-                    modifier = Modifier.size(32.dp),
-                    tint = Color(0xFFFFB74D)
-                )
+                // Scrollable content
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .padding(horizontal = 24.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    contentPadding = PaddingValues(top = 12.dp, bottom = 24.dp)
+                ) {
+                    // Hero Dynamic Status Card
+                    item {
+                        Card(
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(
+                                        color = Color(0xFFFFF8E1),
+                                        shape = RoundedCornerShape(8.dp)
+                                    )
+                                    .padding(14.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                androidx.compose.material3.Icon(
+                                    imageVector = Icons.Default.HourglassEmpty,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(36.dp),
+                                    tint = Color(0xFFFFB74D)
+                                )
 
-                Column {
-                    Text(
-                        text = "En proceso",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
+                                Text(
+                                    text = "Esperando pago",
+                                    variant = TextVariant.Large,
+                                    color = Color(0xFFFFB74D)
+                                )
+                            }
+                        }
+                    }
+
+                    // Operation Summary Card
+                    item {
+                        Card(
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "ID DE TRANSACCION",
+                                        variant = TextVariant.Small,
+                                        color = Color.Gray
+                                    )
+                                    Text(
+                                        text = "TX-001249",
+                                        variant = TextVariant.Small,
+                                        color = RikkaTheme.colors.onBackground
+                                    )
+                                }
+
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(1.dp)
+                                        .background(RikkaTheme.colors.muted.copy(alpha = 0.15f))
+                                )
+
+                                TransactionBriefRow(
+                                    icon = Icons.Default.CurrencyExchange,
+                                    label = "Operacion",
+                                    value = "Compra de 1,000.00 USD"
+                                )
+
+                                TransactionBriefRow(
+                                    icon = Icons.Default.Person,
+                                    label = "Contraparte",
+                                    value = "Mateo Rojas"
+                                )
+                            }
+                        }
+                    }
+
+                    // Stepper Timeline Card
+                    item {
+                        Card(
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                Text(
+                                    text = "Historial del flujo",
+                                    variant = TextVariant.Large,
+                                    color = RikkaTheme.colors.onBackground
+                                )
+
+                                Column(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalArrangement = Arrangement.spacedBy(0.dp)
+                                ) {
+                                    TimelineStep(
+                                        status = TimelineStepStatus.COMPLETED,
+                                        title = "Transaccion creada",
+                                        subtitle = "24 May, 14:15",
+                                        isLast = false
+                                    )
+
+                                    TimelineStep(
+                                        status = TimelineStepStatus.COMPLETED,
+                                        title = "Pago realizado",
+                                        subtitle = "24 May, 14:28",
+                                        isLast = false
+                                    )
+
+                                    TimelineStep(
+                                        status = TimelineStepStatus.ACTIVE,
+                                        title = "Verificando transferencia",
+                                        subtitle = "El vendedor debe confirmar la recepcion del dinero",
+                                        isLast = true
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Fixed bottom action section
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                        .padding(start = 24.dp, end = 24.dp, top = 16.dp, bottom = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Button(
+                        onClick = onViewBankDetails,
+                        modifier = Modifier.fillMaxWidth(),
+                        text = "Ver instrucciones bancarias"
                     )
 
-                    Text(
-                        text = "Actualizado el 24 de Mayo, 2024 - 14:30",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Button(
+                            onClick = onChat,
+                            variant = ButtonVariant.Outline,
+                            modifier = Modifier.weight(1f),
+                            text = "Chat"
+                        )
+
+                        Button(
+                            onClick = onConfirmPayment,
+                            variant = ButtonVariant.Outline,
+                            modifier = Modifier.weight(1f),
+                            text = "Confirmar recepcion"
+                        )
+                    }
                 }
             }
-
-            HorizontalDivider()
-
-            // Operación
-            TransactionDetailRow(
-                icon = Icons.Default.CurrencyExchange,
-                label = "OPERACIÓN",
-                value = "Compra de USD",
-                iconTint = MaterialTheme.colorScheme.secondary
-            )
-
-            // Usuario vendedor
-            TransactionDetailRow(
-                icon = Icons.Default.Person,
-                label = "VENDIDO POR",
-                value = "Mateo Rojas",
-                iconTint = MaterialTheme.colorScheme.primary
-            )
         }
     }
 }
 
-/**
- * TransactionHistoryCard
- *
- * Componente que muestra el historial de operación en formato de línea de tiempo.
- */
 @Composable
-private fun TransactionHistoryCard() {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth(0.9f)
-            .padding(vertical = 8.dp),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            // Título del historial
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.History,
-                    contentDescription = "Historial",
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(20.dp)
-                )
-
-                Text(
-                    text = "Historial de operación",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
-
-            // Timeline items
-            TimelineItem(
-                state = TransactionState.COMPLETED,
-                title = "Oferta aceptada",
-                date = "24 May, 10:15",
-                isLast = false
-            )
-
-            TimelineItem(
-                state = TransactionState.COMPLETED,
-                title = "Pago enviado",
-                date = "24 May, 11:30",
-                isLast = false
-            )
-
-            TimelineItem(
-                state = TransactionState.PENDING,
-                title = "Verificación pendiente",
-                subtitle = "En revisión por el vendedor.",
-                date = null,
-                isLast = false
-            )
-
-            TimelineItem(
-                state = TransactionState.INACTIVE,
-                title = "Transacción completada",
-                date = "Pendiente",
-                isLast = true
-            )
-        }
-    }
-}
-
-/**
- * TransactionDetailRow
- *
- * Componente reutilizable para mostrar detalles de la transacción.
- */
-@Composable
-private fun TransactionDetailRow(
+private fun TransactionBriefRow(
     icon: ImageVector,
     label: String,
-    value: String,
-    iconTint: Color
+    value: String
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        Icon(
+        androidx.compose.material3.Icon(
             imageVector = icon,
-            contentDescription = label,
-            modifier = Modifier
-                .size(32.dp)
-                .background(
-                    color = iconTint.copy(alpha = 0.1f),
-                    shape = RoundedCornerShape(8.dp)
-                )
-                .padding(6.dp),
-            tint = iconTint
+            contentDescription = null,
+            modifier = Modifier.size(18.dp),
+            tint = RikkaTheme.colors.primary
         )
 
-        Column(modifier = Modifier.weight(1f)) {
+        Column(
+            verticalArrangement = Arrangement.spacedBy(1.dp)
+        ) {
             Text(
                 text = label,
-                fontSize = 11.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontWeight = FontWeight.Medium
+                variant = TextVariant.Small,
+                color = Color.Gray
             )
-
             Text(
                 text = value,
-                fontSize = 14.sp,
-                color = MaterialTheme.colorScheme.onSurface,
-                fontWeight = FontWeight.SemiBold
+                variant = TextVariant.P,
+                color = RikkaTheme.colors.onBackground
             )
         }
     }
 }
 
-/**
- * TimelineItem
- *
- * Componente para mostrar un ítem en la línea de tiempo del historial.
- */
+enum class TimelineStepStatus {
+    COMPLETED,
+    ACTIVE,
+    PENDING
+}
+
 @Composable
-private fun TimelineItem(
-    state: TransactionState,
+private fun TimelineStep(
+    status: TimelineStepStatus,
     title: String,
-    subtitle: String? = null,
-    date: String? = null,
-    isLast: Boolean = false
+    subtitle: String,
+    isLast: Boolean
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // Línea de tiempo vertical
-        Box(
-            modifier = Modifier
-                .width(2.dp)
-                .height(if (subtitle != null) 80.dp else 60.dp)
-                .background(
-                    color = if (isLast) MaterialTheme.colorScheme.surfaceVariant
-                    else MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
-                )
-        )
-
-        // Contenido del item
         Column(
-            modifier = Modifier
-                .weight(1f)
-                .padding(top = 4.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Punto de la línea de tiempo y título
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            // Icon / Indicator circle
+            Box(
+                modifier = Modifier
+                    .size(24.dp)
+                    .clip(CircleShape)
+                    .background(
+                        color = when (status) {
+                            TimelineStepStatus.COMPLETED -> Color(0xFF4CAF50)
+                            TimelineStepStatus.ACTIVE -> Color(0xFFFFB74D)
+                            TimelineStepStatus.PENDING -> RikkaTheme.colors.muted.copy(alpha = 0.2f)
+                        }
+                    ),
+                contentAlignment = Alignment.Center
             ) {
-                // Punto indicador
+                androidx.compose.material3.Icon(
+                    imageVector = when (status) {
+                        TimelineStepStatus.COMPLETED -> Icons.Default.CheckCircle
+                        TimelineStepStatus.ACTIVE -> Icons.Default.HourglassEmpty
+                        TimelineStepStatus.PENDING -> Icons.Default.RadioButtonUnchecked
+                    },
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = when (status) {
+                        TimelineStepStatus.PENDING -> Color.Gray
+                        else -> Color.White
+                    }
+                )
+            }
+
+            if (!isLast) {
                 Box(
                     modifier = Modifier
-                        .size(24.dp)
-                        .clip(CircleShape)
+                        .width(2.dp)
+                        .height(44.dp)
                         .background(
-                            color = when (state) {
-                                TransactionState.COMPLETED -> Color(0xFF4CAF50)
-                                TransactionState.PENDING -> Color(0xFFFFB74D)
-                                TransactionState.INACTIVE -> MaterialTheme.colorScheme.surfaceVariant
+                            color = when (status) {
+                                TimelineStepStatus.COMPLETED -> Color(0xFF4CAF50).copy(alpha = 0.5f)
+                                else -> RikkaTheme.colors.muted.copy(alpha = 0.2f)
                             }
                         )
-                        .padding(2.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = when (state) {
-                            TransactionState.COMPLETED -> Icons.Default.CheckCircle
-                            TransactionState.PENDING -> Icons.Default.HourglassEmpty
-                            TransactionState.INACTIVE -> Icons.Default.Schedule
-                        },
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                        tint = when (state) {
-                            TransactionState.COMPLETED -> Color.White
-                            TransactionState.PENDING -> Color.White
-                            TransactionState.INACTIVE -> MaterialTheme.colorScheme.onSurfaceVariant
-                        }
-                    )
-                }
-
-                Text(
-                    text = title,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
-
-            // Subtítulo si existe
-            if (subtitle != null) {
-                Text(
-                    text = subtitle,
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(start = 32.dp)
-                )
-            }
-
-            // Fecha si existe
-            if (date != null) {
-                Text(
-                    text = date,
-                    fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(start = 32.dp)
                 )
             }
         }
-    }
-}
 
-/**
- * Enum para representar los estados de transacción
- */
-enum class TransactionState {
-    COMPLETED,
-    PENDING,
-    INACTIVE
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            Text(
+                text = title,
+                variant = TextVariant.P,
+                color = when (status) {
+                    TimelineStepStatus.PENDING -> Color.Gray
+                    else -> RikkaTheme.colors.onBackground
+                }
+            )
+
+            Text(
+                text = subtitle,
+                variant = TextVariant.Small,
+                color = Color.Gray
+            )
+        }
+    }
 }
