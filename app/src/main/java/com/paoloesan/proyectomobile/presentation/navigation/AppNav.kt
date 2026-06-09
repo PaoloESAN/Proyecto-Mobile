@@ -62,7 +62,7 @@ sealed class Destination(
 
     object Marketplace : Destination(
         route = "marketplace",
-        title = "Mercado P2P",
+        title = "Mercado",
         icon = Icons.Default.SwapHoriz,
         showInBottomBar = true,
         content = { navController -> MarketplaceScreen(navController) }
@@ -235,7 +235,7 @@ sealed class Destination(
 
     object Profile : Destination(
         route = "profile",
-        title = "Mi Perfil",
+        title = "Perfil",
         icon = Icons.Default.Person,
         showInBottomBar = true,
         content = { navController -> ProfileScreen(navController) }
