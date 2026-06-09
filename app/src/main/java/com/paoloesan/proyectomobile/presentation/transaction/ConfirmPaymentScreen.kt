@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -40,7 +39,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalFocusManager
@@ -235,11 +233,6 @@ fun ConfirmPaymentScreen(navController: NavController) {
                     Card(
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        val statusBgColor = when (transactionStatus) {
-                            TransactionStatus.FINISHED -> Color(0xFFE8F5E9)
-                            TransactionStatus.DISPUTE -> Color(0xFFFFEBEE)
-                            else -> Color(0xFFE3F2FD)
-                        }
                         val statusTextColor = when (transactionStatus) {
                             TransactionStatus.FINISHED -> Color(0xFF2E7D32)
                             TransactionStatus.DISPUTE -> Color(0xFFC62828)
@@ -253,12 +246,7 @@ fun ConfirmPaymentScreen(navController: NavController) {
 
                         Row(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .background(
-                                    color = statusBgColor,
-                                    shape = RoundedCornerShape(8.dp)
-                                )
-                                .padding(12.dp),
+                                .fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
