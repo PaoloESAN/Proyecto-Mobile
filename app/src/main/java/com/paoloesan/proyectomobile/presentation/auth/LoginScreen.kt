@@ -56,6 +56,7 @@ import zed.rainxch.rikkaui.components.ui.button.ButtonVariant
 import zed.rainxch.rikkaui.components.ui.checkbox.Checkbox
 import zed.rainxch.rikkaui.components.ui.icon.RikkaIcons
 import zed.rainxch.rikkaui.components.ui.input.Input
+import zed.rainxch.rikkaui.components.ui.label.Label
 import zed.rainxch.rikkaui.components.ui.text.Text
 import zed.rainxch.rikkaui.components.ui.text.TextVariant
 import zed.rainxch.rikkaui.components.ui.toast.ToastHost
@@ -269,59 +270,57 @@ fun LoginScreen(
                         .padding(vertical = 24.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    // Email Label
-                    Text(
-                        text = "Correo electrónico",
-                        variant = TextVariant.P,
-                        color = RikkaTheme.colors.onBackground,
-                    )
-
-                    Input(
-                        value = uiState.correo,
-                        onValueChange = viewModel::onCorreoChange,
-                        placeholder = "wu@kbro.com",
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                        leadingIcon = Icons.Default.Email,
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        enabled = !uiState.isLoading
-                    )
-
-                    Spacer(modifier = Modifier.height(2.dp))
-
-                    // Password Label
-                    Text(
-                        text = "Contraseña",
-                        variant = TextVariant.P,
-                        color = RikkaTheme.colors.onBackground,
-                    )
-
-                    // Password Input with eye icon toggle overlay
-                    Box(
-                        modifier = Modifier.fillMaxWidth(),
-                        contentAlignment = Alignment.CenterEnd
-                    ) {
+                    Column {
+                        Label(
+                            text = "Correo electrónico",
+                        )
+                        Spacer(Modifier.height(4.dp))
                         Input(
-                            value = uiState.password,
-                            onValueChange = viewModel::onPasswordChange,
-                            placeholder = "Por favor escribe tu contraseña",
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                            visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                            leadingIcon = Icons.Default.Lock,
-                            trailingIcon = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                            value = uiState.correo,
+                            onValueChange = viewModel::onCorreoChange,
+                            placeholder = "wu@kbro.com",
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                            leadingIcon = Icons.Default.Email,
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
                             enabled = !uiState.isLoading
                         )
+                    }
 
-                        Box(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .clickable(
-                                    enabled = !uiState.isLoading,
-                                    onClick = { passwordVisible = !passwordVisible }
-                                )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Column {
+                        // Password Label
+                        Label(
+                            text = "Contraseña",
                         )
+
+                        // Password Input with eye icon toggle overlay
+                        Box(
+                            modifier = Modifier.fillMaxWidth(),
+                            contentAlignment = Alignment.CenterEnd
+                        ) {
+                            Input(
+                                value = uiState.password,
+                                onValueChange = viewModel::onPasswordChange,
+                                placeholder = "Por favor escribe tu contraseña",
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                                leadingIcon = Icons.Default.Lock,
+                                trailingIcon = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true,
+                                enabled = !uiState.isLoading
+                            )
+
+                            Box(
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .clickable(
+                                        enabled = !uiState.isLoading,
+                                        onClick = { passwordVisible = !passwordVisible }
+                                    )
+                            )
+                        }
                     }
 
                     // Remember Me & Forgot Password Row

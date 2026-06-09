@@ -52,6 +52,7 @@ import zed.rainxch.rikkaui.components.ui.button.ButtonSize
 import zed.rainxch.rikkaui.components.ui.button.ButtonVariant
 import zed.rainxch.rikkaui.components.ui.icon.RikkaIcons
 import zed.rainxch.rikkaui.components.ui.input.Input
+import zed.rainxch.rikkaui.components.ui.label.Label
 import zed.rainxch.rikkaui.components.ui.text.Text
 import zed.rainxch.rikkaui.components.ui.text.TextVariant
 import zed.rainxch.rikkaui.components.ui.toast.ToastHost
@@ -185,120 +186,116 @@ fun RegistroScreen(
                         .padding(vertical = 12.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    // Nombres Label & Input
-                    Text(
-                        text = "Nombres",
-                        variant = TextVariant.P,
-                        color = RikkaTheme.colors.onBackground,
-                    )
-                    Input(
-                        value = uiState.nombres,
-                        onValueChange = viewModel::onNombresChange,
-                        placeholder = "Escribe tus nombres",
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
-                        leadingIcon = Icons.Default.Person,
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        enabled = !uiState.isLoading
-                    )
-
-                    // Apellidos Label & Input
-                    Text(
-                        text = "Apellidos",
-                        variant = TextVariant.P,
-                        color = RikkaTheme.colors.onBackground,
-                    )
-                    Input(
-                        value = uiState.apellidos,
-                        onValueChange = viewModel::onApellidosChange,
-                        placeholder = "Escribe tus apellidos",
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
-                        leadingIcon = Icons.Default.Person,
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        enabled = !uiState.isLoading
-                    )
-
-                    // Correo Label & Input
-                    Text(
-                        text = "Correo electrónico",
-                        variant = TextVariant.P,
-                        color = RikkaTheme.colors.onBackground,
-                    )
-                    Input(
-                        value = uiState.correo,
-                        onValueChange = viewModel::onCorreoChange,
-                        placeholder = "ejemplo@correo.com",
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                        leadingIcon = Icons.Default.Email,
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        enabled = !uiState.isLoading
-                    )
-
-                    // Contraseña Label & Input
-                    Text(
-                        text = "Contraseña",
-                        variant = TextVariant.P,
-                        color = RikkaTheme.colors.onBackground,
-                    )
-                    Box(
-                        modifier = Modifier.fillMaxWidth(),
-                        contentAlignment = Alignment.CenterEnd
-                    ) {
+                    Column {
+                        // Nombres Label & Input
+                        Label("Nombres")
+                        Spacer(Modifier.height(4.dp))
                         Input(
-                            value = uiState.password,
-                            onValueChange = viewModel::onPasswordChange,
-                            placeholder = "Por favor escribe tu contraseña",
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                            visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                            leadingIcon = Icons.Default.Lock,
-                            trailingIcon = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                            value = uiState.nombres,
+                            onValueChange = viewModel::onNombresChange,
+                            placeholder = "Escribe tus nombres",
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
+                            leadingIcon = Icons.Default.Person,
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
                             enabled = !uiState.isLoading
                         )
-                        Box(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .clickable(
-                                    enabled = !uiState.isLoading,
-                                    onClick = { passwordVisible = !passwordVisible }
-                                )
-                        )
                     }
 
-                    // Confirmar Contraseña Label & Input
-                    Text(
-                        text = "Confirmar contraseña",
-                        variant = TextVariant.P,
-                        color = RikkaTheme.colors.onBackground,
-                    )
-                    Box(
-                        modifier = Modifier.fillMaxWidth(),
-                        contentAlignment = Alignment.CenterEnd
-                    ) {
+                    Column {
+                        // Apellidos Label & Input
+                        Label("Apellidos")
+                        Spacer(Modifier.height(4.dp))
                         Input(
-                            value = uiState.confirmarPassword,
-                            onValueChange = viewModel::onConfirmarPasswordChange,
-                            placeholder = "Repite tu contraseña",
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                            visualTransformation = if (confirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                            leadingIcon = Icons.Default.Lock,
-                            trailingIcon = if (confirmPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                            value = uiState.apellidos,
+                            onValueChange = viewModel::onApellidosChange,
+                            placeholder = "Escribe tus apellidos",
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
+                            leadingIcon = Icons.Default.Person,
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
                             enabled = !uiState.isLoading
                         )
-                        Box(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .clickable(
-                                    enabled = !uiState.isLoading,
-                                    onClick = { confirmPasswordVisible = !confirmPasswordVisible }
-                                )
+                    }
+
+                    Column {
+                        // Correo Label & Input
+                        Label("Correo electrónico")
+                        Spacer(Modifier.height(4.dp))
+                        Input(
+                            value = uiState.correo,
+                            onValueChange = viewModel::onCorreoChange,
+                            placeholder = "ejemplo@correo.com",
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                            leadingIcon = Icons.Default.Email,
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            enabled = !uiState.isLoading
                         )
                     }
+
+                    Column {
+                        // Contraseña Label & Input
+                        Label("Contraseña")
+                        Box(
+                            modifier = Modifier.fillMaxWidth(),
+                            contentAlignment = Alignment.CenterEnd
+                        ) {
+                            Input(
+                                value = uiState.password,
+                                onValueChange = viewModel::onPasswordChange,
+                                placeholder = "Por favor escribe tu contraseña",
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                                leadingIcon = Icons.Default.Lock,
+                                trailingIcon = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true,
+                                enabled = !uiState.isLoading
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .clickable(
+                                        enabled = !uiState.isLoading,
+                                        onClick = { passwordVisible = !passwordVisible }
+                                    )
+                            )
+                        }
+                    }
+
+                    Column {
+                        // Confirmar Contraseña Label & Input
+                        Label("Confirmar contraseña")
+                        Box(
+                            modifier = Modifier.fillMaxWidth(),
+                            contentAlignment = Alignment.CenterEnd
+                        ) {
+                            Input(
+                                value = uiState.confirmarPassword,
+                                onValueChange = viewModel::onConfirmarPasswordChange,
+                                placeholder = "Repite tu contraseña",
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                                visualTransformation = if (confirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                                leadingIcon = Icons.Default.Lock,
+                                trailingIcon = if (confirmPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true,
+                                enabled = !uiState.isLoading
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .clickable(
+                                        enabled = !uiState.isLoading,
+                                        onClick = {
+                                            confirmPasswordVisible = !confirmPasswordVisible
+                                        }
+                                    )
+                            )
+                        }
+                    }
+
 
                     Spacer(modifier = Modifier.height(4.dp))
 
