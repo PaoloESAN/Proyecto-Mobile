@@ -1,9 +1,13 @@
 package com.paoloesan.proyectomobile.presentation.profile
 
-import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -11,61 +15,66 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AdminPanelSettings
+import androidx.compose.material.icons.filled.Gavel
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.VerifiedUser
-import androidx.compose.material.icons.filled.Gavel
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuAnchorType
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.paoloesan.proyectomobile.R
 import com.paoloesan.proyectomobile.data.local.SessionManager
 import com.paoloesan.proyectomobile.presentation.navigation.Destination
+import kotlinx.coroutines.launch
+import zed.rainxch.rikkaui.components.ui.PopupAnimation
+import zed.rainxch.rikkaui.components.ui.button.Button
+import zed.rainxch.rikkaui.components.ui.button.ButtonSize
+import zed.rainxch.rikkaui.components.ui.button.ButtonVariant
+import zed.rainxch.rikkaui.components.ui.card.Card
+import zed.rainxch.rikkaui.components.ui.icon.RikkaIcons
+import zed.rainxch.rikkaui.components.ui.input.Input
+import zed.rainxch.rikkaui.components.ui.label.Label
+import zed.rainxch.rikkaui.components.ui.select.Select
+import zed.rainxch.rikkaui.components.ui.select.SelectOption
+import zed.rainxch.rikkaui.components.ui.text.Text
+import zed.rainxch.rikkaui.components.ui.text.TextVariant
+import zed.rainxch.rikkaui.components.ui.toast.ToastHost
+import zed.rainxch.rikkaui.components.ui.toast.ToastVariant
+import zed.rainxch.rikkaui.components.ui.toast.rememberToastHostState
+import zed.rainxch.rikkaui.foundation.RikkaTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -74,203 +83,361 @@ fun ProfileScreen(
     viewModel: ProfileViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val snackbarHostState = remember { SnackbarHostState() }
     val sheetState = rememberModalBottomSheetState()
     var showBottomSheet by remember { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
+    val toastState = rememberToastHostState()
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(uiState.errorMessage) {
-        uiState.errorMessage?.let { snackbarHostState.showSnackbar(it) }
+        uiState.errorMessage?.let { message ->
+            scope.launch {
+                toastState.show(
+                    message = message,
+                    variant = ToastVariant.Destructive
+                )
+            }
+        }
     }
 
     LaunchedEffect(uiState.isSuccess) {
         if (uiState.isSuccess) {
-            snackbarHostState.showSnackbar("Perfil actualizado correctamente")
             viewModel.consumeSuccess()
+            scope.launch {
+                toastState.show(
+                    message = "Cambios guardados con exito",
+                    variant = ToastVariant.Success
+                )
+            }
         }
     }
 
-    Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        topBar = {
-            TopAppBar(
-                title = { Text("Mi Perfil") },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Regresar"
-                        )
-                    }
-                }
-            )
-        }
-    ) { innerPadding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(horizontal = 24.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            item {
-                Box(
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(RikkaTheme.colors.background)
+    ) {
+        Scaffold(
+            containerColor = RikkaTheme.colors.background,
+            snackbarHost = {
+                ToastHost(
+                    hostState = toastState
+                )
+            },
+            topBar = {
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 8.dp),
-                    contentAlignment = Alignment.Center
+                        .statusBarsPadding()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.ic_launcher_foreground),
-                        contentDescription = "Foto de perfil",
-                        modifier = Modifier.size(120.dp)
+                    Button(
+                        onClick = { navController.popBackStack() },
+                        variant = ButtonVariant.Ghost,
+                        size = ButtonSize.Icon,
+                    ) {
+                        androidx.compose.material3.Icon(
+                            imageVector = RikkaIcons.ArrowLeft,
+                            contentDescription = "Regresar",
+                            tint = RikkaTheme.colors.onBackground
+                        )
+                    }
+
+                    Text(
+                        text = "Mi Perfil",
+                        color = RikkaTheme.colors.onBackground,
+                        variant = TextVariant.Large,
                     )
+
+                    Spacer(modifier = Modifier.size(40.dp))
                 }
             }
+        ) { innerPadding ->
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) {
+                        focusManager.clearFocus()
+                    }
+                    .padding(horizontal = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                contentPadding = PaddingValues(vertical = 12.dp)
+            ) {
+                // Header / Avatar Section
+                item {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 12.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(96.dp)
+                                .background(
+                                    color = RikkaTheme.colors.primary.copy(alpha = 0.12f),
+                                    shape = CircleShape
+                                )
+                                .border(
+                                    width = 2.dp,
+                                    color = RikkaTheme.colors.primary.copy(alpha = 0.5f),
+                                    shape = CircleShape
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            val firstLetter = uiState.nombres.firstOrNull()?.toString() ?: ""
+                            val secondLetter = uiState.apellidos.firstOrNull()?.toString() ?: ""
+                            val initials = (firstLetter + secondLetter).uppercase()
+                            Text(
+                                text = initials,
+                                color = RikkaTheme.colors.primary,
+                                variant = TextVariant.H1
+                            )
+                        }
 
-            item {
-                OutlinedTextField(
-                    value = uiState.nombres,
-                    onValueChange = viewModel::onNombresChange,
-                    label = { Text("Nombres") },
-                    leadingIcon = {
-                        Icon(imageVector = Icons.Default.Person, contentDescription = null)
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
-            }
+                        Text(
+                            text = "${uiState.nombres} ${uiState.apellidos}",
+                            variant = TextVariant.H2,
+                            color = RikkaTheme.colors.onBackground
+                        )
 
-            item {
-                OutlinedTextField(
-                    value = uiState.apellidos,
-                    onValueChange = viewModel::onApellidosChange,
-                    label = { Text("Apellidos") },
-                    leadingIcon = {
-                        Icon(imageVector = Icons.Default.Person, contentDescription = null)
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
-            }
+                        Box(
+                            modifier = Modifier
+                                .background(
+                                    color = RikkaTheme.colors.primary.copy(alpha = 0.15f),
+                                    shape = RoundedCornerShape(4.dp)
+                                )
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = "Socio P2P Verificado",
+                                variant = TextVariant.Small,
+                                color = RikkaTheme.colors.primary
+                            )
+                        }
+                    }
+                }
 
-            item {
-                OutlinedTextField(
-                    value = uiState.telefono,
-                    onValueChange = viewModel::onTelefonoChange,
-                    label = { Text("Teléfono") },
-                    placeholder = { Text("987654321") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                    leadingIcon = {
-                        Icon(imageVector = Icons.Default.Phone, contentDescription = null)
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
-            }
+                // Personal Info Card
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            Text(
+                                text = "Informacion Personal",
+                                variant = TextVariant.Large,
+                                color = RikkaTheme.colors.onBackground
+                            )
 
-            item {
-                Text(
-                    text = "Cuentas bancarias registradas",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(top = 8.dp)
-                )
-            }
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Label(text = "Nombres")
+                                Input(
+                                    value = uiState.nombres,
+                                    onValueChange = viewModel::onNombresChange,
+                                    placeholder = "Nombres",
+                                    leadingIcon = Icons.Default.Person,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    singleLine = true
+                                )
+                            }
 
-            if (uiState.cuentas.isEmpty()) {
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Label(text = "Apellidos")
+                                Input(
+                                    value = uiState.apellidos,
+                                    onValueChange = viewModel::onApellidosChange,
+                                    placeholder = "Apellidos",
+                                    leadingIcon = Icons.Default.Person,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    singleLine = true
+                                )
+                            }
+
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Label(text = "Telefono")
+                                Input(
+                                    value = uiState.telefono,
+                                    onValueChange = viewModel::onTelefonoChange,
+                                    placeholder = "987654321",
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                                    leadingIcon = Icons.Default.Phone,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    singleLine = true
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(4.dp))
+
+                            Button(
+                                onClick = { viewModel.saveChanges() },
+                                modifier = Modifier.fillMaxWidth(),
+                                text = "Guardar cambios"
+                            )
+                        }
+                    }
+                }
+
+                // Bank Accounts Header
+                item {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp, bottom = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Mis Cuentas Bancarias",
+                            variant = TextVariant.Large,
+                            color = RikkaTheme.colors.onBackground
+                        )
+
+                        Button(
+                            onClick = { showBottomSheet = true },
+                            variant = ButtonVariant.Outline,
+                            size = ButtonSize.Sm
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                androidx.compose.material3.Icon(
+                                    imageVector = Icons.Default.Add,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp),
+                                    tint = RikkaTheme.colors.onBackground
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "Agregar",
+                                    variant = TextVariant.Small,
+                                    color = RikkaTheme.colors.onBackground
+                                )
+                            }
+                        }
+                    }
+                }
+
+                if (uiState.cuentas.isEmpty()) {
+                    item {
+                        Card(
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = "No tienes cuentas registradas",
+                                variant = TextVariant.P,
+                                color = Color.Gray,
+                                modifier = Modifier.fillMaxWidth(),
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
+                        }
+                    }
+                } else {
+                    items(uiState.cuentas, key = { it.id }) { cuenta ->
+                        BankAccountCard(cuenta)
+                    }
+                }
+
+                // More Options Header
                 item {
                     Text(
-                        text = "No tienes cuentas registradas",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        text = "Mas opciones",
+                        variant = TextVariant.Large,
+                        color = RikkaTheme.colors.onBackground,
+                        modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
                     )
                 }
-            } else {
-                items(uiState.cuentas, key = { it.id }) { cuenta ->
-                    BankAccountCard(cuenta)
-                }
-            }
 
-            item {
-                OutlinedButton(
-                    onClick = { showBottomSheet = true },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(imageVector = Icons.Default.Add, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Agregar cuenta bancaria")
-                }
-            }
-
-            item {
-                Button(
-                    onClick = { viewModel.saveChanges() },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Guardar cambios")
-                }
-            }
-
-            item {
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = "Más opciones",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(top = 8.dp)
-                )
-            }
-
-            item {
-                ProfileMenuItem(
-                    icon = Icons.Default.VerifiedUser,
-                    title = "Verificación de identidad",
-                    onClick = { navController.navigate("identity_verification") }
-                )
-            }
-
-            item {
-                ProfileMenuItem(
-                    icon = Icons.Default.Notifications,
-                    title = "Alertas de tipo de cambio",
-                    onClick = { navController.navigate("alerts") }
-                )
-            }
-
-            item {
-                ProfileMenuItem(
-                    icon = Icons.Default.Gavel,
-                    title = "Mis disputas",
-                    onClick = { navController.navigate("disputas") }
-                )
-            }
-
-            item {
-                ProfileMenuItem(
-                    icon = Icons.Default.AdminPanelSettings,
-                    title = "Administración de usuarios",
-                    onClick = { navController.navigate("admin_users") }
-                )
-            }
-
-            item {
-                Spacer(modifier = Modifier.height(16.dp))
-                val context = LocalContext.current
-                OutlinedButton(
-                    onClick = {
-                        SessionManager.clearToken(context)
-                        navController.navigate(Destination.Login.route) {
-                            popUpTo(Destination.Marketplace.route) { inclusive = true }
+                // More Options Card List
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column {
+                            ProfileMenuItem(
+                                icon = Icons.Default.VerifiedUser,
+                                title = "Verificacion de identidad",
+                                onClick = { navController.navigate("identity_verification") }
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(1.dp)
+                                    .background(RikkaTheme.colors.muted.copy(alpha = 0.2f))
+                            )
+                            ProfileMenuItem(
+                                icon = Icons.Default.Notifications,
+                                title = "Alertas de tipo de cambio",
+                                onClick = { navController.navigate("alerts") }
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(1.dp)
+                                    .background(RikkaTheme.colors.muted.copy(alpha = 0.2f))
+                            )
+                            ProfileMenuItem(
+                                icon = Icons.Default.Gavel,
+                                title = "Mis disputas",
+                                onClick = { navController.navigate("disputas") }
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(1.dp)
+                                    .background(RikkaTheme.colors.muted.copy(alpha = 0.2f))
+                            )
+                            ProfileMenuItem(
+                                icon = Icons.Default.AdminPanelSettings,
+                                title = "Administracion de usuarios",
+                                onClick = { navController.navigate("admin_users") }
+                            )
                         }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error
-                    )
-                ) {
-                    Icon(imageVector = Icons.AutoMirrored.Filled.Logout, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Cerrar sesión")
+                    }
+                }
+
+                // Logout Button
+                item {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    val context = LocalContext.current
+                    Button(
+                        onClick = {
+                            SessionManager.clearToken(context)
+                            navController.navigate(Destination.Login.route) {
+                                popUpTo(Destination.Marketplace.route) { inclusive = true }
+                            }
+                        },
+                        variant = ButtonVariant.Destructive,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            androidx.compose.material3.Icon(
+                                imageVector = Icons.AutoMirrored.Filled.Logout,
+                                contentDescription = null,
+                                tint = RikkaTheme.colors.destructive
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Cerrar sesion",
+                                variant = TextVariant.P,
+                                color = RikkaTheme.colors.destructive
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -279,7 +446,8 @@ fun ProfileScreen(
     if (showBottomSheet) {
         ModalBottomSheet(
             onDismissRequest = { showBottomSheet = false },
-            sheetState = sheetState
+            sheetState = sheetState,
+            containerColor = RikkaTheme.colors.background
         ) {
             AddBankAccountSheet(
                 onCancel = { showBottomSheet = false },
@@ -295,205 +463,208 @@ fun ProfileScreen(
 @Composable
 private fun BankAccountCard(cuenta: BankAccount) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        modifier = Modifier.fillMaxWidth()
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = Icons.Default.AccountBalance,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary
-            )
-            Spacer(modifier = Modifier.width(12.dp))
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .background(
+                        color = RikkaTheme.colors.primary.copy(alpha = 0.12f),
+                        shape = RoundedCornerShape(8.dp)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                androidx.compose.material3.Icon(
+                    imageVector = Icons.Default.AccountBalance,
+                    contentDescription = null,
+                    tint = RikkaTheme.colors.primary
+                )
+            }
+            Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = cuenta.banco,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold
+                    variant = TextVariant.Large,
+                    color = RikkaTheme.colors.onBackground
                 )
                 Text(
-                    text = "N° ${cuenta.numeroCuenta}",
-                    style = MaterialTheme.typography.bodySmall
+                    text = "N. ${cuenta.numeroCuenta}",
+                    variant = TextVariant.Small,
+                    color = Color.Gray
                 )
                 Text(
                     text = cuenta.titular,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    variant = TextVariant.Small,
+                    color = Color.Gray
                 )
             }
-            Text(
-                text = cuenta.moneda,
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.Bold
-            )
+            Box(
+                modifier = Modifier
+                    .background(
+                        color = RikkaTheme.colors.primary.copy(alpha = 0.15f),
+                        shape = RoundedCornerShape(4.dp)
+                    )
+                    .padding(horizontal = 8.dp, vertical = 4.dp)
+            ) {
+                Text(
+                    text = cuenta.moneda,
+                    variant = TextVariant.Small,
+                    color = RikkaTheme.colors.primary
+                )
+            }
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ProfileMenuItem(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     title: String,
     onClick: () -> Unit
 ) {
-    Card(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 12.dp, horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary
-            )
-            Spacer(modifier = Modifier.width(12.dp))
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyLarge
-            )
-        }
+        androidx.compose.material3.Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = RikkaTheme.colors.primary,
+            modifier = Modifier.size(24.dp)
+        )
+        Spacer(modifier = Modifier.width(16.dp))
+        Text(
+            text = title,
+            variant = TextVariant.P,
+            color = RikkaTheme.colors.onBackground,
+            modifier = Modifier.weight(1f)
+        )
+        androidx.compose.material3.Icon(
+            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+            contentDescription = null,
+            tint = Color.Gray.copy(alpha = 0.7f),
+            modifier = Modifier.size(16.dp)
+        )
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AddBankAccountSheet(
     onCancel: () -> Unit,
     onConfirm: (BankAccount) -> Unit
 ) {
-    val bancos = listOf("BCP", "Interbank", "Yape")
-    val monedas = listOf("PEN", "USD")
+    val bancos = listOf(
+        SelectOption("BCP", "BCP"),
+        SelectOption("Interbank", "Interbank"),
+        SelectOption("Yape", "Yape")
+    )
+    val monedas = listOf(
+        SelectOption("PEN", "PEN"),
+        SelectOption("USD", "USD")
+    )
 
-    var bancoSeleccionado by remember { mutableStateOf(bancos.first()) }
-    var bancoExpanded by remember { mutableStateOf(false) }
-
-    var monedaSeleccionada by remember { mutableStateOf(monedas.first()) }
-    var monedaExpanded by remember { mutableStateOf(false) }
+    var bancoSeleccionado by remember { mutableStateOf(bancos.first().value) }
+    var monedaSeleccionada by remember { mutableStateOf(monedas.first().value) }
 
     var numeroCuenta by remember { mutableStateOf("") }
     var titular by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    val focusManager = LocalFocusManager.current
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) {
+                focusManager.clearFocus()
+            }
+            .padding(24.dp)
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text(
             text = "Agregar cuenta bancaria",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold
+            variant = TextVariant.H2,
+            color = RikkaTheme.colors.onBackground
         )
 
-        ExposedDropdownMenuBox(
-            expanded = bancoExpanded,
-            onExpandedChange = { bancoExpanded = it }
-        ) {
-            OutlinedTextField(
-                value = bancoSeleccionado,
-                onValueChange = {},
-                readOnly = true,
-                label = { Text("Banco") },
-                trailingIcon = {
-                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = bancoExpanded)
-                },
-                modifier = Modifier
-                    .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled = true)
-                    .fillMaxWidth()
+        // Banco Dropdown
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Label(text = "Banco")
+            Select(
+                selectedValue = bancoSeleccionado,
+                onValueChange = { bancoSeleccionado = it },
+                options = bancos,
+                placeholder = "Seleccione un banco...",
+                animation = PopupAnimation.Fade,
+                maxHeight = 300.dp,
+                modifier = Modifier.fillMaxWidth()
             )
-            ExposedDropdownMenu(
-                expanded = bancoExpanded,
-                onDismissRequest = { bancoExpanded = false }
-            ) {
-                bancos.forEach { banco ->
-                    DropdownMenuItem(
-                        text = { Text(banco) },
-                        onClick = {
-                            bancoSeleccionado = banco
-                            bancoExpanded = false
-                        }
-                    )
-                }
-            }
         }
 
-        OutlinedTextField(
-            value = numeroCuenta,
-            onValueChange = { value ->
-                if (value.isEmpty() || value.all { it.isDigit() }) {
-                    numeroCuenta = value
-                }
-            },
-            label = { Text("Número de cuenta") },
-            placeholder = { Text("1234567890") },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true
-        )
-
-        OutlinedTextField(
-            value = titular,
-            onValueChange = { value ->
-                if (value.isEmpty() || value.all { it.isLetter() || it == ' ' }) {
-                    titular = value
-                }
-            },
-            label = { Text("Nombre del titular") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true
-        )
-
-        ExposedDropdownMenuBox(
-            expanded = monedaExpanded,
-            onExpandedChange = { monedaExpanded = it }
-        ) {
-            OutlinedTextField(
-                value = monedaSeleccionada,
-                onValueChange = {},
-                readOnly = true,
-                label = { Text("Moneda") },
-                trailingIcon = {
-                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = monedaExpanded)
+        // Numero de Cuenta Input
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Label(text = "Numero de cuenta")
+            Input(
+                value = numeroCuenta,
+                onValueChange = { value ->
+                    if (value.isEmpty() || value.all { it.isDigit() }) {
+                        numeroCuenta = value
+                    }
                 },
-                modifier = Modifier
-                    .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled = true)
-                    .fillMaxWidth()
+                placeholder = "1234567890",
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                leadingIcon = Icons.Default.AccountBalance,
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
             )
-            ExposedDropdownMenu(
-                expanded = monedaExpanded,
-                onDismissRequest = { monedaExpanded = false }
-            ) {
-                monedas.forEach { moneda ->
-                    DropdownMenuItem(
-                        text = { Text(moneda) },
-                        onClick = {
-                            monedaSeleccionada = moneda
-                            monedaExpanded = false
-                        }
-                    )
-                }
-            }
+        }
+
+        // Titular Input
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Label(text = "Nombre del titular")
+            Input(
+                value = titular,
+                onValueChange = { value ->
+                    if (value.isEmpty() || value.all { it.isLetter() || it == ' ' }) {
+                        titular = value
+                    }
+                },
+                placeholder = "Nombre del titular",
+                leadingIcon = Icons.Default.Person,
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+        }
+
+        // Moneda Dropdown
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Label(text = "Moneda")
+            Select(
+                selectedValue = monedaSeleccionada,
+                onValueChange = { monedaSeleccionada = it },
+                options = monedas,
+                placeholder = "Seleccione una moneda...",
+                animation = PopupAnimation.Fade,
+                maxHeight = 300.dp,
+                modifier = Modifier.fillMaxWidth()
+            )
         }
 
         errorMessage?.let {
             Text(
                 text = it,
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall
+                variant = TextVariant.Small,
+                color = RikkaTheme.colors.destructive
             )
         }
 
@@ -501,18 +672,20 @@ private fun AddBankAccountSheet(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            OutlinedButton(
+            Button(
                 onClick = onCancel,
-                modifier = Modifier.weight(1f)
-            ) {
-                Text("Cancelar")
-            }
+                variant = ButtonVariant.Outline,
+                modifier = Modifier.weight(1f),
+                text = "Cancelar"
+            )
             Button(
                 onClick = {
                     when {
                         bancoSeleccionado.isBlank() -> errorMessage = "Seleccione un banco"
-                        numeroCuenta.isBlank() -> errorMessage = "Ingrese el número de cuenta"
-                        numeroCuenta.length < 10 -> errorMessage = "El número de cuenta debe tener al menos 10 dígitos"
+                        numeroCuenta.isBlank() -> errorMessage = "Ingrese el numero de cuenta"
+                        numeroCuenta.length < 10 -> errorMessage =
+                            "El numero de cuenta debe tener al menos 10 digitos"
+
                         titular.isBlank() -> errorMessage = "Ingrese el nombre del titular"
                         monedaSeleccionada.isBlank() -> errorMessage = "Seleccione una moneda"
                         else -> {
@@ -528,12 +701,11 @@ private fun AddBankAccountSheet(
                         }
                     }
                 },
-                modifier = Modifier.weight(1f)
-            ) {
-                Text("Guardar")
-            }
+                modifier = Modifier.weight(1f),
+                text = "Guardar"
+            )
         }
 
-        Spacer(modifier = Modifier.size(8.dp))
+        Spacer(modifier = Modifier.height(8.dp))
     }
 }
