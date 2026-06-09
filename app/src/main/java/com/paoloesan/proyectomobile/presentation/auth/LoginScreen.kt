@@ -24,7 +24,6 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -40,12 +39,10 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
@@ -243,12 +240,9 @@ fun LoginScreen(
                         .padding(top = 16.dp),
                     horizontalAlignment = Alignment.Start
                 ) {
-                    androidx.compose.material3.Text(
+                    Text(
                         text = "¡Hola, Bienvenido! 👋",
-                        style = MaterialTheme.typography.headlineLarge.copy(
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 32.sp
-                        ),
+                        variant = TextVariant.H1,
                         color = RikkaTheme.colors.onBackground
                     )
                     Spacer(modifier = Modifier.height(4.dp))
@@ -267,11 +261,10 @@ fun LoginScreen(
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     // Email Label
-                    androidx.compose.material3.Text(
+                    Text(
                         text = "Correo electrónico",
-                        fontWeight = FontWeight.Bold,
-                        color = RikkaTheme.colors.primary,
-                        fontSize = 14.sp
+                        variant = TextVariant.P,
+                        color = RikkaTheme.colors.onBackground,
                     )
 
                     Input(
@@ -288,11 +281,10 @@ fun LoginScreen(
                     Spacer(modifier = Modifier.height(2.dp))
 
                     // Password Label
-                    androidx.compose.material3.Text(
+                    Text(
                         text = "Contraseña",
-                        fontWeight = FontWeight.Bold,
-                        color = RikkaTheme.colors.primary,
-                        fontSize = 14.sp
+                        variant = TextVariant.P,
+                        color = RikkaTheme.colors.onBackground,
                     )
 
                     // Password Input with eye icon toggle overlay
@@ -329,27 +321,17 @@ fun LoginScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(5.dp)
-                        ) {
-                            Checkbox(
-                                checked = rememberMe,
-                                onCheckedChange = { rememberMe = it },
-                                enabled = !uiState.isLoading
-                            )
-                            androidx.compose.material3.Text(
-                                text = "Recordarme",
-                                fontSize = 14.sp,
-                                color = Color.DarkGray
-                            )
-                        }
+                        Checkbox(
+                            checked = rememberMe,
+                            onCheckedChange = { rememberMe = it },
+                            enabled = !uiState.isLoading,
+                            label = "Recordarme"
+                        )
 
-                        androidx.compose.material3.Text(
+                        Text(
                             text = "Olvide mi contraseña",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = RikkaTheme.colors.destructive,
+                            variant = TextVariant.Small,
+                            color = RikkaTheme.colors.primary,
                             modifier = Modifier.clickable(enabled = !uiState.isLoading) {
                                 navController.navigate(Destination.RecoverPassword.route)
                             }
@@ -372,12 +354,9 @@ fun LoginScreen(
                     } else {
                         Button(
                             onClick = { viewModel.login(context) },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(
-                                text = "Iniciar Sesion",
-                            )
-                        }
+                            modifier = Modifier.fillMaxWidth(),
+                            text = "Iniciar Sesion"
+                        )
                     }
 
                     // Or With Divider
@@ -393,11 +372,10 @@ fun LoginScreen(
                                 .height(1.dp)
                                 .background(Color.LightGray)
                         )
-                        androidx.compose.material3.Text(
+                        Text(
                             text = "O continúe con",
                             modifier = Modifier.padding(horizontal = 8.dp),
                             color = Color.Gray,
-                            fontSize = 12.sp
                         )
                         Box(
                             modifier = Modifier
@@ -468,16 +446,15 @@ fun LoginScreen(
                         .padding(bottom = 16.dp),
                     horizontalArrangement = Arrangement.Center
                 ) {
-                    androidx.compose.material3.Text(
+                    Text(
                         text = "¿No tienes una cuenta? ",
+                        variant = TextVariant.P,
                         color = RikkaTheme.colors.onBackground,
-                        fontSize = 14.sp
                     )
-                    androidx.compose.material3.Text(
+                    Text(
                         text = "Regístrate",
-                        color = RikkaTheme.colors.destructive,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp,
+                        variant = TextVariant.Large,
+                        color = RikkaTheme.colors.primary,
                         modifier = Modifier.clickable {
                             navController.navigate(Destination.Registro.route)
                         }

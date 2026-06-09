@@ -36,7 +36,7 @@ fun AppTheme(
 
     RikkaTheme(
         palette = RikkaPalette.Zinc,
-        accent = RikkaAccentPreset.Yellow,
+        accent = RikkaAccentPreset.Green,
         isDark = isDark,
         preset = RikkaStylePreset.Vega,
         typography = rikkaTypography(fontFamily, scale = RikkaStylePreset.Default.typeScale),
