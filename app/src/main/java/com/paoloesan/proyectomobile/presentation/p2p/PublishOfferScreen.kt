@@ -15,14 +15,21 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AttachMoney
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -32,11 +39,14 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import coil3.compose.AsyncImage
 import kotlinx.coroutines.launch
 import zed.rainxch.rikkaui.components.ui.PopupAnimation
 import zed.rainxch.rikkaui.components.ui.button.Button
@@ -56,19 +66,35 @@ import zed.rainxch.rikkaui.components.ui.toast.ToastVariant
 import zed.rainxch.rikkaui.components.ui.toast.rememberToastHostState
 import zed.rainxch.rikkaui.foundation.RikkaTheme
 
-data class LocalOffer(
-    val type: String,
-    val currency: String,
-    val amount: String,
-    val rate: String,
-    val minAmount: String,
-    val maxAmount: String,
-    val paymentMethod: String
-)
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PublishOfferScreen(navController: NavController) {
+    // Listado de ofertas activas ("Mis Ofertas")
+    var offers by remember {
+        mutableStateOf(
+            listOf(
+                MyOffer("1", "Compra", "USD", 150.0, 3.75, 50.0, 200.0, "BCP"),
+                MyOffer("2", "Venta", "PEN", 500.0, 1.0, 10.0, 500.0, "Yape"),
+                MyOffer(
+                    "3",
+                    "Compra",
+                    "USD",
+                    300.0,
+                    3.76,
+                    100.0,
+                    400.0,
+                    "Interbank",
+                    hasActiveTransaction = true
+                ),
+                MyOffer("4", "Venta", "USD", 200.0, 3.74, 50.0, 250.0, "BCP")
+            )
+        )
+    }
+
+    // Estados para publicación (Formulario en BottomSheet)
+    var showPublishSheet by remember { mutableStateOf(false) }
+    val publishSheetState = rememberModalBottomSheetState()
+
     var type by remember { mutableStateOf("Compra") }
     var currency by remember { mutableStateOf("USD") }
     var amount by remember { mutableStateOf("") }
@@ -77,7 +103,16 @@ fun PublishOfferScreen(navController: NavController) {
     var maxAmount by remember { mutableStateOf("") }
     var paymentMethod by remember { mutableStateOf("BCP") }
 
-    var publishedOffers by remember { mutableStateOf(listOf<LocalOffer>()) }
+    // Estados para edición y cancelación
+    var showCancelDialog by remember { mutableStateOf(false) }
+    var showEditDialog by remember { mutableStateOf(false) }
+    var selectedOffer by remember { mutableStateOf<MyOffer?>(null) }
+
+    var editAmount by remember { mutableStateOf("") }
+    var editRate by remember { mutableStateOf("") }
+    var editMinLimit by remember { mutableStateOf("") }
+    var editMaxLimit by remember { mutableStateOf("") }
+    var editPaymentMethod by remember { mutableStateOf("") }
 
     val toastState = rememberToastHostState()
     val scope = rememberCoroutineScope()
@@ -94,6 +129,7 @@ fun PublishOfferScreen(navController: NavController) {
         SelectOption("Interbank", "Interbank")
     )
 
+    // Validaciones de publicación
     val isMinMaxError by remember {
         derivedStateOf {
             val min = minAmount.toDoubleOrNull()
@@ -127,6 +163,191 @@ fun PublishOfferScreen(navController: NavController) {
                     max != null && max > 0 &&
                     !isMinMaxError
         }
+    }
+
+    // Diálogo de confirmación para cancelar oferta
+    if (showCancelDialog && selectedOffer != null) {
+        AlertDialog(
+            onDismissRequest = { showCancelDialog = false },
+            containerColor = RikkaTheme.colors.background,
+            title = {
+                Text(
+                    text = "Cancelar Oferta",
+                    variant = TextVariant.Large,
+                    color = RikkaTheme.colors.onBackground
+                )
+            },
+            text = {
+                Text(
+                    text = "¿Está seguro de cancelar esta oferta?",
+                    variant = TextVariant.P,
+                    color = RikkaTheme.colors.onBackground
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        offers = offers.filter { it.id != selectedOffer!!.id }
+                        showCancelDialog = false
+                        scope.launch {
+                            toastState.show(
+                                message = "Oferta cancelada correctamente",
+                                variant = ToastVariant.Success
+                            )
+                        }
+                    },
+                    text = "Confirmar"
+                )
+            },
+            dismissButton = {
+                Button(
+                    onClick = { showCancelDialog = false },
+                    variant = ButtonVariant.Outline,
+                    text = "Cancelar"
+                )
+            }
+        )
+    }
+
+    // Diálogo para editar oferta
+    if (showEditDialog && selectedOffer != null) {
+        AlertDialog(
+            onDismissRequest = { showEditDialog = false },
+            containerColor = RikkaTheme.colors.background,
+            title = {
+                Text(
+                    text = "Editar Oferta",
+                    variant = TextVariant.Large,
+                    color = RikkaTheme.colors.onBackground
+                )
+            },
+            text = {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.verticalScroll(rememberScrollState())
+                ) {
+                    Text(
+                        text = "Monto",
+                        variant = TextVariant.Small,
+                        color = RikkaTheme.colors.onBackground
+                    )
+                    Input(
+                        value = editAmount,
+                        onValueChange = {
+                            if (it.all { c -> c.isDigit() || c == '.' }) editAmount = it
+                        },
+                        placeholder = "Monto",
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+
+                    Text(
+                        text = "Tipo de Cambio",
+                        variant = TextVariant.Small,
+                        color = RikkaTheme.colors.onBackground
+                    )
+                    Input(
+                        value = editRate,
+                        onValueChange = {
+                            if (it.all { c -> c.isDigit() || c == '.' }) editRate = it
+                        },
+                        placeholder = "Tipo de cambio",
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+
+                    Text(
+                        text = "Límite Mínimo",
+                        variant = TextVariant.Small,
+                        color = RikkaTheme.colors.onBackground
+                    )
+                    Input(
+                        value = editMinLimit,
+                        onValueChange = {
+                            if (it.all { c -> c.isDigit() || c == '.' }) editMinLimit = it
+                        },
+                        placeholder = "Límite mínimo",
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+
+                    Text(
+                        text = "Límite Máximo",
+                        variant = TextVariant.Small,
+                        color = RikkaTheme.colors.onBackground
+                    )
+                    Input(
+                        value = editMaxLimit,
+                        onValueChange = {
+                            if (it.all { c -> c.isDigit() || c == '.' }) editMaxLimit = it
+                        },
+                        placeholder = "Límite máximo",
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+
+                    Text(
+                        text = "Método de Pago",
+                        variant = TextVariant.Small,
+                        color = RikkaTheme.colors.onBackground
+                    )
+                    Input(
+                        value = editPaymentMethod,
+                        onValueChange = { editPaymentMethod = it },
+                        placeholder = "BCP, Yape, etc.",
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val minVal = editMinLimit.toDoubleOrNull()
+                        val maxVal = editMaxLimit.toDoubleOrNull()
+                        if (minVal != null && maxVal != null && minVal > maxVal) {
+                            scope.launch {
+                                toastState.show(
+                                    message = "El monto mínimo no puede ser mayor al máximo",
+                                    variant = ToastVariant.Destructive
+                                )
+                            }
+                        } else {
+                            offers = offers.map {
+                                if (it.id == selectedOffer!!.id) {
+                                    it.copy(
+                                        amount = editAmount.toDoubleOrNull() ?: it.amount,
+                                        rate = editRate.toDoubleOrNull() ?: it.rate,
+                                        minLimit = minVal ?: it.minLimit,
+                                        maxLimit = maxVal ?: it.maxLimit,
+                                        paymentMethod = editPaymentMethod.ifBlank { it.paymentMethod }
+                                    )
+                                } else it
+                            }
+                            showEditDialog = false
+                            scope.launch {
+                                toastState.show(
+                                    message = "Oferta actualizada correctamente",
+                                    variant = ToastVariant.Success
+                                )
+                            }
+                        }
+                    },
+                    text = "Guardar"
+                )
+            },
+            dismissButton = {
+                Button(
+                    onClick = { showEditDialog = false },
+                    variant = ButtonVariant.Outline,
+                    text = "Cancelar"
+                )
+            }
+        )
     }
 
     Box(
@@ -163,7 +384,7 @@ fun PublishOfferScreen(navController: NavController) {
                     }
 
                     Text(
-                        text = "Publicar Oferta",
+                        text = "Publicar",
                         color = RikkaTheme.colors.onBackground,
                         variant = TextVariant.Large,
                     )
@@ -184,217 +405,91 @@ fun PublishOfferScreen(navController: NavController) {
                     }
                     .padding(horizontal = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
-                contentPadding = PaddingValues(vertical = 12.dp)
+                contentPadding = PaddingValues(vertical = 12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                // 1. Imagen del principio (Placeholder)
                 item {
-                    Text(
-                        text = "Crea una nueva oferta P2P",
-                        variant = TextVariant.H2,
-                        color = RikkaTheme.colors.primary
+                    Spacer(modifier = Modifier.height(8.dp))
+                    AsyncImage(
+                        model = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQvAbeKbIKVC9WHqPx7a8CVJPLmcoBJEO6QpQ&s",
+                        contentDescription = "Intercambia tus objetos",
+                        modifier = Modifier
+                            .size(160.dp)
+                            .clip(RoundedCornerShape(16.dp)),
+                        contentScale = ContentScale.Fit
                     )
                 }
 
-                // Main Form Card
+                // Título
                 item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth()
+                    Text(
+                        text = "Publicar una oferta",
+                        variant = TextVariant.H2,
+                        color = RikkaTheme.colors.onBackground
+                    )
+                }
+
+                // 2. Botón de crear oferta
+                item {
+                    Button(
+                        onClick = { showPublishSheet = true },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp)
                     ) {
-                        Column(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
                         ) {
-                            // Selector Compra/Venta
-                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Label(text = "Tipo de transaccion")
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Button(
-                                        onClick = { type = "Compra" },
-                                        variant = if (type == "Compra") ButtonVariant.Default else ButtonVariant.Outline,
-                                        modifier = Modifier.weight(1f),
-                                        text = "Compra"
-                                    )
-                                    Button(
-                                        onClick = { type = "Venta" },
-                                        variant = if (type == "Venta") ButtonVariant.Default else ButtonVariant.Outline,
-                                        modifier = Modifier.weight(1f),
-                                        text = "Venta"
-                                    )
-                                }
-                            }
-
-                            // Moneda Select
-                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Label(text = "Moneda")
-                                Select(
-                                    selectedValue = currency,
-                                    onValueChange = { currency = it },
-                                    options = currencyOptions,
-                                    placeholder = "Seleccione moneda...",
-                                    animation = PopupAnimation.Fade,
-                                    maxHeight = 300.dp,
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-                            }
-
-                            // Monto Input
-                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Label(text = "Monto")
-                                Input(
-                                    value = amount,
-                                    onValueChange = { input ->
-                                        if (input.all { it.isDigit() }) {
-                                            amount = input
-                                        }
-                                    },
-                                    placeholder = "Ingrese monto",
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                    leadingIcon = Icons.Default.AttachMoney,
-                                    modifier = Modifier.fillMaxWidth(),
-                                    singleLine = true
-                                )
-                            }
-
-                            // Tipo de Cambio Input
-                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Label(text = "Tipo de cambio")
-                                Input(
-                                    value = rate,
-                                    onValueChange = { input ->
-                                        if (input.all { it.isDigit() || it == '.' }) {
-                                            rate = input
-                                        }
-                                    },
-                                    placeholder = "3.75",
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                                    leadingIcon = Icons.Default.AttachMoney,
-                                    modifier = Modifier.fillMaxWidth(),
-                                    singleLine = true
-                                )
-                            }
-
-                            // Monto Minimo Input
-                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Label(text = "Monto minimo")
-                                Input(
-                                    value = minAmount,
-                                    onValueChange = { input ->
-                                        if (input.all { it.isDigit() }) {
-                                            minAmount = input
-                                        }
-                                    },
-                                    placeholder = "Minimo",
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                    leadingIcon = Icons.Default.AttachMoney,
-                                    modifier = Modifier.fillMaxWidth(),
-                                    singleLine = true
-                                )
-                                if (isMinMaxError) {
-                                    Text(
-                                        text = "El monto minimo no puede ser mayor al maximo",
-                                        variant = TextVariant.Small,
-                                        color = RikkaTheme.colors.destructive
-                                    )
-                                } else if (isMinZero) {
-                                    Text(
-                                        text = "El monto debe ser mayor a 0",
-                                        variant = TextVariant.Small,
-                                        color = RikkaTheme.colors.destructive
-                                    )
-                                }
-                            }
-
-                            // Monto Maximo Input
-                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Label(text = "Monto maximo")
-                                Input(
-                                    value = maxAmount,
-                                    onValueChange = { input ->
-                                        if (input.all { it.isDigit() }) {
-                                            maxAmount = input
-                                        }
-                                    },
-                                    placeholder = "Maximo",
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                    leadingIcon = Icons.Default.AttachMoney,
-                                    modifier = Modifier.fillMaxWidth(),
-                                    singleLine = true
-                                )
-                                if (isMaxZero && !isMinMaxError) {
-                                    Text(
-                                        text = "El monto debe ser mayor a 0",
-                                        variant = TextVariant.Small,
-                                        color = RikkaTheme.colors.destructive
-                                    )
-                                }
-                            }
-
-                            // Metodo de Pago Select
-                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Label(text = "Metodo de Pago")
-                                Select(
-                                    selectedValue = paymentMethod,
-                                    onValueChange = { paymentMethod = it },
-                                    options = paymentOptions,
-                                    placeholder = "Seleccione metodo de pago...",
-                                    animation = PopupAnimation.Fade,
-                                    maxHeight = 300.dp,
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.height(4.dp))
-
-                            // Publish Button
-                            Button(
-                                enabled = canPublish,
-                                onClick = {
-                                    scope.launch {
-                                        toastState.show(
-                                            message = "Oferta publicada correctamente",
-                                            variant = ToastVariant.Success
-                                        )
-                                        val newOffer = LocalOffer(
-                                            type = type,
-                                            currency = currency,
-                                            amount = amount,
-                                            rate = rate,
-                                            minAmount = minAmount,
-                                            maxAmount = maxAmount,
-                                            paymentMethod = paymentMethod
-                                        )
-                                        publishedOffers = publishedOffers + newOffer
-                                        // Limpiar campos
-                                        amount = ""
-                                        rate = ""
-                                        minAmount = ""
-                                        maxAmount = ""
-                                    }
-                                },
-                                modifier = Modifier.fillMaxWidth(),
-                                text = "Publicar oferta"
+                            androidx.compose.material3.Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                                tint = Color.White
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Nueva oferta",
+                                variant = TextVariant.P,
+                                color = Color.White
                             )
                         }
                     }
                 }
 
-                // Published Offers List
-                if (publishedOffers.isNotEmpty()) {
-                    item {
+                // Separador o Encabezado de la lista
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Start
+                    ) {
                         Text(
-                            text = "Ofertas en el mercado",
+                            text = "Mis Ofertas",
                             variant = TextVariant.Large,
                             color = RikkaTheme.colors.onBackground,
                             modifier = Modifier.padding(top = 8.dp)
                         )
                     }
+                }
 
-                    items(publishedOffers) { offer ->
-                        val isCompra = offer.type == "Compra"
-                        val operationColor =
-                            if (isCompra) RikkaTheme.colors.primary else RikkaTheme.colors.destructive
+                // 3. Mis Ofertas (Cards trasladadas)
+                if (offers.isEmpty()) {
+                    item {
+                        Card(
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = "No tienes ofertas publicadas",
+                                variant = TextVariant.P,
+                                color = Color.Gray,
+                                modifier = Modifier.fillMaxWidth(),
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
+                        }
+                    }
+                } else {
+                    items(offers, key = { it.id }) { offer ->
                         Card(
                             modifier = Modifier.fillMaxWidth(),
                             animation = CardAnimation.Press
@@ -408,6 +503,9 @@ fun PublishOfferScreen(navController: NavController) {
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
+                                    val isCompra = offer.type == "Compra"
+                                    val operationColor =
+                                        if (isCompra) RikkaTheme.colors.primary else RikkaTheme.colors.destructive
                                     Box(
                                         modifier = Modifier
                                             .background(
@@ -436,14 +534,23 @@ fun PublishOfferScreen(navController: NavController) {
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(
-                                        text = "T.C.: ${offer.rate}",
+                                        text = "T.C.: ${offer.rate}  |  Metodo: ${offer.paymentMethod}",
                                         variant = TextVariant.Small,
                                         color = Color.Gray
                                     )
+                                }
+
+                                Text(
+                                    text = "Limites: Min ${offer.minLimit} / Max ${offer.maxLimit}",
+                                    variant = TextVariant.Small,
+                                    color = Color.Gray
+                                )
+
+                                if (offer.hasActiveTransaction) {
                                     Text(
-                                        text = "Metodo: ${offer.paymentMethod}",
+                                        text = "Tiene transaccion activa",
                                         variant = TextVariant.Small,
-                                        color = Color.Gray
+                                        color = RikkaTheme.colors.destructive
                                     )
                                 }
 
@@ -454,14 +561,267 @@ fun PublishOfferScreen(navController: NavController) {
                                         .background(RikkaTheme.colors.muted.copy(alpha = 0.2f))
                                 )
 
-                                Text(
-                                    text = "Limites: Min ${offer.minAmount} / Max ${offer.maxAmount}",
-                                    variant = TextVariant.Small,
-                                    color = RikkaTheme.colors.onBackground
-                                )
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Button(
+                                        onClick = {
+                                            selectedOffer = offer
+                                            editAmount = offer.amount.toString()
+                                            editRate = offer.rate.toString()
+                                            editMinLimit = offer.minLimit.toString()
+                                            editMaxLimit = offer.maxLimit.toString()
+                                            editPaymentMethod = offer.paymentMethod
+                                            showEditDialog = true
+                                        },
+                                        variant = ButtonVariant.Outline,
+                                        modifier = Modifier.weight(1f),
+                                        size = ButtonSize.Sm,
+                                        text = "Editar"
+                                    )
+
+                                    Button(
+                                        onClick = {
+                                            if (offer.hasActiveTransaction) {
+                                                scope.launch {
+                                                    toastState.show(
+                                                        message = "No se puede cancelar: tiene transaccion activa",
+                                                        variant = ToastVariant.Destructive
+                                                    )
+                                                }
+                                            } else {
+                                                selectedOffer = offer
+                                                showCancelDialog = true
+                                            }
+                                        },
+                                        variant = ButtonVariant.Destructive,
+                                        modifier = Modifier.weight(1f),
+                                        size = ButtonSize.Sm,
+                                        text = "Cancelar"
+                                    )
+                                }
                             }
                         }
                     }
+                }
+            }
+        }
+
+        // Formulario de Creación de Oferta (ModalBottomSheet)
+        if (showPublishSheet) {
+            ModalBottomSheet(
+                onDismissRequest = { showPublishSheet = false },
+                sheetState = publishSheetState,
+                containerColor = RikkaTheme.colors.background
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 16.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Text(
+                        text = "Publicar oferta",
+                        variant = TextVariant.H2,
+                        color = RikkaTheme.colors.onBackground
+                    )
+
+                    // Selector Compra/Venta
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Label(text = "Tipo de transacción")
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Button(
+                                onClick = { type = "Compra" },
+                                variant = if (type == "Compra") ButtonVariant.Default else ButtonVariant.Outline,
+                                modifier = Modifier.weight(1f),
+                                text = "Compra"
+                            )
+                            Button(
+                                onClick = { type = "Venta" },
+                                variant = if (type == "Venta") ButtonVariant.Default else ButtonVariant.Outline,
+                                modifier = Modifier.weight(1f),
+                                text = "Venta"
+                            )
+                        }
+                    }
+
+                    // Moneda Select
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Label(text = "Moneda")
+                        Select(
+                            selectedValue = currency,
+                            onValueChange = { currency = it },
+                            options = currencyOptions,
+                            placeholder = "Seleccione moneda...",
+                            animation = PopupAnimation.Fade,
+                            maxHeight = 300.dp,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+
+                    // Monto Input
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Label(text = "Monto")
+                        Input(
+                            value = amount,
+                            onValueChange = { input ->
+                                if (input.all { it.isDigit() }) {
+                                    amount = input
+                                }
+                            },
+                            placeholder = "Ingrese monto",
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            leadingIcon = Icons.Default.AttachMoney,
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
+                        )
+                    }
+
+                    // Tipo de Cambio Input
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Label(text = "Tipo de cambio")
+                        Input(
+                            value = rate,
+                            onValueChange = { input ->
+                                if (input.all { it.isDigit() || it == '.' }) {
+                                    rate = input
+                                }
+                            },
+                            placeholder = "3.75",
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            leadingIcon = Icons.Default.AttachMoney,
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
+                        )
+                    }
+
+                    // Monto Mínimo Input
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Label(text = "Monto mínimo")
+                        Input(
+                            value = minAmount,
+                            onValueChange = { input ->
+                                if (input.all { it.isDigit() }) {
+                                    minAmount = input
+                                }
+                            },
+                            placeholder = "Mínimo",
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            leadingIcon = Icons.Default.AttachMoney,
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
+                        )
+                        if (isMinMaxError) {
+                            Text(
+                                text = "El monto mínimo no puede ser mayor al máximo",
+                                variant = TextVariant.Small,
+                                color = RikkaTheme.colors.destructive
+                            )
+                        } else if (isMinZero) {
+                            Text(
+                                text = "El monto debe ser mayor a 0",
+                                variant = TextVariant.Small,
+                                color = RikkaTheme.colors.destructive
+                            )
+                        }
+                    }
+
+                    // Monto Máximo Input
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Label(text = "Monto máximo")
+                        Input(
+                            value = maxAmount,
+                            onValueChange = { input ->
+                                if (input.all { it.isDigit() }) {
+                                    maxAmount = input
+                                }
+                            },
+                            placeholder = "Máximo",
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            leadingIcon = Icons.Default.AttachMoney,
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
+                        )
+                        if (isMaxZero && !isMinMaxError) {
+                            Text(
+                                text = "El monto debe ser mayor a 0",
+                                variant = TextVariant.Small,
+                                color = RikkaTheme.colors.destructive
+                            )
+                        }
+                    }
+
+                    // Método de Pago Select
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Label(text = "Método de Pago")
+                        Select(
+                            selectedValue = paymentMethod,
+                            onValueChange = { paymentMethod = it },
+                            options = paymentOptions,
+                            placeholder = "Seleccione método de pago...",
+                            animation = PopupAnimation.Fade,
+                            maxHeight = 300.dp,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Botones Cancelar / Publicar
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Button(
+                            onClick = { showPublishSheet = false },
+                            variant = ButtonVariant.Outline,
+                            modifier = Modifier.weight(1f),
+                            text = "Cancelar"
+                        )
+                        Button(
+                            enabled = canPublish,
+                            onClick = {
+                                val amt = amount.toDoubleOrNull() ?: 0.0
+                                val rt = rate.toDoubleOrNull() ?: 0.0
+                                val min = minAmount.toDoubleOrNull() ?: 0.0
+                                val max = maxAmount.toDoubleOrNull() ?: 0.0
+
+                                val newOffer = MyOffer(
+                                    id = java.util.UUID.randomUUID().toString(),
+                                    type = type,
+                                    currency = currency,
+                                    amount = amt,
+                                    rate = rt,
+                                    minLimit = min,
+                                    maxLimit = max,
+                                    paymentMethod = paymentMethod
+                                )
+                                offers = offers + newOffer
+                                showPublishSheet = false
+
+                                // Limpiar campos
+                                amount = ""
+                                rate = ""
+                                minAmount = ""
+                                maxAmount = ""
+
+                                scope.launch {
+                                    toastState.show(
+                                        message = "Oferta publicada correctamente",
+                                        variant = ToastVariant.Success
+                                    )
+                                }
+                            },
+                            modifier = Modifier.weight(1f),
+                            text = "Publicar"
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(24.dp))
                 }
             }
         }

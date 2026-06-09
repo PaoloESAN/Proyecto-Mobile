@@ -4,8 +4,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.Text
@@ -36,6 +38,8 @@ import com.paoloesan.proyectomobile.presentation.p2p.MatchScreen
 import com.paoloesan.proyectomobile.presentation.p2p.MyOffersScreen
 import com.paoloesan.proyectomobile.presentation.p2p.PublishOfferScreen
 import com.paoloesan.proyectomobile.presentation.profile.ProfileScreen
+import com.paoloesan.proyectomobile.presentation.profile.SettingsScreen
+import com.paoloesan.proyectomobile.presentation.profile.EditProfileScreen
 import com.paoloesan.proyectomobile.presentation.transaction.BankDetailsScreen
 import com.paoloesan.proyectomobile.presentation.transaction.ChatScreen
 import com.paoloesan.proyectomobile.presentation.transaction.ConfirmPaymentScreen
@@ -70,7 +74,9 @@ sealed class Destination(
 
     object PublishOffer : Destination(
         route = "publish_offer",
-        title = "Publicar Oferta",
+        title = "Crear",
+        icon = Icons.Default.Add,
+        showInBottomBar = true,
         content = { navController -> PublishOfferScreen(navController) }
     )
 
@@ -118,8 +124,8 @@ sealed class Destination(
 
     object MyOffers : Destination(
         route = "my_offers",
-        title = "Mis Ofertas",
-        icon = Icons.Default.Receipt,
+        title = "Trades",
+        icon = Icons.Default.Star,
         showInBottomBar = true,
         content = { navController -> MyOffersScreen(navController) }
     )
@@ -170,18 +176,22 @@ sealed class Destination(
     )
 
     object TransactionStatus : Destination(
-        route = "transactionStatus/{transactionId}",
+        route = "transactionStatus/{transactionId}?isSeller={isSeller}",
         title = "Estado de Transacción",
         content = { navController ->
+            val arguments = navController.currentBackStackEntry?.arguments
+            val transactionId = arguments?.getString("transactionId") ?: "TX001"
+            val isSeller = arguments?.getString("isSeller")?.toBoolean() ?: false
             TransactionStatusScreen(
+                isSeller = isSeller,
                 onBack = {
                     navController.popBackStack()
                 },
                 onViewBankDetails = {
-                    navController.navigate("bankDetails/TX001")
+                    navController.navigate("bankDetails/$transactionId")
                 },
                 onChat = {
-                    navController.navigate("chat/TX001")
+                    navController.navigate("chat/$transactionId")
                 },
                 onConfirmPayment = {
                     navController.navigate("confirm_payment")
@@ -241,6 +251,18 @@ sealed class Destination(
         content = { navController -> ProfileScreen(navController) }
     )
 
+    object Settings : Destination(
+        route = "settings",
+        title = "Configuración",
+        content = { navController -> SettingsScreen(navController) }
+    )
+
+    object EditProfile : Destination(
+        route = "edit_profile",
+        title = "Editar Información",
+        content = { navController -> EditProfileScreen(navController) }
+    )
+
     object AdminUsers : Destination(
         route = "admin_users",
         title = "Administración de Usuarios",
@@ -261,6 +283,8 @@ val appDestinations = listOf(
     Destination.Matches,
     Destination.History,
     Destination.Profile,
+    Destination.Settings,
+    Destination.EditProfile,
     Destination.Alerts,
     Destination.OfferDetail,
     Destination.TransactionStatus,
@@ -275,6 +299,7 @@ val appDestinations = listOf(
 val bottomBarDestinations = listOf(
     Destination.Marketplace,
     Destination.MyOffers,
+    Destination.PublishOffer,
     Destination.History,
     Destination.Profile
 )
@@ -321,7 +346,7 @@ fun AppNav() {
                     dest.icon?.let {
                         NavigationBarItem(
                             selected = currentRoute == dest.route,
-                            activeColor = RikkaTheme.colors.onBackground,
+                            activeColor = RikkaTheme.colors.primary,
                             onClick = {
                                 if (currentRoute != dest.route) {
                                     navController.navigate(dest.route) {

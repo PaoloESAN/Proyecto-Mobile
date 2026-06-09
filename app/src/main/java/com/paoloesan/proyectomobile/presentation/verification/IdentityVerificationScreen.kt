@@ -373,6 +373,7 @@ fun IdentityVerificationScreen(navController: NavController) {
                                     isUploading = false
                                     selectedFrontImageUri = null
                                     selectedBackImageUri = null
+                                    com.paoloesan.proyectomobile.data.local.SessionManager.saveVerified(context, true)
                                     toastState.show(
                                         message = "Verificacion enviada correctamente",
                                         variant = ToastVariant.Success

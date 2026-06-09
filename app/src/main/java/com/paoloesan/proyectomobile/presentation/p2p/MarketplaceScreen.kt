@@ -23,11 +23,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AttachMoney
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FilterList
-import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Payment
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.SwapHoriz
@@ -96,7 +95,7 @@ fun MarketplaceScreen(
         Scaffold(
             containerColor = RikkaTheme.colors.background,
             topBar = {
-                // Transparent Top Bar with White Icons
+                // Transparent Top Bar with Centered Title
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -123,44 +122,7 @@ fun MarketplaceScreen(
                         variant = TextVariant.Large,
                     )
 
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Button(
-                            onClick = { navController.navigate(Destination.Matches.route) },
-                            variant = ButtonVariant.Ghost,
-                            size = ButtonSize.Icon,
-                        ) {
-                            androidx.compose.material3.Icon(
-                                imageVector = Icons.Default.SwapHoriz,
-                                contentDescription = "Coincidencias",
-                                tint = RikkaTheme.colors.onBackground
-                            )
-                        }
-                        Button(
-                            onClick = { navController.navigate(Destination.Alerts.route) },
-                            variant = ButtonVariant.Ghost,
-                            size = ButtonSize.Icon,
-                        ) {
-                            androidx.compose.material3.Icon(
-                                imageVector = Icons.Default.Notifications,
-                                contentDescription = "Alertas",
-                                tint = RikkaTheme.colors.onBackground
-                            )
-                        }
-                        Button(
-                            onClick = { navController.navigate(Destination.PublishOffer.route) },
-                            variant = ButtonVariant.Ghost,
-                            size = ButtonSize.Icon,
-                        ) {
-                            androidx.compose.material3.Icon(
-                                imageVector = Icons.Default.Add,
-                                contentDescription = "Publicar oferta",
-                                tint = RikkaTheme.colors.onBackground
-                            )
-                        }
-                    }
+                    Spacer(modifier = Modifier.size(40.dp))
                 }
             }
         ) { innerPadding ->
@@ -279,6 +241,60 @@ fun MarketplaceScreen(
                                 }
                             )
                         }
+                    }
+                }
+                // Matching Automático Card
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = { navController.navigate(Destination.Matches.route) },
+                    animation = CardAnimation.Press
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .background(
+                                        color = RikkaTheme.colors.primary.copy(alpha = 0.12f),
+                                        shape = androidx.compose.foundation.shape.CircleShape
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                androidx.compose.material3.Icon(
+                                    imageVector = Icons.Default.SwapHoriz,
+                                    contentDescription = null,
+                                    tint = RikkaTheme.colors.primary,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                            Column {
+                                Text(
+                                    text = "Matching Automático",
+                                    variant = TextVariant.P,
+                                    color = RikkaTheme.colors.onBackground
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = "Encuentra ofertas ideales al instante",
+                                    variant = TextVariant.Small,
+                                    color = RikkaTheme.colors.onBackground.copy(alpha = 0.6f)
+                                )
+                            }
+                        }
+                        androidx.compose.material3.Icon(
+                            imageVector = Icons.Default.ChevronRight,
+                            contentDescription = null,
+                            tint = RikkaTheme.colors.onBackground.copy(alpha = 0.4f),
+                            modifier = Modifier.size(20.dp)
+                        )
                     }
                 }
 
@@ -543,7 +559,7 @@ fun OfferCard(
             ) {
                 Text(
                     text = "${offer.currency} ${offer.amount}",
-                    variant = TextVariant.H2,
+                    variant = TextVariant.H3,
                     color = RikkaTheme.colors.onBackground
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {

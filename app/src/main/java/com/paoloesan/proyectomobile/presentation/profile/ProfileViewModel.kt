@@ -1,5 +1,7 @@
 package com.paoloesan.proyectomobile.presentation.profile
 
+import android.content.Context
+import com.paoloesan.proyectomobile.data.local.SessionManager
 import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,6 +21,7 @@ data class ProfileUiState(
     val nombres: String = "Freddy",
     val apellidos: String = "Delgado",
     val telefono: String = "987654321",
+    val isVerified: Boolean = false,
     val cuentas: List<BankAccount> = listOf(
         BankAccount(
             banco = "BCP",
@@ -41,6 +44,21 @@ class ProfileViewModel : ViewModel() {
 
     private val _uiState = MutableStateFlow(ProfileUiState())
     val uiState: StateFlow<ProfileUiState> = _uiState.asStateFlow()
+
+    fun loadProfile(context: Context) {
+        val isVerified = SessionManager.isVerified(context)
+        val nombres = SessionManager.getNombres(context)
+        val apellidos = SessionManager.getApellidos(context)
+        val telefono = SessionManager.getTelefono(context)
+        _uiState.update {
+            it.copy(
+                isVerified = isVerified,
+                nombres = nombres,
+                apellidos = apellidos,
+                telefono = telefono
+            )
+        }
+    }
 
     fun onNombresChange(value: String) {
         val filtered = value.filter { it.isLetter() || it == ' ' }
@@ -65,7 +83,7 @@ class ProfileViewModel : ViewModel() {
         _uiState.update { it.copy(isSuccess = false) }
     }
 
-    fun saveChanges() {
+    fun saveChanges(context: Context) {
         val current = _uiState.value
 
         if (current.nombres.isBlank() || current.apellidos.isBlank() || current.telefono.isBlank()) {
@@ -81,6 +99,8 @@ class ProfileViewModel : ViewModel() {
             }
             return
         }
+
+        SessionManager.saveProfileInfo(context, current.nombres, current.apellidos, current.telefono)
 
         _uiState.update {
             it.copy(isSuccess = true, errorMessage = null)

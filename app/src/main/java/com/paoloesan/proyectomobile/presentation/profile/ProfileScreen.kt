@@ -25,16 +25,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.AdminPanelSettings
-import androidx.compose.material.icons.filled.Gavel
-import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Phone
-import androidx.compose.material.icons.filled.VerifiedUser
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
@@ -56,8 +51,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.paoloesan.proyectomobile.data.local.SessionManager
-import com.paoloesan.proyectomobile.presentation.navigation.Destination
 import kotlinx.coroutines.launch
 import zed.rainxch.rikkaui.components.ui.PopupAnimation
 import zed.rainxch.rikkaui.components.ui.button.Button
@@ -88,6 +81,11 @@ fun ProfileScreen(
     val focusManager = LocalFocusManager.current
     val toastState = rememberToastHostState()
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+
+    LaunchedEffect(Unit) {
+        viewModel.loadProfile(context)
+    }
 
     LaunchedEffect(uiState.errorMessage) {
         uiState.errorMessage?.let { message ->
@@ -151,7 +149,17 @@ fun ProfileScreen(
                         variant = TextVariant.Large,
                     )
 
-                    Spacer(modifier = Modifier.size(40.dp))
+                    Button(
+                        onClick = { navController.navigate("settings") },
+                        variant = ButtonVariant.Ghost,
+                        size = ButtonSize.Icon,
+                    ) {
+                        androidx.compose.material3.Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = "Configuracion",
+                            tint = RikkaTheme.colors.onBackground
+                        )
+                    }
                 }
             }
         ) { innerPadding ->
@@ -208,82 +216,74 @@ fun ProfileScreen(
                             color = RikkaTheme.colors.onBackground
                         )
 
-                        Box(
-                            modifier = Modifier
-                                .background(
-                                    color = RikkaTheme.colors.primary.copy(alpha = 0.15f),
-                                    shape = RoundedCornerShape(4.dp)
+                        if (uiState.isVerified) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(2.dp)
+                                ) {
+                                    for (i in 1..5) {
+                                        val starColor =
+                                            if (i <= 4) Color(0xFFFFB74D) else Color.Gray.copy(alpha = 0.3f)
+                                        androidx.compose.material3.Icon(
+                                            imageVector = Icons.Default.Star,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(20.dp),
+                                            tint = starColor
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = "4.5",
+                                        variant = TextVariant.Large,
+                                        color = RikkaTheme.colors.onBackground
+                                    )
+                                }
+                                Text(
+                                    text = "120 reseñas",
+                                    variant = TextVariant.Small,
+                                    color = Color.Gray
                                 )
-                                .padding(horizontal = 8.dp, vertical = 4.dp)
-                        ) {
-                            Text(
-                                text = "Socio P2P Verificado",
-                                variant = TextVariant.Small,
-                                color = RikkaTheme.colors.primary
-                            )
+                            }
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .background(
+                                        color = RikkaTheme.colors.warning.copy(alpha = 0.15f),
+                                        shape = RoundedCornerShape(4.dp)
+                                    )
+                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                Text(
+                                    text = "Sin verificar",
+                                    variant = TextVariant.Small,
+                                    color = RikkaTheme.colors.warning
+                                )
+                            }
                         }
-                    }
-                }
 
-                // Personal Info Card
-                item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                            Text(
-                                text = "Informacion Personal",
-                                variant = TextVariant.Large,
-                                color = RikkaTheme.colors.onBackground
-                            )
-
-                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Label(text = "Nombres")
-                                Input(
-                                    value = uiState.nombres,
-                                    onValueChange = viewModel::onNombresChange,
-                                    placeholder = "Nombres",
-                                    leadingIcon = Icons.Default.Person,
-                                    modifier = Modifier.fillMaxWidth(),
-                                    singleLine = true
-                                )
-                            }
-
-                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Label(text = "Apellidos")
-                                Input(
-                                    value = uiState.apellidos,
-                                    onValueChange = viewModel::onApellidosChange,
-                                    placeholder = "Apellidos",
-                                    leadingIcon = Icons.Default.Person,
-                                    modifier = Modifier.fillMaxWidth(),
-                                    singleLine = true
-                                )
-                            }
-
-                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Label(text = "Telefono")
-                                Input(
-                                    value = uiState.telefono,
-                                    onValueChange = viewModel::onTelefonoChange,
-                                    placeholder = "987654321",
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                                    leadingIcon = Icons.Default.Phone,
-                                    modifier = Modifier.fillMaxWidth(),
-                                    singleLine = true
-                                )
-                            }
-
+                        if (!uiState.isVerified) {
                             Spacer(modifier = Modifier.height(4.dp))
-
-                            Button(
-                                onClick = { viewModel.saveChanges() },
-                                modifier = Modifier.fillMaxWidth(),
-                                text = "Guardar cambios"
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .border(
+                                        width = 1.dp,
+                                        color = RikkaTheme.colors.warning,
+                                        shape = RoundedCornerShape(999.dp)
+                                    )
+                                    .clickable { navController.navigate("identity_verification") }
+                                    .padding(horizontal = 16.dp, vertical = 6.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "Verificar cuenta",
+                                    variant = TextVariant.Small,
+                                    color = RikkaTheme.colors.warning
+                                )
+                            }
                         }
                     }
                 }
@@ -349,96 +349,7 @@ fun ProfileScreen(
                     }
                 }
 
-                // More Options Header
-                item {
-                    Text(
-                        text = "Mas opciones",
-                        variant = TextVariant.Large,
-                        color = RikkaTheme.colors.onBackground,
-                        modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
-                    )
-                }
 
-                // More Options Card List
-                item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column {
-                            ProfileMenuItem(
-                                icon = Icons.Default.VerifiedUser,
-                                title = "Verificacion de identidad",
-                                onClick = { navController.navigate("identity_verification") }
-                            )
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(1.dp)
-                                    .background(RikkaTheme.colors.muted.copy(alpha = 0.2f))
-                            )
-                            ProfileMenuItem(
-                                icon = Icons.Default.Notifications,
-                                title = "Alertas de tipo de cambio",
-                                onClick = { navController.navigate("alerts") }
-                            )
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(1.dp)
-                                    .background(RikkaTheme.colors.muted.copy(alpha = 0.2f))
-                            )
-                            ProfileMenuItem(
-                                icon = Icons.Default.Gavel,
-                                title = "Mis disputas",
-                                onClick = { navController.navigate("disputas") }
-                            )
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(1.dp)
-                                    .background(RikkaTheme.colors.muted.copy(alpha = 0.2f))
-                            )
-                            ProfileMenuItem(
-                                icon = Icons.Default.AdminPanelSettings,
-                                title = "Administracion de usuarios",
-                                onClick = { navController.navigate("admin_users") }
-                            )
-                        }
-                    }
-                }
-
-                // Logout Button
-                item {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    val context = LocalContext.current
-                    Button(
-                        onClick = {
-                            SessionManager.clearToken(context)
-                            navController.navigate(Destination.Login.route) {
-                                popUpTo(Destination.Marketplace.route) { inclusive = true }
-                            }
-                        },
-                        variant = ButtonVariant.Destructive,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
-                        ) {
-                            androidx.compose.material3.Icon(
-                                imageVector = Icons.AutoMirrored.Filled.Logout,
-                                contentDescription = null,
-                                tint = RikkaTheme.colors.destructive
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "Cerrar sesion",
-                                variant = TextVariant.P,
-                                color = RikkaTheme.colors.destructive
-                            )
-                        }
-                    }
-                }
             }
         }
     }
@@ -517,41 +428,6 @@ private fun BankAccountCard(cuenta: BankAccount) {
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun ProfileMenuItem(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    title: String,
-    onClick: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(vertical = 12.dp, horizontal = 4.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        androidx.compose.material3.Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = RikkaTheme.colors.primary,
-            modifier = Modifier.size(24.dp)
-        )
-        Spacer(modifier = Modifier.width(16.dp))
-        Text(
-            text = title,
-            variant = TextVariant.P,
-            color = RikkaTheme.colors.onBackground,
-            modifier = Modifier.weight(1f)
-        )
-        androidx.compose.material3.Icon(
-            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-            contentDescription = null,
-            tint = Color.Gray.copy(alpha = 0.7f),
-            modifier = Modifier.size(16.dp)
-        )
     }
 }
 

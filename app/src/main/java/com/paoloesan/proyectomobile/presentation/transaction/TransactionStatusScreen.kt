@@ -32,6 +32,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -39,6 +40,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import zed.rainxch.rikkaui.components.ui.button.Button
 import zed.rainxch.rikkaui.components.ui.button.ButtonSize
 import zed.rainxch.rikkaui.components.ui.button.ButtonVariant
@@ -46,17 +48,23 @@ import zed.rainxch.rikkaui.components.ui.card.Card
 import zed.rainxch.rikkaui.components.ui.icon.RikkaIcons
 import zed.rainxch.rikkaui.components.ui.text.Text
 import zed.rainxch.rikkaui.components.ui.text.TextVariant
+import zed.rainxch.rikkaui.components.ui.toast.ToastHost
+import zed.rainxch.rikkaui.components.ui.toast.ToastVariant
+import zed.rainxch.rikkaui.components.ui.toast.rememberToastHostState
 import zed.rainxch.rikkaui.foundation.RikkaTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TransactionStatusScreen(
+    isSeller: Boolean = false,
     onBack: () -> Unit,
     onViewBankDetails: () -> Unit,
     onChat: () -> Unit = {},
     onConfirmPayment: () -> Unit = {}
 ) {
     val focusManager = LocalFocusManager.current
+    val toastState = rememberToastHostState()
+    val scope = rememberCoroutineScope()
 
     Box(
         modifier = Modifier
@@ -65,6 +73,7 @@ fun TransactionStatusScreen(
     ) {
         Scaffold(
             containerColor = RikkaTheme.colors.background,
+            snackbarHost = { ToastHost(toastState) },
             topBar = {
                 Row(
                     modifier = Modifier
@@ -259,29 +268,74 @@ fun TransactionStatusScreen(
                         .padding(start = 24.dp, end = 24.dp, top = 16.dp, bottom = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Button(
-                        onClick = onViewBankDetails,
-                        modifier = Modifier.fillMaxWidth(),
-                        text = "Ver instrucciones bancarias"
-                    )
+                    if (isSeller) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Button(
+                                onClick = {
+                                    scope.launch {
+                                        toastState.show(
+                                            message = "Solicitud aceptada correctamente",
+                                            variant = ToastVariant.Success
+                                        )
+                                        kotlinx.coroutines.delay(1000)
+                                        onBack()
+                                    }
+                                },
+                                modifier = Modifier.weight(1f),
+                                text = "Aceptar"
+                            )
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
+                            Button(
+                                onClick = {
+                                    scope.launch {
+                                        toastState.show(
+                                            message = "Solicitud rechazada correctamente",
+                                            variant = ToastVariant.Destructive
+                                        )
+                                        kotlinx.coroutines.delay(1000)
+                                        onBack()
+                                    }
+                                },
+                                variant = ButtonVariant.Destructive,
+                                modifier = Modifier.weight(1f),
+                                text = "Rechazar"
+                            )
+                        }
+
                         Button(
                             onClick = onChat,
                             variant = ButtonVariant.Outline,
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier.fillMaxWidth(),
                             text = "Chat"
                         )
-
+                    } else {
                         Button(
-                            onClick = onConfirmPayment,
-                            variant = ButtonVariant.Outline,
-                            modifier = Modifier.weight(1f),
-                            text = "Confirmar recepcion"
+                            onClick = onViewBankDetails,
+                            modifier = Modifier.fillMaxWidth(),
+                            text = "Ver instrucciones bancarias"
                         )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Button(
+                                onClick = onChat,
+                                variant = ButtonVariant.Outline,
+                                modifier = Modifier.weight(1f),
+                                text = "Chat"
+                            )
+
+                            Button(
+                                onClick = onConfirmPayment,
+                                variant = ButtonVariant.Outline,
+                                modifier = Modifier.weight(1f),
+                                text = "Confirmar recepcion"
+                            )
+                        }
                     }
                 }
             }

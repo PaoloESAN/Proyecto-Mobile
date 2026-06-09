@@ -13,14 +13,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
@@ -37,7 +37,6 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.paoloesan.proyectomobile.presentation.navigation.Destination
 import kotlinx.coroutines.launch
 import zed.rainxch.rikkaui.components.ui.button.Button
 import zed.rainxch.rikkaui.components.ui.button.ButtonSize
@@ -46,6 +45,10 @@ import zed.rainxch.rikkaui.components.ui.card.Card
 import zed.rainxch.rikkaui.components.ui.card.CardAnimation
 import zed.rainxch.rikkaui.components.ui.icon.RikkaIcons
 import zed.rainxch.rikkaui.components.ui.input.Input
+import zed.rainxch.rikkaui.components.ui.tabs.Tab
+import zed.rainxch.rikkaui.components.ui.tabs.TabAnimation
+import zed.rainxch.rikkaui.components.ui.tabs.TabContent
+import zed.rainxch.rikkaui.components.ui.tabs.TabList
 import zed.rainxch.rikkaui.components.ui.text.Text
 import zed.rainxch.rikkaui.components.ui.text.TextVariant
 import zed.rainxch.rikkaui.components.ui.toast.ToastHost
@@ -65,10 +68,24 @@ data class MyOffer(
     val hasActiveTransaction: Boolean = false
 )
 
+data class IncomingRequest(
+    val id: String,
+    val buyerName: String,
+    val type: String, // "Compra" o "Venta"
+    val currency: String,
+    val amount: Double,
+    val rate: Double,
+    val paymentMethod: String,
+    var status: String // "Pendiente", "Aceptada", "Rechazada"
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MyOffersScreen(navController: NavController) {
+    // Pestaña Seleccionada: 0 = Mis solicitudes, 1 = Solicitudes
+    var selectedTab by remember { mutableStateOf(0) }
 
+    // Mis Ofertas ("Mis solicitudes")
     var offers by remember {
         mutableStateOf(
             listOf(
@@ -90,11 +107,49 @@ fun MyOffersScreen(navController: NavController) {
         )
     }
 
+    // Ofertas que otros me hacen a mí ("Solicitudes")
+    var incomingRequests by remember {
+        mutableStateOf(
+            listOf(
+                IncomingRequest(
+                    "1",
+                    "Juan Pérez",
+                    "Compra",
+                    "USD",
+                    100.0,
+                    3.75,
+                    "BCP",
+                    "Pendiente"
+                ),
+                IncomingRequest(
+                    "2",
+                    "María Gómez",
+                    "Venta",
+                    "PEN",
+                    200.0,
+                    1.0,
+                    "Yape",
+                    "Pendiente"
+                ),
+                IncomingRequest(
+                    "3",
+                    "Carlos López",
+                    "Compra",
+                    "USD",
+                    150.0,
+                    3.76,
+                    "Interbank",
+                    "Aceptada"
+                )
+            )
+        )
+    }
+
+    // Estados para edición y cancelación (Tab 0)
     var showCancelDialog by remember { mutableStateOf(false) }
     var showEditDialog by remember { mutableStateOf(false) }
     var selectedOffer by remember { mutableStateOf<MyOffer?>(null) }
 
-    // Estados para edición
     var editAmount by remember { mutableStateOf("") }
     var editRate by remember { mutableStateOf("") }
     var editMinLimit by remember { mutableStateOf("") }
@@ -119,7 +174,7 @@ fun MyOffersScreen(navController: NavController) {
             },
             text = {
                 Text(
-                    text = "Esta seguro de cancelar esta oferta?",
+                    text = "¿Está seguro de cancelar esta oferta?",
                     variant = TextVariant.P,
                     color = RikkaTheme.colors.onBackground
                 )
@@ -127,7 +182,7 @@ fun MyOffersScreen(navController: NavController) {
             confirmButton = {
                 Button(
                     onClick = {
-                        offers = offers.filter { it.id != selectedOffer!!.id }
+                        offers = offers.filter { it.id != selectedOffer?.id }
                         showCancelDialog = false
                         scope.launch {
                             toastState.show(
@@ -183,7 +238,7 @@ fun MyOffersScreen(navController: NavController) {
                     )
 
                     Text(
-                        text = "Tipo de cambio",
+                        text = "Tipo de Cambio",
                         variant = TextVariant.Small,
                         color = RikkaTheme.colors.onBackground
                     )
@@ -193,13 +248,13 @@ fun MyOffersScreen(navController: NavController) {
                             if (it.all { c -> c.isDigit() || c == '.' }) editRate = it
                         },
                         placeholder = "Tipo de cambio",
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
                     )
 
                     Text(
-                        text = "Monto minimo",
+                        text = "Límite Mínimo",
                         variant = TextVariant.Small,
                         color = RikkaTheme.colors.onBackground
                     )
@@ -208,14 +263,14 @@ fun MyOffersScreen(navController: NavController) {
                         onValueChange = {
                             if (it.all { c -> c.isDigit() || c == '.' }) editMinLimit = it
                         },
-                        placeholder = "Monto minimo",
+                        placeholder = "Límite mínimo",
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
                     )
 
                     Text(
-                        text = "Monto maximo",
+                        text = "Límite Máximo",
                         variant = TextVariant.Small,
                         color = RikkaTheme.colors.onBackground
                     )
@@ -224,21 +279,21 @@ fun MyOffersScreen(navController: NavController) {
                         onValueChange = {
                             if (it.all { c -> c.isDigit() || c == '.' }) editMaxLimit = it
                         },
-                        placeholder = "Monto maximo",
+                        placeholder = "Límite máximo",
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
                     )
 
                     Text(
-                        text = "Metodo de pago",
+                        text = "Método de Pago",
                         variant = TextVariant.Small,
                         color = RikkaTheme.colors.onBackground
                     )
                     Input(
                         value = editPaymentMethod,
                         onValueChange = { editPaymentMethod = it },
-                        placeholder = "Metodo de pago",
+                        placeholder = "BCP, Yape, etc.",
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
                     )
@@ -252,13 +307,13 @@ fun MyOffersScreen(navController: NavController) {
                         if (minVal != null && maxVal != null && minVal > maxVal) {
                             scope.launch {
                                 toastState.show(
-                                    message = "El monto minimo no puede ser mayor al maximo",
+                                    message = "El monto mínimo no puede ser mayor al máximo",
                                     variant = ToastVariant.Destructive
                                 )
                             }
                         } else {
                             offers = offers.map {
-                                if (it.id == selectedOffer!!.id) {
+                                if (it.id == selectedOffer?.id) {
                                     it.copy(
                                         amount = editAmount.toDoubleOrNull() ?: it.amount,
                                         rate = editRate.toDoubleOrNull() ?: it.rate,
@@ -299,11 +354,10 @@ fun MyOffersScreen(navController: NavController) {
             containerColor = RikkaTheme.colors.background,
             snackbarHost = {
                 ToastHost(
-                    hostState = toastState,
+                    hostState = toastState
                 )
             },
             topBar = {
-                // Transparent Top Bar with White Icons
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -325,152 +379,238 @@ fun MyOffersScreen(navController: NavController) {
                     }
 
                     Text(
-                        text = "Mis Ofertas",
+                        text = "Trades",
                         color = RikkaTheme.colors.onBackground,
                         variant = TextVariant.Large,
                     )
 
-                    Button(
-                        onClick = { navController.navigate(Destination.PublishOffer.route) },
-                        variant = ButtonVariant.Ghost,
-                        size = ButtonSize.Icon,
-                    ) {
-                        androidx.compose.material3.Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = "Publicar oferta",
-                            tint = RikkaTheme.colors.onBackground
-                        )
-                    }
+                    Spacer(modifier = Modifier.size(40.dp))
                 }
             }
         ) { innerPadding ->
-            if (offers.isEmpty()) {
-                Box(
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+            ) {
+                TabList(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding)
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null
-                        ) {
-                            focusManager.clearFocus()
-                        },
-                    contentAlignment = Alignment.Center
+                        .padding(horizontal = 16.dp)
+                        .fillMaxWidth()
                 ) {
-                    Text(
-                        text = "No tienes ofertas activas",
-                        variant = TextVariant.Large,
-                        color = Color.Gray
+                    Tab(
+                        modifier = Modifier.weight(1f),
+                        selected = selectedTab == 0,
+                        onClick = { selectedTab = 0 },
+                        text = "Mis solicitudes",
+                        animation = TabAnimation.Spring,
+                    )
+                    Tab(
+                        modifier = Modifier.weight(1f),
+                        selected = selectedTab == 1,
+                        onClick = { selectedTab = 1 },
+                        text = "Solicitudes",
                     )
                 }
-            } else {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding)
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null
-                        ) {
-                            focusManager.clearFocus()
-                        }
-                        .padding(horizontal = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    contentPadding = PaddingValues(vertical = 12.dp)
-                ) {
-                    items(offers, key = { it.id }) { offer ->
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            animation = CardAnimation.Press
-                        ) {
-                            Column {
-                                // Tipo y moneda
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    val isCompra = offer.type == "Compra"
-                                    Text(
-                                        text = "${offer.type} - ${offer.currency}",
-                                        variant = TextVariant.Large,
-                                        color = if (isCompra)
-                                            RikkaTheme.colors.primary
-                                        else
-                                            RikkaTheme.colors.destructive
-                                    )
-                                    Text(
-                                        text = "${offer.currency} ${offer.amount}",
-                                        variant = TextVariant.Large,
-                                        color = RikkaTheme.colors.onBackground
-                                    )
-                                }
 
-                                Spacer(modifier = Modifier.height(6.dp))
-
-                                Text(
-                                    text = "T.C.: ${offer.rate}  |  Metodo: ${offer.paymentMethod}",
-                                    variant = TextVariant.Small,
-                                    color = Color.Gray
-                                )
-                                Text(
-                                    text = "Limites: Min ${offer.minLimit} / Max ${offer.maxLimit}",
-                                    variant = TextVariant.Small,
-                                    color = Color.Gray
-                                )
-
-                                if (offer.hasActiveTransaction) {
-                                    Spacer(modifier = Modifier.height(6.dp))
-                                    Text(
-                                        text = "Tiene transaccion activa",
-                                        variant = TextVariant.Small,
-                                        color = RikkaTheme.colors.destructive
-                                    )
-                                }
-
-                                Spacer(modifier = Modifier.height(8.dp))
-
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    // Boton Editar
-                                    Button(
-                                        onClick = {
-                                            selectedOffer = offer
-                                            editAmount = offer.amount.toString()
-                                            editRate = offer.rate.toString()
-                                            editMinLimit = offer.minLimit.toString()
-                                            editMaxLimit = offer.maxLimit.toString()
-                                            editPaymentMethod = offer.paymentMethod
-                                            showEditDialog = true
+                TabContent {
+                    when (selectedTab) {
+                        0 -> {
+                            if (offers.isEmpty()) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .clickable(
+                                            interactionSource = remember { MutableInteractionSource() },
+                                            indication = null
+                                        ) {
+                                            focusManager.clearFocus()
                                         },
-                                        variant = ButtonVariant.Outline,
-                                        modifier = Modifier.weight(1f),
-                                        size = ButtonSize.Sm,
-                                        text = "Editar"
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = "No tienes solicitudes activas",
+                                        variant = TextVariant.Large,
+                                        color = Color.Gray
                                     )
-
-                                    // Boton Cancelar
-                                    Button(
-                                        onClick = {
-                                            if (offer.hasActiveTransaction) {
-                                                scope.launch {
-                                                    toastState.show(
-                                                        message = "No se puede cancelar: tiene transaccion activa",
-                                                        variant = ToastVariant.Destructive
+                                }
+                            } else {
+                                LazyColumn(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .clickable(
+                                            interactionSource = remember { MutableInteractionSource() },
+                                            indication = null
+                                        ) {
+                                            focusManager.clearFocus()
+                                        }
+                                        .padding(horizontal = 16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                                    contentPadding = PaddingValues(vertical = 12.dp)
+                                ) {
+                                    items(offers, key = { it.id }) { offer ->
+                                        Card(
+                                            onClick = {
+                                                navController.navigate("transactionStatus/TX001?isSeller=false")
+                                            },
+                                            modifier = Modifier.fillMaxWidth(),
+                                            animation = CardAnimation.Press
+                                        ) {
+                                            Column {
+                                                Row(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    val isCompra = offer.type == "Compra"
+                                                    Text(
+                                                        text = "${offer.type} - ${offer.currency}",
+                                                        variant = TextVariant.Large,
+                                                        color = if (isCompra) RikkaTheme.colors.primary else RikkaTheme.colors.destructive
+                                                    )
+                                                    Text(
+                                                        text = "${offer.currency} ${offer.amount}",
+                                                        variant = TextVariant.Large,
+                                                        color = RikkaTheme.colors.onBackground
                                                     )
                                                 }
-                                            } else {
-                                                selectedOffer = offer
-                                                showCancelDialog = true
+
+                                                Spacer(modifier = Modifier.height(6.dp))
+
+                                                Text(
+                                                    text = "T.C.: ${offer.rate}  |  Metodo: ${offer.paymentMethod}",
+                                                    variant = TextVariant.Small,
+                                                    color = Color.Gray
+                                                )
+                                                Text(
+                                                    text = "Limites: Min ${offer.minLimit} / Max ${offer.maxLimit}",
+                                                    variant = TextVariant.Small,
+                                                    color = Color.Gray
+                                                )
+
+                                                if (offer.hasActiveTransaction) {
+                                                    Spacer(modifier = Modifier.height(6.dp))
+                                                    Text(
+                                                        text = "Tiene transaccion activa",
+                                                        variant = TextVariant.Small,
+                                                        color = RikkaTheme.colors.destructive
+                                                    )
+                                                }
                                             }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        1 -> {
+                            if (incomingRequests.isEmpty()) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .clickable(
+                                            interactionSource = remember { MutableInteractionSource() },
+                                            indication = null
+                                        ) {
+                                            focusManager.clearFocus()
                                         },
-                                        variant = ButtonVariant.Destructive,
-                                        modifier = Modifier.weight(1f),
-                                        size = ButtonSize.Sm,
-                                        text = "Cancelar"
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = "No has recibido solicitudes",
+                                        variant = TextVariant.Large,
+                                        color = Color.Gray
                                     )
+                                }
+                            } else {
+                                LazyColumn(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .clickable(
+                                            interactionSource = remember { MutableInteractionSource() },
+                                            indication = null
+                                        ) {
+                                            focusManager.clearFocus()
+                                        }
+                                        .padding(horizontal = 16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                                    contentPadding = PaddingValues(vertical = 12.dp)
+                                ) {
+                                    items(incomingRequests, key = { it.id }) { req ->
+                                        Card(
+                                            onClick = {
+                                                navController.navigate("transactionStatus/TX001?isSeller=true")
+                                            },
+                                            modifier = Modifier.fillMaxWidth(),
+                                            animation = CardAnimation.Press
+                                        ) {
+                                            Column(
+                                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                                            ) {
+                                                Row(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    val isCompra = req.type == "Compra"
+                                                    Text(
+                                                        text = "Solicitud de ${req.buyerName}",
+                                                        variant = TextVariant.Large,
+                                                        color = RikkaTheme.colors.onBackground
+                                                    )
+                                                    val badgeBgColor = when (req.status) {
+                                                        "Aceptada" -> RikkaTheme.colors.primary.copy(
+                                                            alpha = 0.15f
+                                                        )
+
+                                                        "Rechazada" -> RikkaTheme.colors.destructive.copy(
+                                                            alpha = 0.15f
+                                                        )
+
+                                                        else -> RikkaTheme.colors.warning.copy(alpha = 0.15f)
+                                                    }
+                                                    val badgeTextColor = when (req.status) {
+                                                        "Aceptada" -> RikkaTheme.colors.primary
+                                                        "Rechazada" -> RikkaTheme.colors.destructive
+                                                        else -> RikkaTheme.colors.warning
+                                                    }
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .background(
+                                                                color = badgeBgColor,
+                                                                shape = RoundedCornerShape(4.dp)
+                                                            )
+                                                            .padding(
+                                                                horizontal = 8.dp,
+                                                                vertical = 4.dp
+                                                            )
+                                                    ) {
+                                                        Text(
+                                                            text = req.status,
+                                                            variant = TextVariant.Small,
+                                                            color = badgeTextColor
+                                                        )
+                                                    }
+                                                }
+
+                                                Spacer(modifier = Modifier.height(2.dp))
+
+                                                Text(
+                                                    text = "${if (req.type == "Compra") "Quiere comprarte" else "Quiere venderte"} ${req.currency} ${req.amount}",
+                                                    variant = TextVariant.P,
+                                                    color = RikkaTheme.colors.onBackground.copy(
+                                                        alpha = 0.8f
+                                                    )
+                                                )
+
+                                                Text(
+                                                    text = "T.C.: ${req.rate}  |  Metodo: ${req.paymentMethod}",
+                                                    variant = TextVariant.Small,
+                                                    color = Color.Gray
+                                                )
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
