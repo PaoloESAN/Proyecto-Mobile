@@ -30,8 +30,10 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -85,6 +87,8 @@ fun TransactionStatusScreen(
     type: String = "Compra",
     status: String = "Pendiente",
     uploaded: Boolean = false,
+    currency: String = "USD",
+    isRated: Boolean = false,
     onBack: () -> Unit,
     onViewBankDetails: () -> Unit,
     onChat: () -> Unit = {},
@@ -98,6 +102,7 @@ fun TransactionStatusScreen(
     val initialState = when (status) {
         "Aceptada", "Aceptado" -> TransactionState.EN_PROCESO
         "Rechazada", "Rechazado" -> TransactionState.RECHAZADA
+        "Finalizada", "Finalizado" -> TransactionState.FINALIZADA
         else -> TransactionState.ESPERANDO_ACEPTACION
     }
     var currentState by remember { mutableStateOf(initialState) }
@@ -105,10 +110,12 @@ fun TransactionStatusScreen(
     var showBankDetailsDialog by remember { mutableStateOf(false) }
     var showBuyerBankDetailsDialog by remember { mutableStateOf(false) }
 
-    var buyerVoucherUploaded by remember { mutableStateOf(!isSeller && uploaded) }
-    var sellerVoucherUploaded by remember { mutableStateOf(isSeller && uploaded) }
-    var buyerConfirmedReceipt by remember { mutableStateOf(false) }
-    var sellerConfirmedReceipt by remember { mutableStateOf(false) }
+    var buyerVoucherUploaded by remember { mutableStateOf(!isSeller && uploaded || initialState == TransactionState.FINALIZADA) }
+    var sellerVoucherUploaded by remember { mutableStateOf(isSeller && uploaded || initialState == TransactionState.FINALIZADA) }
+    var buyerConfirmedReceipt by remember { mutableStateOf(initialState == TransactionState.FINALIZADA) }
+    var sellerConfirmedReceipt by remember { mutableStateOf(initialState == TransactionState.FINALIZADA) }
+    var showDisputeDialog by remember { mutableStateOf(false) }
+    var isTransactionRated by remember { mutableStateOf(isRated) }
 
     androidx.compose.runtime.LaunchedEffect(buyerVoucherUploaded, sellerVoucherUploaded) {
         if (buyerVoucherUploaded && !sellerVoucherUploaded && !isSeller) {
@@ -125,10 +132,18 @@ fun TransactionStatusScreen(
         }
     }
 
+    val currencyClean = currency.uppercase()
     val amountDouble = amount.toDoubleOrNull() ?: 100.0
     val rateDouble = rate.toDoubleOrNull() ?: 3.85
-    val penAmount = amountDouble * rateDouble
+
+    val (usdAmount, penAmount) = if (currencyClean == "PEN") {
+        (amountDouble / rateDouble) to amountDouble
+    } else {
+        amountDouble to (amountDouble * rateDouble)
+    }
+
     val formattedPen = String.format(java.util.Locale.US, "%,.2f", penAmount)
+    val formattedUsd = String.format(java.util.Locale.US, "%,.2f", usdAmount)
 
     // Dialog: Bank details for buyer (Seller's bank details)
     if (showBankDetailsDialog) {
@@ -218,7 +233,7 @@ fun TransactionStatusScreen(
                             Text(text = "Moneda: USD", variant = TextVariant.Small, color = RikkaTheme.colors.onBackground)
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "Monto a depositar: $amount USD",
+                                text = "Monto a depositar: $formattedUsd USD",
                                 variant = TextVariant.P,
                                 color = RikkaTheme.colors.primary,
                                 style = androidx.compose.ui.text.TextStyle(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
@@ -239,7 +254,7 @@ fun TransactionStatusScreen(
     // Dialog: Voucher preview for seller or buyer
     if (showVoucherDialog) {
         val voucherTitle = if (isSeller) "Comprobante del Comprador (PEN)" else "Comprobante del Vendedor (USD)"
-        val voucherAmount = if (isSeller) "$formattedPen PEN" else "$amount USD"
+        val voucherAmount = if (isSeller) "$formattedPen PEN" else "$formattedUsd USD"
         val transactionCode = if (isSeller) "BCP-9081249-X" else "INT-5542123-Z"
 
         AlertDialog(
@@ -304,6 +319,49 @@ fun TransactionStatusScreen(
                 Button(
                     onClick = { showVoucherDialog = false },
                     text = "Cerrar"
+                )
+            }
+        )
+    }
+
+    if (showDisputeDialog) {
+        AlertDialog(
+            onDismissRequest = { showDisputeDialog = false },
+            containerColor = RikkaTheme.colors.background,
+            title = {
+                Text(
+                    text = "Abrir Disputa",
+                    variant = TextVariant.Large,
+                    color = RikkaTheme.colors.onBackground
+                )
+            },
+            text = {
+                Text(
+                    text = "¿Está seguro de iniciar una disputa? Esto pausará el proceso de intercambio de divisas y un administrador intervendrá para verificar los comprobantes de pago de ambas partes.",
+                    variant = TextVariant.P,
+                    color = RikkaTheme.colors.onBackground.copy(alpha = 0.8f)
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showDisputeDialog = false
+                        scope.launch {
+                            toastState.show(
+                                message = "Disputa iniciada correctamente. Soporte revisará el caso.",
+                                variant = ToastVariant.Success
+                            )
+                        }
+                    },
+                    variant = ButtonVariant.Destructive,
+                    text = "Iniciar Disputa"
+                )
+            },
+            dismissButton = {
+                Button(
+                    onClick = { showDisputeDialog = false },
+                    variant = ButtonVariant.Outline,
+                    text = "Volver"
                 )
             }
         )
@@ -378,8 +436,8 @@ fun TransactionStatusScreen(
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     contentPadding = PaddingValues(top = 12.dp, bottom = 24.dp)
                 ) {
-                    // 1. Rating Form (only when transaction is finished)
-                    if (currentState == TransactionState.FINALIZADA) {
+                    // 1. Rating Form (only when transaction is finished and not yet rated)
+                    if (currentState == TransactionState.FINALIZADA && !isTransactionRated) {
                         item {
                             Card(
                                 modifier = Modifier.fillMaxWidth()
@@ -401,21 +459,21 @@ fun TransactionStatusScreen(
                                         textAlign = androidx.compose.ui.text.style.TextAlign.Center
                                     )
                                     
-                                    var ratingSelection by remember { mutableStateOf(5) }
+                                    var ratingSelection by remember { mutableStateOf(0) }
                                     Row(
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.Center,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         for (i in 1..5) {
-                                            val isSelected = i <= ratingSelection
-                                            androidx.compose.material3.Icon(
-                                                imageVector = Icons.Default.Star,
-                                                contentDescription = null,
-                                                modifier = Modifier
-                                                    .size(36.dp)
-                                                    .clickable { ratingSelection = i },
-                                                tint = if (isSelected) Color(0xFFFFB74D) else Color.Gray.copy(alpha = 0.3f)
-                                            )
+                                            IconButton(onClick = { ratingSelection = i }) {
+                                                androidx.compose.material3.Icon(
+                                                    imageVector = if (i <= ratingSelection) Icons.Default.Star else Icons.Default.StarBorder,
+                                                    contentDescription = "Rating $i",
+                                                    tint = if (i <= ratingSelection) RikkaTheme.colors.primary else Color.Gray,
+                                                    modifier = Modifier.size(32.dp)
+                                                )
+                                            }
                                         }
                                     }
                                     
@@ -428,14 +486,14 @@ fun TransactionStatusScreen(
                                     )
                                     
                                     Button(
+                                        enabled = ratingSelection > 0,
                                         onClick = {
                                             scope.launch {
                                                 toastState.show(
                                                     message = "¡Gracias por calificar la transacción!",
                                                     variant = ToastVariant.Success
                                                 )
-                                                kotlinx.coroutines.delay(1200)
-                                                onBack()
+                                                isTransactionRated = true
                                             }
                                         },
                                         modifier = Modifier.fillMaxWidth(),
@@ -513,14 +571,50 @@ fun TransactionStatusScreen(
 
                                 TransactionBriefRow(
                                     icon = Icons.Default.CurrencyExchange,
-                                    label = "Operacion",
-                                    value = "$type de $amount USD"
+                                    label = "Operación",
+                                    value = if (type == "Compra") "Compra de USD" else "Venta de USD"
                                 )
 
                                 TransactionBriefRow(
                                     icon = Icons.Default.Person,
                                     label = "Contraparte",
                                     value = if (isSeller) "Mateo Rojas (Comprador)" else "Juan Perez (Vendedor)"
+                                )
+
+                                TransactionBriefRow(
+                                    icon = Icons.Default.Star,
+                                    label = "Tipo de Cambio",
+                                    value = "S/ $rate"
+                                )
+
+                                if (type == "Compra") {
+                                    TransactionBriefRow(
+                                        icon = Icons.Default.CheckCircle,
+                                        label = "Tú Enviaste (Pago)",
+                                        value = "$formattedPen PEN"
+                                    )
+                                    TransactionBriefRow(
+                                        icon = Icons.Default.CheckCircle,
+                                        label = "Tú Recibiste",
+                                        value = "$formattedUsd USD"
+                                    )
+                                } else {
+                                    TransactionBriefRow(
+                                        icon = Icons.Default.CheckCircle,
+                                        label = "Tú Enviaste",
+                                        value = "$formattedUsd USD"
+                                    )
+                                    TransactionBriefRow(
+                                        icon = Icons.Default.CheckCircle,
+                                        label = "Tú Recibiste (Cobro)",
+                                        value = "$formattedPen PEN"
+                                    )
+                                }
+
+                                TransactionBriefRow(
+                                    icon = Icons.Default.MoreVert,
+                                    label = "Banco Destino",
+                                    value = bank
                                 )
                             }
                         }
@@ -583,29 +677,96 @@ fun TransactionStatusScreen(
                                     TimelineStep(
                                         status = step3Status,
                                         title = "Pago realizado (Voucher enviado)",
-                                        subtitle = when (currentState) {
-                                            TransactionState.ESPERANDO_ACEPTACION, TransactionState.RECHAZADA -> "Pendiente de aceptación de la transacción"
-                                            TransactionState.EN_PROCESO -> {
+                                        subtitleContent = {
+                                            if (currentState == TransactionState.ESPERANDO_ACEPTACION || currentState == TransactionState.RECHAZADA) {
+                                                Text(
+                                                    text = "Pendiente de aceptación de la transacción",
+                                                    variant = TextVariant.Small,
+                                                    color = Color.Gray
+                                                )
+                                            } else {
                                                 val mine = if (isSeller) sellerVoucherUploaded else buyerVoucherUploaded
                                                 val peer = if (isSeller) buyerVoucherUploaded else sellerVoucherUploaded
-                                                "Voucher: Tú (${if (mine) "Listo" else "Pendiente"}) | Contraparte (${if (peer) "Listo" else "Pendiente"})"
+                                                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                                        Text(text = "Tú: ", variant = TextVariant.Small, color = Color.Gray)
+                                                        Text(
+                                                            text = if (mine) "Listo (Comprobante subido)" else "Pendiente",
+                                                            variant = TextVariant.Small,
+                                                            color = if (mine) Color(0xFF4CAF50) else Color(0xFFD32F2F)
+                                                        )
+                                                    }
+                                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                                        Text(text = "Contraparte: ", variant = TextVariant.Small, color = Color.Gray)
+                                                        Text(
+                                                            text = if (peer) "Listo (Comprobante subido)" else "Pendiente",
+                                                            variant = TextVariant.Small,
+                                                            color = if (peer) Color(0xFF4CAF50) else Color(0xFFD32F2F)
+                                                        )
+                                                    }
+                                                }
                                             }
-                                            else -> "Comprobante de pago subido correctamente por ambos"
                                         },
                                         isLast = false
                                     )
 
                                     TimelineStep(
                                         status = step4Status,
-                                        title = "Pago verificado y fondos liberados",
-                                        subtitle = when (currentState) {
-                                            TransactionState.FINALIZADA -> "Fondos liberados. Operación completada con éxito."
-                                            TransactionState.PAGADA_CON_VOUCHER -> {
+                                        title = "Pago verificado por ambas partes",
+                                        subtitleContent = {
+                                            if (currentState == TransactionState.FINALIZADA) {
+                                                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                                        Text(text = "Tú: ", variant = TextVariant.Small, color = Color.Gray)
+                                                        Text(
+                                                            text = "Confirmado",
+                                                            variant = TextVariant.Small,
+                                                            color = Color(0xFF4CAF50)
+                                                        )
+                                                    }
+                                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                                        Text(text = "Contraparte: ", variant = TextVariant.Small, color = Color.Gray)
+                                                        Text(
+                                                            text = "Confirmado",
+                                                            variant = TextVariant.Small,
+                                                            color = Color(0xFF4CAF50)
+                                                        )
+                                                    }
+                                                    Spacer(modifier = Modifier.height(2.dp))
+                                                    Text(
+                                                        text = "Fondos liberados. Operación completada con éxito.",
+                                                        variant = TextVariant.Small,
+                                                        color = Color.Gray
+                                                    )
+                                                }
+                                            } else if (currentState == TransactionState.PAGADA_CON_VOUCHER) {
                                                 val mineConf = if (isSeller) sellerConfirmedReceipt else buyerConfirmedReceipt
                                                 val peerConf = if (isSeller) buyerConfirmedReceipt else sellerConfirmedReceipt
-                                                "Confirmación: Tú (${if (mineConf) "Confirmado" else "Pendiente"}) | Contraparte (${if (peerConf) "Confirmado" else "Pendiente"})"
+                                                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                                        Text(text = "Tú: ", variant = TextVariant.Small, color = Color.Gray)
+                                                        Text(
+                                                            text = if (mineConf) "Confirmado" else "Pendiente",
+                                                            variant = TextVariant.Small,
+                                                            color = if (mineConf) Color(0xFF4CAF50) else Color(0xFFD32F2F)
+                                                        )
+                                                    }
+                                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                                        Text(text = "Contraparte: ", variant = TextVariant.Small, color = Color.Gray)
+                                                        Text(
+                                                            text = if (peerConf) "Confirmado" else "Pendiente",
+                                                            variant = TextVariant.Small,
+                                                            color = if (peerConf) Color(0xFF4CAF50) else Color(0xFFD32F2F)
+                                                        )
+                                                    }
+                                                }
+                                            } else {
+                                                Text(
+                                                    text = "Pendiente de verificación del depósito.",
+                                                    variant = TextVariant.Small,
+                                                    color = Color.Gray
+                                                )
                                             }
-                                            else -> "Pendiente de verificación del depósito."
                                         },
                                         isLast = true
                                     )
@@ -729,12 +890,23 @@ fun TransactionStatusScreen(
                         }
 
                         if (currentState == TransactionState.EN_PROCESO || currentState == TransactionState.PAGADA_CON_VOUCHER) {
-                            Button(
-                                onClick = onChat,
-                                variant = ButtonVariant.Outline,
+                            Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                text = "Chat"
-                            )
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Button(
+                                    onClick = onChat,
+                                    variant = ButtonVariant.Outline,
+                                    modifier = Modifier.weight(1f),
+                                    text = "Chat"
+                                )
+                                Button(
+                                    onClick = { showDisputeDialog = true },
+                                    variant = ButtonVariant.Destructive,
+                                    modifier = Modifier.weight(1f),
+                                    text = "Abrir disputa"
+                                )
+                            }
                         }
                     } else {
                         // Buyer View
@@ -815,12 +987,23 @@ fun TransactionStatusScreen(
                         }
 
                         if (currentState == TransactionState.EN_PROCESO || currentState == TransactionState.PAGADA_CON_VOUCHER) {
-                            Button(
-                                onClick = onChat,
-                                variant = ButtonVariant.Outline,
+                            Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                text = "Chat"
-                            )
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Button(
+                                    onClick = onChat,
+                                    variant = ButtonVariant.Outline,
+                                    modifier = Modifier.weight(1f),
+                                    text = "Chat"
+                                )
+                                Button(
+                                    onClick = { showDisputeDialog = true },
+                                    variant = ButtonVariant.Destructive,
+                                    modifier = Modifier.weight(1f),
+                                    text = "Abrir disputa"
+                                )
+                            }
                         }
                     }
                 }
@@ -875,7 +1058,8 @@ enum class TimelineStepStatus {
 private fun TimelineStep(
     status: TimelineStepStatus,
     title: String,
-    subtitle: String,
+    subtitle: String = "",
+    subtitleContent: @Composable (() -> Unit)? = null,
     isLast: Boolean
 ) {
     Row(
@@ -944,11 +1128,15 @@ private fun TimelineStep(
                 }
             )
 
-            Text(
-                text = subtitle,
-                variant = TextVariant.Small,
-                color = Color.Gray
-            )
+            if (subtitleContent != null) {
+                subtitleContent()
+            } else if (subtitle.isNotEmpty()) {
+                Text(
+                    text = subtitle,
+                    variant = TextVariant.Small,
+                    color = Color.Gray
+                )
+            }
         }
     }
 }

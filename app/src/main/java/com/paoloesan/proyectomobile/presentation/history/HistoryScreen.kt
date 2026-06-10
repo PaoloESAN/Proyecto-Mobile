@@ -65,7 +65,8 @@ data class HistoryItem(
     val tipoOperacion: String,
     val monto: Double,
     val tipoCambio: Double,
-    val estado: String
+    val estado: String,
+    val moneda: String = "USD"
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -74,16 +75,16 @@ fun HistoryScreen(navController: NavController) {
 
     val operaciones = remember {
         listOf(
-            HistoryItem(1, "05/06/2026", "Compra", 150.0, 3.75, "Finalizado"),
-            HistoryItem(2, "04/06/2026", "Venta", 300.0, 3.72, "Pendiente"),
-            HistoryItem(3, "03/06/2026", "Compra", 500.0, 3.70, "Finalizado"),
-            HistoryItem(4, "02/06/2026", "Venta", 250.0, 3.73, "Finalizado"),
-            HistoryItem(5, "01/06/2026", "Compra", 1000.0, 3.71, "Pendiente"),
-            HistoryItem(6, "31/05/2026", "Venta", 420.0, 3.74, "Finalizado"),
-            HistoryItem(7, "30/05/2026", "Compra", 800.0, 3.69, "Finalizado"),
-            HistoryItem(8, "29/05/2026", "Venta", 1500.0, 3.76, "Pendiente"),
-            HistoryItem(9, "28/05/2026", "Compra", 350.0, 3.72, "Finalizado"),
-            HistoryItem(10, "27/05/2026", "Venta", 620.0, 3.75, "Finalizado")
+            HistoryItem(1, "05/06/2026", "Compra", 150.0, 3.75, "Finalizado", "PEN"),
+            HistoryItem(2, "04/06/2026", "Venta", 300.0, 3.72, "Pendiente", "USD"),
+            HistoryItem(3, "03/06/2026", "Compra", 500.0, 3.70, "Finalizado", "PEN"),
+            HistoryItem(4, "02/06/2026", "Venta", 250.0, 3.73, "Finalizado", "USD"),
+            HistoryItem(5, "01/06/2026", "Compra", 1000.0, 3.71, "Pendiente", "PEN"),
+            HistoryItem(6, "31/05/2026", "Venta", 420.0, 3.74, "Finalizado", "USD"),
+            HistoryItem(7, "30/05/2026", "Compra", 800.0, 3.69, "Finalizado", "PEN"),
+            HistoryItem(8, "29/05/2026", "Venta", 1500.0, 3.76, "Pendiente", "USD"),
+            HistoryItem(9, "28/05/2026", "Compra", 350.0, 3.72, "Finalizado", "PEN"),
+            HistoryItem(10, "27/05/2026", "Venta", 620.0, 3.75, "Finalizado", "USD")
         )
     }
 
@@ -155,7 +156,7 @@ fun HistoryScreen(navController: NavController) {
                 contentPadding = PaddingValues(vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(operaciones, key = { it.id }) { item ->
+                items(operaciones.filter { it.estado == "Finalizado" }, key = { it.id }) { item ->
                     HistoryItemCard(
                         item = item,
                         isRated = item.id in operacionesCalificadas,
@@ -164,10 +165,11 @@ fun HistoryScreen(navController: NavController) {
                             mostrarDialogo = true
                         },
                         onCardClick = {
+                            val bankDetail = if (item.tipoOperacion == "Compra") "BCP - 191-99882211-0-45 (PEN)" else "Interbank - 200-3004455-1 (USD)"
                             navController.navigate(
                                 "transactionStatus/TX${
                                     item.id.toString().padStart(3, '0')
-                                }"
+                                }?isSeller=${item.tipoOperacion == "Venta"}&amount=${item.monto}&rate=${item.tipoCambio}&bank=$bankDetail&type=${item.tipoOperacion}&status=${item.estado}&currency=${item.moneda}"
                             )
                         }
                     )
@@ -320,33 +322,11 @@ fun HistoryItemCard(
                         color = Color.Gray
                     )
                     Text(
-                        text = "S/${item.monto}",
+                        text = "${item.moneda} ${item.monto}",
                         variant = TextVariant.H2,
                         color = RikkaTheme.colors.onBackground
                     )
                 }
-                Column(horizontalAlignment = Alignment.End) {
-                    Text(
-                        text = "Tipo de cambio",
-                        variant = TextVariant.Small,
-                        color = Color.Gray
-                    )
-                    Text(
-                        text = item.tipoCambio.toString(),
-                        variant = TextVariant.P,
-                        color = RikkaTheme.colors.onBackground
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                StatusBadge(estado = item.estado)
 
                 if (item.estado == "Finalizado") {
                     if (isRated) {

@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessTime
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.CurrencyExchange
@@ -169,11 +170,34 @@ fun OfferDetailScreen(
                                 )
                             }
 
-                            Text(
-                                text = "Juan Perez",
-                                variant = TextVariant.Large,
-                                color = RikkaTheme.colors.onBackground
-                            )
+                            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                Text(
+                                    text = "Juan Perez",
+                                    variant = TextVariant.Large,
+                                    color = RikkaTheme.colors.onBackground
+                                )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    androidx.compose.material3.Icon(
+                                        imageVector = Icons.Default.Star,
+                                        contentDescription = "Estrellas",
+                                        tint = Color(0xFFFFB74D),
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Text(
+                                        text = "4.5",
+                                        variant = TextVariant.Small,
+                                        color = RikkaTheme.colors.onBackground
+                                    )
+                                    Text(
+                                        text = "• 120 reseñas",
+                                        variant = TextVariant.Small,
+                                        color = Color.Gray
+                                    )
+                                }
+                            }
                         }
                     }
 
@@ -341,11 +365,6 @@ fun OfferDetailScreen(
                                 icon = Icons.Default.Tune,
                                 label = "Limites permitidos",
                                 value = "Minimo $minLimit / Maximo $maxLimit"
-                            )
-                            DetailItemRow(
-                                icon = Icons.Default.AccessTime,
-                                label = "Tiempo limite de pago",
-                                value = "15 minutos"
                             )
                         }
                     }

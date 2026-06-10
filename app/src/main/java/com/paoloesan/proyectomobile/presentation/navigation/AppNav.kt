@@ -176,7 +176,7 @@ sealed class Destination(
     )
 
     object TransactionStatus : Destination(
-        route = "transactionStatus/{transactionId}?isSeller={isSeller}&amount={amount}&rate={rate}&bank={bank}&type={type}&status={status}&uploaded={uploaded}",
+        route = "transactionStatus/{transactionId}?isSeller={isSeller}&amount={amount}&rate={rate}&bank={bank}&type={type}&status={status}&uploaded={uploaded}&currency={currency}&isRated={isRated}",
         title = "Estado de Transacción",
         content = { navController ->
             val arguments = navController.currentBackStackEntry?.arguments
@@ -188,6 +188,8 @@ sealed class Destination(
             val type = arguments?.getString("type") ?: "Compra"
             val status = arguments?.getString("status") ?: "Pendiente"
             val uploaded = arguments?.getString("uploaded")?.toBoolean() ?: false
+            val currency = arguments?.getString("currency") ?: "USD"
+            val isRated = arguments?.getString("isRated")?.toBoolean() ?: false
             TransactionStatusScreen(
                 isSeller = isSeller,
                 transactionId = transactionId,
@@ -197,6 +199,8 @@ sealed class Destination(
                 type = type,
                 status = status,
                 uploaded = uploaded,
+                currency = currency,
+                isRated = isRated,
                 onBack = {
                     navController.popBackStack()
                 },
