@@ -27,6 +27,9 @@ import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Payment
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.SwapHoriz
@@ -243,79 +246,90 @@ fun MarketplaceScreen(
                         }
                     }
                 }
-                // Matching Automático Card
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    onClick = { navController.navigate(Destination.Matches.route) },
-                    animation = CardAnimation.Press
+
+                // Offers List
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.fillMaxSize()
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    item {
+                        PartialOffersInfoCard()
+                    }
+
+                    item {
+                        // Matching Automático Card
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = { navController.navigate(Destination.Matches.route) },
+                            animation = CardAnimation.Press
                         ) {
-                            Box(
+                            Row(
                                 modifier = Modifier
-                                    .size(40.dp)
-                                    .background(
-                                        color = RikkaTheme.colors.primary.copy(alpha = 0.12f),
-                                        shape = androidx.compose.foundation.shape.CircleShape
-                                    ),
-                                contentAlignment = Alignment.Center
+                                    .fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(40.dp)
+                                            .background(
+                                                color = RikkaTheme.colors.primary.copy(alpha = 0.12f),
+                                                shape = androidx.compose.foundation.shape.CircleShape
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        androidx.compose.material3.Icon(
+                                            imageVector = Icons.Default.SwapHoriz,
+                                            contentDescription = null,
+                                            tint = RikkaTheme.colors.primary,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                    }
+                                    Column {
+                                        Text(
+                                            text = "Matching Automático",
+                                            variant = TextVariant.P,
+                                            color = RikkaTheme.colors.onBackground
+                                        )
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Text(
+                                            text = "Encuentra ofertas ideales al instante",
+                                            variant = TextVariant.Small,
+                                            color = RikkaTheme.colors.onBackground.copy(alpha = 0.6f)
+                                        )
+                                    }
+                                }
                                 androidx.compose.material3.Icon(
-                                    imageVector = Icons.Default.SwapHoriz,
+                                    imageVector = Icons.Default.ChevronRight,
                                     contentDescription = null,
-                                    tint = RikkaTheme.colors.primary,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            }
-                            Column {
-                                Text(
-                                    text = "Matching Automático",
-                                    variant = TextVariant.P,
-                                    color = RikkaTheme.colors.onBackground
-                                )
-                                Spacer(modifier = Modifier.height(2.dp))
-                                Text(
-                                    text = "Encuentra ofertas ideales al instante",
-                                    variant = TextVariant.Small,
-                                    color = RikkaTheme.colors.onBackground.copy(alpha = 0.6f)
+                                    tint = RikkaTheme.colors.onBackground.copy(alpha = 0.4f),
+                                    modifier = Modifier.size(20.dp)
                                 )
                             }
                         }
-                        androidx.compose.material3.Icon(
-                            imageVector = Icons.Default.ChevronRight,
-                            contentDescription = null,
-                            tint = RikkaTheme.colors.onBackground.copy(alpha = 0.4f),
-                            modifier = Modifier.size(20.dp)
-                        )
                     }
-                }
 
-                // Offers List
-                if (offers.isEmpty()) {
-                    Column(
-                        modifier = Modifier.fillMaxSize(),
-                        verticalArrangement = Arrangement.Center,
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = "No se encontraron ofertas disponibles",
-                            variant = TextVariant.Large,
-                            color = Color.Gray
-                        )
-                    }
-                } else {
-                    LazyColumn(
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                        modifier = Modifier.fillMaxSize()
-                    ) {
+                    if (offers.isEmpty()) {
+                        item {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 48.dp),
+                                verticalArrangement = Arrangement.Center,
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    text = "No se encontraron ofertas disponibles",
+                                    variant = TextVariant.Large,
+                                    color = Color.Gray
+                                )
+                            }
+                        }
+                    } else {
                         items(offers, key = { it.id }) { offer ->
                             OfferCard(
                                 offer = offer,
@@ -603,6 +617,111 @@ fun OfferCard(
                         variant = TextVariant.Small,
                         color = Color.Gray
                     )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PartialOffersInfoCard() {
+    var isExpanded by remember { mutableStateOf(false) }
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        onClick = { isExpanded = !isExpanded }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    androidx.compose.material3.Icon(
+                        imageVector = Icons.Default.Info,
+                        contentDescription = "Información",
+                        tint = RikkaTheme.colors.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Text(
+                        text = "¿Cómo funcionan las ofertas?",
+                        variant = TextVariant.P,
+                        color = RikkaTheme.colors.onBackground,
+                    )
+                }
+                androidx.compose.material3.Icon(
+                    imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                    contentDescription = if (isExpanded) "Colapsar" else "Expandir",
+                    tint = Color.Gray,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
+            if (isExpanded) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Al publicar una oferta, permites compras o ventas parciales según tus límites por transacción. El sistema descuenta el saldo automáticamente y ajusta inteligentemente el límite máximo si supera el monto restante disponible.",
+                    variant = TextVariant.Small,
+                    color = Color.Gray
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+
+                // Example Box
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            color = RikkaTheme.colors.muted.copy(alpha = 0.15f),
+                            shape = RoundedCornerShape(8.dp)
+                        )
+                        .padding(12.dp)
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(
+                            text = "Ejemplo práctico (Oferta de 1000 USD | Min: 100 / Max: 400):",
+                            variant = TextVariant.Small,
+                            color = RikkaTheme.colors.primary,
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(text = "•", variant = TextVariant.Small, color = Color.Gray)
+                            Text(
+                                text = "Usuario A toma 400 USD -> Quedan 600 USD de saldo (límite máximo sigue en 400 USD).",
+                                variant = TextVariant.Small,
+                                color = Color.Gray
+                            )
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(text = "•", variant = TextVariant.Small, color = Color.Gray)
+                            Text(
+                                text = "Usuario B toma 350 USD -> Quedan 250 USD de saldo.",
+                                variant = TextVariant.Small,
+                                color = Color.Gray
+                            )
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(text = "•", variant = TextVariant.Small, color = Color.Gray)
+                            Text(
+                                text = "Ajuste Inteligente -> El límite máximo se reduce automáticamente a 250 USD.",
+                                variant = TextVariant.Small,
+                                color = RikkaTheme.colors.success
+                            )
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(text = "•", variant = TextVariant.Small, color = Color.Gray)
+                            Text(
+                                text = "Usuario C toma los 250 USD restantes -> Monto total llega a 0 y la oferta se completa.",
+                                variant = TextVariant.Small,
+                                color = Color.Gray
+                            )
+                        }
+                    }
                 }
             }
         }
