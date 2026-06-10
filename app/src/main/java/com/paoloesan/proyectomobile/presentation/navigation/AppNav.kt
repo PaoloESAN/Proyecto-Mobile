@@ -45,7 +45,6 @@ import com.paoloesan.proyectomobile.presentation.transaction.ChatScreen
 import com.paoloesan.proyectomobile.presentation.transaction.ConfirmPaymentScreen
 import com.paoloesan.proyectomobile.presentation.transaction.OfferDetailScreen
 import com.paoloesan.proyectomobile.presentation.transaction.TransactionStatusScreen
-import com.paoloesan.proyectomobile.presentation.transaction.UploadVoucherScreen
 import com.paoloesan.proyectomobile.presentation.verification.IdentityVerificationScreen
 import zed.rainxch.rikkaui.components.ui.navigationbar.NavigationBar
 import zed.rainxch.rikkaui.components.ui.navigationbar.NavigationBarItem
@@ -205,7 +204,7 @@ sealed class Destination(
                     navController.popBackStack()
                 },
                 onViewBankDetails = {
-                    navController.navigate("bankDetails/$transactionId")
+                    navController.navigate("bankDetails/$transactionId?isSeller=$isSeller&amount=$amount&rate=$rate&bank=$bank&type=$type&status=$status&uploaded=$uploaded&currency=$currency")
                 },
                 onChat = {
                     navController.navigate("chat/$transactionId")
@@ -213,54 +212,41 @@ sealed class Destination(
                 onConfirmPayment = {
                     navController.navigate("confirm_payment")
                 },
-                onUploadVoucher = {
-                    navController.navigate("uploadVoucher/$transactionId")
-                }
+                onUploadVoucher = {}
             )
         }
     )
 
     object BankDetails : Destination(
-        route = "bankDetails/{transactionId}",
-        title = "Datos Bancarios",
+        route = "bankDetails/{transactionId}?isSeller={isSeller}&amount={amount}&rate={rate}&bank={bank}&type={type}&status={status}&uploaded={uploaded}&currency={currency}",
+        title = "Detalles de Pago",
         content = { navController ->
+            val arguments = navController.currentBackStackEntry?.arguments
+            val transactionId = arguments?.getString("transactionId") ?: "TX001"
+            val isSeller = arguments?.getString("isSeller")?.toBoolean() ?: false
+            val amount = arguments?.getString("amount") ?: "100.00"
+            val rate = arguments?.getString("rate") ?: "3.85"
+            val bank = arguments?.getString("bank") ?: "BCP - 191-99882211-0-45"
+            val type = arguments?.getString("type") ?: "Compra"
+            val status = arguments?.getString("status") ?: "Pendiente"
+            val uploaded = arguments?.getString("uploaded")?.toBoolean() ?: false
+            val currency = arguments?.getString("currency") ?: "USD"
             BankDetailsScreen(
+                isSeller = isSeller,
+                transactionId = transactionId,
+                amount = amount,
+                rate = rate,
+                bank = bank,
+                type = type,
+                status = status,
+                uploaded = uploaded,
+                currency = currency,
+                navController = navController,
                 onBack = {
                     navController.popBackStack()
-                },
-                onContinueToVoucher = {
-                    navController.navigate("uploadVoucher/TX001")
                 },
                 onChat = {
-                    navController.navigate("chat/TX001")
-                }
-            )
-        }
-    )
-
-    object UploadVoucher : Destination(
-        route = "uploadVoucher/{transactionId}",
-        title = "Subir Voucher",
-        content = { navController ->
-            UploadVoucherScreen(
-                onBack = {
-                    navController.popBackStack()
-                },
-                onVoucherSent = {
-                    val prevBackStackEntry = navController.previousBackStackEntry
-                    val prevArguments = prevBackStackEntry?.arguments
-                    val isSeller = prevArguments?.getString("isSeller")?.toBoolean() ?: false
-                    val amount = prevArguments?.getString("amount") ?: "100.00"
-                    val rate = prevArguments?.getString("rate") ?: "3.85"
-                    val bank = prevArguments?.getString("bank") ?: "BCP - 191-99882211-0-45"
-                    val type = prevArguments?.getString("type") ?: "Compra"
-                    val status = prevArguments?.getString("status") ?: "Pendiente"
-                    
-                    navController.navigate("transactionStatus/TX001?isSeller=$isSeller&amount=$amount&rate=$rate&bank=$bank&type=$type&status=$status&uploaded=true") {
-                        popUpTo("transactionStatus/TX001?isSeller=$isSeller&amount=$amount&rate=$rate&bank=$bank&type=$type&status=$status") {
-                            inclusive = true
-                        }
-                    }
+                    navController.navigate("chat/$transactionId")
                 }
             )
         }
@@ -318,7 +304,6 @@ val appDestinations = listOf(
     Destination.OfferDetail,
     Destination.TransactionStatus,
     Destination.BankDetails,
-    Destination.UploadVoucher,
     Destination.ConfirmPayment,
     Destination.Chat,
     Destination.DisputaLista,

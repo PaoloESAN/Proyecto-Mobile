@@ -217,6 +217,16 @@ fun MyOffersScreen(navController: NavController) {
                     3.80,
                     "BCP",
                     "Rechazada"
+                ),
+                SentRequest(
+                    "S4",
+                    "Mariano Beltrán",
+                    "Venta",
+                    "USD",
+                    220.0,
+                    3.78,
+                    "BCP",
+                    "En disputa"
                 )
             )
         )
@@ -553,7 +563,7 @@ fun MyOffersScreen(navController: NavController) {
                                                             alpha = 0.15f
                                                         )
 
-                                                        "Rechazada" -> RikkaTheme.colors.destructive.copy(
+                                                        "Rechazada", "En disputa" -> RikkaTheme.colors.destructive.copy(
                                                             alpha = 0.15f
                                                         )
 
@@ -561,7 +571,7 @@ fun MyOffersScreen(navController: NavController) {
                                                     }
                                                     val badgeTextColor = when (req.status) {
                                                         "Aceptada" -> RikkaTheme.colors.primary
-                                                        "Rechazada" -> RikkaTheme.colors.destructive
+                                                        "Rechazada", "En disputa" -> RikkaTheme.colors.destructive
                                                         else -> RikkaTheme.colors.warning
                                                     }
                                                     Box(
@@ -791,12 +801,12 @@ fun MyOffersScreen(navController: NavController) {
 
                                                                             val badgeBgColor = when (req.status) {
                                                                                 "Aceptada" -> RikkaTheme.colors.primary.copy(alpha = 0.15f)
-                                                                                "Rechazada" -> RikkaTheme.colors.destructive.copy(alpha = 0.15f)
+                                                                                "Rechazada", "En disputa" -> RikkaTheme.colors.destructive.copy(alpha = 0.15f)
                                                                                 else -> RikkaTheme.colors.warning.copy(alpha = 0.15f)
                                                                             }
                                                                             val badgeTextColor = when (req.status) {
                                                                                 "Aceptada" -> RikkaTheme.colors.primary
-                                                                                "Rechazada" -> RikkaTheme.colors.destructive
+                                                                                "Rechazada", "En disputa" -> RikkaTheme.colors.destructive
                                                                                 else -> RikkaTheme.colors.warning
                                                                             }
                                                                             Box(

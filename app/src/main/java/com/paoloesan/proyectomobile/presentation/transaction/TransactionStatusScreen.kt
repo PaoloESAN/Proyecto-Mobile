@@ -73,7 +73,8 @@ enum class TransactionState(
     EN_PROCESO("En proceso (Pendiente de pago)", Color(0xFF1E88E5), Icons.Default.AccessTime, Color(0xFFE3F2FD)),
     PAGADA_CON_VOUCHER("Pago enviado (Voucher subido)", Color(0xFF4CAF50), Icons.Default.CheckCircle, Color(0xFFE8F5E9)),
     FINALIZADA("Finalizada", Color(0xFF2E7D32), Icons.Default.CheckCircle, Color(0xFFE8F5E9)),
-    RECHAZADA("Rechazada", Color(0xFFD32F2F), Icons.Default.Cancel, Color(0xFFFFEBEE))
+    RECHAZADA("Rechazada", Color(0xFFD32F2F), Icons.Default.Cancel, Color(0xFFFFEBEE)),
+    EN_DISPUTA("En disputa", Color(0xFFD32F2F), Icons.Default.Cancel, Color(0xFFFFEBEE))
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -103,6 +104,7 @@ fun TransactionStatusScreen(
         "Aceptada", "Aceptado" -> TransactionState.EN_PROCESO
         "Rechazada", "Rechazado" -> TransactionState.RECHAZADA
         "Finalizada", "Finalizado" -> TransactionState.FINALIZADA
+        "En disputa", "Disputa" -> TransactionState.EN_DISPUTA
         else -> TransactionState.ESPERANDO_ACEPTACION
     }
     var currentState by remember { mutableStateOf(initialState) }
@@ -831,81 +833,24 @@ fun TransactionStatusScreen(
                                     text = "Esta transacción ha sido rechazada"
                                 )
                             }
-                            TransactionState.EN_PROCESO -> {
-                                Row(
+                            TransactionState.EN_DISPUTA -> {
+                                Button(
+                                    onClick = { },
+                                    enabled = false,
+                                    variant = ButtonVariant.Outline,
                                     modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                ) {
-                                    Button(
-                                        onClick = { showBuyerBankDetailsDialog = true },
-                                        variant = ButtonVariant.Outline,
-                                        modifier = Modifier.weight(1f),
-                                        text = "Ver cuenta"
-                                    )
-
-                                    val hasUploaded = sellerVoucherUploaded
-                                    Button(
-                                        onClick = onUploadVoucher,
-                                        enabled = !hasUploaded,
-                                        modifier = Modifier.weight(1f),
-                                        text = if (hasUploaded) "Comprobante subido" else "Subir comprobante"
-                                    )
-                                }
+                                    text = "Esta transacción se encuentra en disputa"
+                                )
                             }
-                            TransactionState.PAGADA_CON_VOUCHER -> {
-                                Row(
+                            TransactionState.EN_PROCESO, TransactionState.PAGADA_CON_VOUCHER -> {
+                                Button(
+                                    onClick = onViewBankDetails,
                                     modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                ) {
-                                    Button(
-                                        onClick = { showVoucherDialog = true },
-                                        variant = ButtonVariant.Outline,
-                                        modifier = Modifier.weight(1f),
-                                        text = "Ver comprobante"
-                                    )
-
-                                    val hasConfirmed = sellerConfirmedReceipt
-                                    Button(
-                                        onClick = {
-                                            scope.launch {
-                                                sellerConfirmedReceipt = true
-                                                toastState.show(
-                                                    message = "Recepción confirmada",
-                                                    variant = ToastVariant.Success
-                                                )
-                                                if (buyerConfirmedReceipt) {
-                                                    currentState = TransactionState.FINALIZADA
-                                                }
-                                            }
-                                        },
-                                        enabled = !hasConfirmed,
-                                        modifier = Modifier.weight(1f),
-                                        text = if (hasConfirmed) "Confirmado" else "Confirmar recepción"
-                                    )
-                                }
+                                    text = "Proceder con el pago"
+                                )
                             }
                             TransactionState.FINALIZADA -> {
                                 // No action buttons needed, rating card is shown
-                            }
-                        }
-
-                        if (currentState == TransactionState.EN_PROCESO || currentState == TransactionState.PAGADA_CON_VOUCHER) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                Button(
-                                    onClick = onChat,
-                                    variant = ButtonVariant.Outline,
-                                    modifier = Modifier.weight(1f),
-                                    text = "Chat"
-                                )
-                                Button(
-                                    onClick = { showDisputeDialog = true },
-                                    variant = ButtonVariant.Destructive,
-                                    modifier = Modifier.weight(1f),
-                                    text = "Abrir disputa"
-                                )
                             }
                         }
                     } else {
@@ -928,81 +873,24 @@ fun TransactionStatusScreen(
                                     text = "Esta transacción ha sido rechazada"
                                 )
                             }
-                            TransactionState.EN_PROCESO -> {
-                                Row(
+                            TransactionState.EN_DISPUTA -> {
+                                Button(
+                                    onClick = { },
+                                    enabled = false,
+                                    variant = ButtonVariant.Outline,
                                     modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                ) {
-                                    Button(
-                                        onClick = { showBankDetailsDialog = true },
-                                        variant = ButtonVariant.Outline,
-                                        modifier = Modifier.weight(1f),
-                                        text = "Ver datos de cuenta"
-                                    )
-
-                                    val hasUploaded = buyerVoucherUploaded
-                                    Button(
-                                        onClick = onUploadVoucher,
-                                        enabled = !hasUploaded,
-                                        modifier = Modifier.weight(1f),
-                                        text = if (hasUploaded) "Comprobante subido" else "Subir comprobante"
-                                    )
-                                }
+                                    text = "Esta transacción se encuentra en disputa"
+                                )
                             }
-                            TransactionState.PAGADA_CON_VOUCHER -> {
-                                Row(
+                            TransactionState.EN_PROCESO, TransactionState.PAGADA_CON_VOUCHER -> {
+                                Button(
+                                    onClick = onViewBankDetails,
                                     modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                ) {
-                                    Button(
-                                        onClick = { showVoucherDialog = true },
-                                        variant = ButtonVariant.Outline,
-                                        modifier = Modifier.weight(1f),
-                                        text = "Ver comprobante"
-                                    )
-
-                                    val hasConfirmed = buyerConfirmedReceipt
-                                    Button(
-                                        onClick = {
-                                            scope.launch {
-                                                buyerConfirmedReceipt = true
-                                                toastState.show(
-                                                    message = "Recepción confirmada",
-                                                    variant = ToastVariant.Success
-                                                )
-                                                if (sellerConfirmedReceipt) {
-                                                    currentState = TransactionState.FINALIZADA
-                                                }
-                                            }
-                                        },
-                                        enabled = !hasConfirmed,
-                                        modifier = Modifier.weight(1f),
-                                        text = if (hasConfirmed) "Confirmado" else "Confirmar recepción"
-                                    )
-                                }
+                                    text = "Proceder con el pago"
+                                )
                             }
                             TransactionState.FINALIZADA -> {
                                 // No actions needed, rating card is shown
-                            }
-                        }
-
-                        if (currentState == TransactionState.EN_PROCESO || currentState == TransactionState.PAGADA_CON_VOUCHER) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                Button(
-                                    onClick = onChat,
-                                    variant = ButtonVariant.Outline,
-                                    modifier = Modifier.weight(1f),
-                                    text = "Chat"
-                                )
-                                Button(
-                                    onClick = { showDisputeDialog = true },
-                                    variant = ButtonVariant.Destructive,
-                                    modifier = Modifier.weight(1f),
-                                    text = "Abrir disputa"
-                                )
                             }
                         }
                     }
