@@ -2,9 +2,12 @@ package com.example.app.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.core.graphics.drawable.toDrawable
 import com.paoloesan.proyectomobile.R
 import zed.rainxch.rikkaui.foundation.RikkaAccentPreset
 import zed.rainxch.rikkaui.foundation.RikkaPalette
@@ -34,9 +37,31 @@ fun AppTheme(
         Font(R.font.inter_black, FontWeight.Black)
     )
 
+    val view = LocalView.current
+    if (!view.isInEditMode) {
+        SideEffect {
+            val window = (view.context as? android.app.Activity)?.window
+            if (window != null) {
+                // Set system bar colors to transparent so they respect edge-to-edge
+                window.statusBarColor = android.graphics.Color.TRANSPARENT
+                window.navigationBarColor = android.graphics.Color.TRANSPARENT
+
+                // Set light/dark appearance for status and navigation bars
+                val windowInsetsController =
+                    androidx.core.view.WindowCompat.getInsetsController(window, view)
+                windowInsetsController.isAppearanceLightStatusBars = !isDark
+                windowInsetsController.isAppearanceLightNavigationBars = !isDark
+
+                // Set window background dynamically to match theme and prevent white flashes
+                val backgroundArgb = if (isDark) 0xFF09090B.toInt() else 0xFFFFFFFF.toInt()
+                window.setBackgroundDrawable(backgroundArgb.toDrawable())
+            }
+        }
+    }
+
     RikkaTheme(
         palette = RikkaPalette.Zinc,
-        accent = RikkaAccentPreset.Yellow,
+        accent = RikkaAccentPreset.Green,
         isDark = isDark,
         preset = RikkaStylePreset.Vega,
         typography = rikkaTypography(fontFamily, scale = RikkaStylePreset.Default.typeScale),

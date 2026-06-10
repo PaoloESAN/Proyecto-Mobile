@@ -2,11 +2,21 @@ package com.paoloesan.proyectomobile.data.local
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.State
 
 object SessionManager {
 
     private const val PREFS_NAME = "proyectomobile_session"
     private const val KEY_TOKEN = "auth_token"
+    private const val KEY_THEME = "theme_mode"
+    private const val KEY_VERIFIED = "user_verified"
+    private const val KEY_NOMBRES = "user_nombres"
+    private const val KEY_APELLIDOS = "user_apellidos"
+    private const val KEY_TELEFONO = "user_telefono"
+
+    private val _themeState = mutableStateOf("system")
+    val themeState: State<String> = _themeState
 
     private fun prefs(context: Context): SharedPreferences =
         context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -24,4 +34,41 @@ object SessionManager {
 
     fun isLoggedIn(context: Context): Boolean =
         getToken(context) != null
+
+    fun initTheme(context: Context) {
+        _themeState.value = getTheme(context)
+    }
+
+    fun saveTheme(context: Context, theme: String) {
+        prefs(context).edit().putString(KEY_THEME, theme).apply()
+        _themeState.value = theme
+    }
+
+    fun getTheme(context: Context): String =
+        prefs(context).getString(KEY_THEME, "system") ?: "system"
+
+    fun saveVerified(context: Context, isVerified: Boolean) {
+        prefs(context).edit().putBoolean(KEY_VERIFIED, isVerified).apply()
+    }
+
+    fun isVerified(context: Context): Boolean =
+        prefs(context).getBoolean(KEY_VERIFIED, false)
+
+    fun saveProfileInfo(context: Context, nombres: String, apellidos: String, telefono: String) {
+        prefs(context).edit()
+            .putString(KEY_NOMBRES, nombres)
+            .putString(KEY_APELLIDOS, apellidos)
+            .putString(KEY_TELEFONO, telefono)
+            .apply()
+    }
+
+    fun getNombres(context: Context): String =
+        prefs(context).getString(KEY_NOMBRES, "Freddy") ?: "Freddy"
+
+    fun getApellidos(context: Context): String =
+        prefs(context).getString(KEY_APELLIDOS, "Delgado") ?: "Delgado"
+
+    fun getTelefono(context: Context): String =
+        prefs(context).getString(KEY_TELEFONO, "987654321") ?: "987654321"
 }
+

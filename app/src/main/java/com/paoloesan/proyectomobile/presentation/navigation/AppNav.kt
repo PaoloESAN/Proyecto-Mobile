@@ -4,8 +4,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.Text
@@ -21,7 +23,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.paoloesan.proyectomobile.presentation.admin.AdminUsersScreen
-import com.paoloesan.proyectomobile.presentation.alert.AlertScreen
 import com.paoloesan.proyectomobile.presentation.auth.LoginScreen
 import com.paoloesan.proyectomobile.presentation.auth.RecoverPasswordScreen
 import com.paoloesan.proyectomobile.presentation.auth.RegistroScreen
@@ -36,12 +37,12 @@ import com.paoloesan.proyectomobile.presentation.p2p.MatchScreen
 import com.paoloesan.proyectomobile.presentation.p2p.MyOffersScreen
 import com.paoloesan.proyectomobile.presentation.p2p.PublishOfferScreen
 import com.paoloesan.proyectomobile.presentation.profile.ProfileScreen
+import com.paoloesan.proyectomobile.presentation.profile.SettingsScreen
+import com.paoloesan.proyectomobile.presentation.profile.EditProfileScreen
 import com.paoloesan.proyectomobile.presentation.transaction.BankDetailsScreen
 import com.paoloesan.proyectomobile.presentation.transaction.ChatScreen
-import com.paoloesan.proyectomobile.presentation.transaction.ConfirmPaymentScreen
 import com.paoloesan.proyectomobile.presentation.transaction.OfferDetailScreen
 import com.paoloesan.proyectomobile.presentation.transaction.TransactionStatusScreen
-import com.paoloesan.proyectomobile.presentation.transaction.UploadVoucherScreen
 import com.paoloesan.proyectomobile.presentation.verification.IdentityVerificationScreen
 import zed.rainxch.rikkaui.components.ui.navigationbar.NavigationBar
 import zed.rainxch.rikkaui.components.ui.navigationbar.NavigationBarItem
@@ -62,7 +63,7 @@ sealed class Destination(
 
     object Marketplace : Destination(
         route = "marketplace",
-        title = "Mercado P2P",
+        title = "Mercado",
         icon = Icons.Default.SwapHoriz,
         showInBottomBar = true,
         content = { navController -> MarketplaceScreen(navController) }
@@ -70,7 +71,9 @@ sealed class Destination(
 
     object PublishOffer : Destination(
         route = "publish_offer",
-        title = "Publicar Oferta",
+        title = "Crear",
+        icon = Icons.Default.Add,
+        showInBottomBar = true,
         content = { navController -> PublishOfferScreen(navController) }
     )
 
@@ -104,22 +107,20 @@ sealed class Destination(
         content = { navController -> ResetPasswordScreen(navController) }
     )
 
-    object ConfirmPayment : Destination(
-        route = "confirm_payment",
-        title = "Confirmar Pago",
-        content = { navController -> ConfirmPaymentScreen(navController) }
-    )
-
     object Chat : Destination(
-        route = "chat/{transactionId}",
+        route = "chat/{transactionId}?readOnly={readOnly}",
         title = "Chat de Transacción",
-        content = { navController -> ChatScreen(navController) }
+        content = { navController ->
+            val arguments = navController.currentBackStackEntry?.arguments
+            val readOnly = arguments?.getString("readOnly")?.toBoolean() ?: false
+            ChatScreen(navController = navController, readOnly = readOnly)
+        }
     )
 
     object MyOffers : Destination(
         route = "my_offers",
-        title = "Mis Ofertas",
-        icon = Icons.Default.Receipt,
+        title = "Ofertas",
+        icon = Icons.Default.Star,
         showInBottomBar = true,
         content = { navController -> MyOffersScreen(navController) }
     )
@@ -159,8 +160,8 @@ sealed class Destination(
         title = "Detalle de Oferta",
         content = { navController ->
             OfferDetailScreen(
-                onStartTransaction = {
-                    navController.navigate("transactionStatus/TX001")
+                onStartTransaction = { amount, rate, bank, type ->
+                    navController.navigate("transactionStatus/TX001?isSeller=false&amount=$amount&rate=$rate&bank=$bank&type=$type")
                 },
                 onBack = {
                     navController.popBackStack()
@@ -170,75 +171,99 @@ sealed class Destination(
     )
 
     object TransactionStatus : Destination(
-        route = "transactionStatus/{transactionId}",
+        route = "transactionStatus/{transactionId}?isSeller={isSeller}&amount={amount}&rate={rate}&bank={bank}&type={type}&status={status}&uploaded={uploaded}&currency={currency}&isRated={isRated}",
         title = "Estado de Transacción",
         content = { navController ->
+            val arguments = navController.currentBackStackEntry?.arguments
+            val transactionId = arguments?.getString("transactionId") ?: "TX001"
+            val isSeller = arguments?.getString("isSeller")?.toBoolean() ?: false
+            val amount = arguments?.getString("amount") ?: "100.00"
+            val rate = arguments?.getString("rate") ?: "3.85"
+            val bank = arguments?.getString("bank") ?: "BCP - 191-99882211-0-45"
+            val type = arguments?.getString("type") ?: "Compra"
+            val status = arguments?.getString("status") ?: "Pendiente"
+            val uploaded = arguments?.getString("uploaded")?.toBoolean() ?: false
+            val currency = arguments?.getString("currency") ?: "USD"
+            val isRated = arguments?.getString("isRated")?.toBoolean() ?: false
             TransactionStatusScreen(
+                isSeller = isSeller,
+                transactionId = transactionId,
+                amount = amount,
+                rate = rate,
+                bank = bank,
+                type = type,
+                status = status,
+                uploaded = uploaded,
+                currency = currency,
+                isRated = isRated,
                 onBack = {
                     navController.popBackStack()
                 },
                 onViewBankDetails = {
-                    navController.navigate("bankDetails/TX001")
+                    navController.navigate("bankDetails/$transactionId?isSeller=$isSeller&amount=$amount&rate=$rate&bank=$bank&type=$type&status=$status&uploaded=$uploaded&currency=$currency")
                 },
                 onChat = {
-                    navController.navigate("chat/TX001")
+                    navController.navigate("chat/$transactionId")
                 },
-                onConfirmPayment = {
-                    navController.navigate("confirm_payment")
-                }
+                onConfirmPayment = {},
+                onUploadVoucher = {}
             )
         }
     )
 
     object BankDetails : Destination(
-        route = "bankDetails/{transactionId}",
-        title = "Datos Bancarios",
+        route = "bankDetails/{transactionId}?isSeller={isSeller}&amount={amount}&rate={rate}&bank={bank}&type={type}&status={status}&uploaded={uploaded}&currency={currency}",
+        title = "Detalles de Pago",
         content = { navController ->
+            val arguments = navController.currentBackStackEntry?.arguments
+            val transactionId = arguments?.getString("transactionId") ?: "TX001"
+            val isSeller = arguments?.getString("isSeller")?.toBoolean() ?: false
+            val amount = arguments?.getString("amount") ?: "100.00"
+            val rate = arguments?.getString("rate") ?: "3.85"
+            val bank = arguments?.getString("bank") ?: "BCP - 191-99882211-0-45"
+            val type = arguments?.getString("type") ?: "Compra"
+            val status = arguments?.getString("status") ?: "Pendiente"
+            val uploaded = arguments?.getString("uploaded")?.toBoolean() ?: false
+            val currency = arguments?.getString("currency") ?: "USD"
             BankDetailsScreen(
+                isSeller = isSeller,
+                transactionId = transactionId,
+                amount = amount,
+                rate = rate,
+                bank = bank,
+                type = type,
+                status = status,
+                uploaded = uploaded,
+                currency = currency,
+                navController = navController,
                 onBack = {
                     navController.popBackStack()
-                },
-                onContinueToVoucher = {
-                    navController.navigate("uploadVoucher/TX001")
                 },
                 onChat = {
-                    navController.navigate("chat/TX001")
+                    navController.navigate("chat/$transactionId")
                 }
             )
         }
-    )
-
-    object UploadVoucher : Destination(
-        route = "uploadVoucher/{transactionId}",
-        title = "Subir Voucher",
-        content = { navController ->
-            UploadVoucherScreen(
-                onBack = {
-                    navController.popBackStack()
-                },
-                onVoucherSent = {
-                    navController.navigate("transactionStatus/TX001") {
-                        popUpTo("transactionStatus/TX001") {
-                            inclusive = true
-                        }
-                    }
-                }
-            )
-        }
-    )
-
-    object Alerts : Destination(
-        route = "alerts",
-        title = "Alertas de Tipo de Cambio",
-        content = { navController -> AlertScreen(navController) }
     )
 
     object Profile : Destination(
         route = "profile",
-        title = "Mi Perfil",
+        title = "Perfil",
         icon = Icons.Default.Person,
         showInBottomBar = true,
         content = { navController -> ProfileScreen(navController) }
+    )
+
+    object Settings : Destination(
+        route = "settings",
+        title = "Configuración",
+        content = { navController -> SettingsScreen(navController) }
+    )
+
+    object EditProfile : Destination(
+        route = "edit_profile",
+        title = "Editar Información",
+        content = { navController -> EditProfileScreen(navController) }
     )
 
     object AdminUsers : Destination(
@@ -261,12 +286,11 @@ val appDestinations = listOf(
     Destination.Matches,
     Destination.History,
     Destination.Profile,
-    Destination.Alerts,
+    Destination.Settings,
+    Destination.EditProfile,
     Destination.OfferDetail,
     Destination.TransactionStatus,
     Destination.BankDetails,
-    Destination.UploadVoucher,
-    Destination.ConfirmPayment,
     Destination.Chat,
     Destination.DisputaLista,
     Destination.AdminUsers
@@ -275,6 +299,7 @@ val appDestinations = listOf(
 val bottomBarDestinations = listOf(
     Destination.Marketplace,
     Destination.MyOffers,
+    Destination.PublishOffer,
     Destination.History,
     Destination.Profile
 )
@@ -321,7 +346,7 @@ fun AppNav() {
                     dest.icon?.let {
                         NavigationBarItem(
                             selected = currentRoute == dest.route,
-                            activeColor = RikkaTheme.colors.onBackground,
+                            activeColor = RikkaTheme.colors.primary,
                             onClick = {
                                 if (currentRoute != dest.route) {
                                     navController.navigate(dest.route) {

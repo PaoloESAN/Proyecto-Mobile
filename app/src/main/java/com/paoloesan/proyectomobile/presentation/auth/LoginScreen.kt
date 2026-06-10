@@ -2,6 +2,7 @@ package com.paoloesan.proyectomobile.presentation.auth
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,7 +25,6 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -40,12 +40,11 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
@@ -57,6 +56,7 @@ import zed.rainxch.rikkaui.components.ui.button.ButtonVariant
 import zed.rainxch.rikkaui.components.ui.checkbox.Checkbox
 import zed.rainxch.rikkaui.components.ui.icon.RikkaIcons
 import zed.rainxch.rikkaui.components.ui.input.Input
+import zed.rainxch.rikkaui.components.ui.label.Label
 import zed.rainxch.rikkaui.components.ui.text.Text
 import zed.rainxch.rikkaui.components.ui.text.TextVariant
 import zed.rainxch.rikkaui.components.ui.toast.ToastHost
@@ -226,11 +226,18 @@ fun LoginScreen(
                 }
             }
         ) { innerPadding ->
+            val focusManager = LocalFocusManager.current
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
                     .verticalScroll(rememberScrollState())
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) {
+                        focusManager.clearFocus()
+                    }
                     .padding(horizontal = 24.dp, vertical = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(24.dp)
@@ -243,12 +250,9 @@ fun LoginScreen(
                         .padding(top = 16.dp),
                     horizontalAlignment = Alignment.Start
                 ) {
-                    androidx.compose.material3.Text(
-                        text = "¡Hola, Bienvenido! 👋",
-                        style = MaterialTheme.typography.headlineLarge.copy(
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 32.sp
-                        ),
+                    Text(
+                        text = "¡Hola, Bienvenido!",
+                        variant = TextVariant.H1,
                         color = RikkaTheme.colors.onBackground
                     )
                     Spacer(modifier = Modifier.height(4.dp))
@@ -266,61 +270,57 @@ fun LoginScreen(
                         .padding(vertical = 24.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    // Email Label
-                    androidx.compose.material3.Text(
-                        text = "Correo electrónico",
-                        fontWeight = FontWeight.Bold,
-                        color = RikkaTheme.colors.primary,
-                        fontSize = 14.sp
-                    )
-
-                    Input(
-                        value = uiState.correo,
-                        onValueChange = viewModel::onCorreoChange,
-                        placeholder = "wu@kbro.com",
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                        leadingIcon = Icons.Default.Email,
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        enabled = !uiState.isLoading
-                    )
-
-                    Spacer(modifier = Modifier.height(2.dp))
-
-                    // Password Label
-                    androidx.compose.material3.Text(
-                        text = "Contraseña",
-                        fontWeight = FontWeight.Bold,
-                        color = RikkaTheme.colors.primary,
-                        fontSize = 14.sp
-                    )
-
-                    // Password Input with eye icon toggle overlay
-                    Box(
-                        modifier = Modifier.fillMaxWidth(),
-                        contentAlignment = Alignment.CenterEnd
-                    ) {
+                    Column {
+                        Label(
+                            text = "Correo electrónico",
+                        )
+                        Spacer(Modifier.height(4.dp))
                         Input(
-                            value = uiState.password,
-                            onValueChange = viewModel::onPasswordChange,
-                            placeholder = "Por favor escribe tu contraseña",
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                            visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                            leadingIcon = Icons.Default.Lock,
-                            trailingIcon = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                            value = uiState.correo,
+                            onValueChange = viewModel::onCorreoChange,
+                            placeholder = "wu@kbro.com",
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                            leadingIcon = Icons.Default.Email,
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
                             enabled = !uiState.isLoading
                         )
+                    }
 
-                        Box(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .clickable(
-                                    enabled = !uiState.isLoading,
-                                    onClick = { passwordVisible = !passwordVisible }
-                                )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Column {
+                        // Password Label
+                        Label(
+                            text = "Contraseña",
                         )
+
+                        // Password Input with eye icon toggle overlay
+                        Box(
+                            modifier = Modifier.fillMaxWidth(),
+                            contentAlignment = Alignment.CenterEnd
+                        ) {
+                            Input(
+                                value = uiState.password,
+                                onValueChange = viewModel::onPasswordChange,
+                                placeholder = "Por favor escribe tu contraseña",
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                                leadingIcon = Icons.Default.Lock,
+                                trailingIcon = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true,
+                                enabled = !uiState.isLoading
+                            )
+
+                            Box(
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .clickable(
+                                        enabled = !uiState.isLoading,
+                                        onClick = { passwordVisible = !passwordVisible }
+                                    )
+                            )
+                        }
                     }
 
                     // Remember Me & Forgot Password Row
@@ -329,27 +329,17 @@ fun LoginScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(5.dp)
-                        ) {
-                            Checkbox(
-                                checked = rememberMe,
-                                onCheckedChange = { rememberMe = it },
-                                enabled = !uiState.isLoading
-                            )
-                            androidx.compose.material3.Text(
-                                text = "Recordarme",
-                                fontSize = 14.sp,
-                                color = Color.DarkGray
-                            )
-                        }
+                        Checkbox(
+                            checked = rememberMe,
+                            onCheckedChange = { rememberMe = it },
+                            enabled = !uiState.isLoading,
+                            label = "Recordarme"
+                        )
 
-                        androidx.compose.material3.Text(
+                        Text(
                             text = "Olvide mi contraseña",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = RikkaTheme.colors.destructive,
+                            variant = TextVariant.Small,
+                            color = RikkaTheme.colors.primary,
                             modifier = Modifier.clickable(enabled = !uiState.isLoading) {
                                 navController.navigate(Destination.RecoverPassword.route)
                             }
@@ -372,12 +362,9 @@ fun LoginScreen(
                     } else {
                         Button(
                             onClick = { viewModel.login(context) },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(
-                                text = "Iniciar Sesion",
-                            )
-                        }
+                            modifier = Modifier.fillMaxWidth(),
+                            text = "Iniciar Sesion"
+                        )
                     }
 
                     // Or With Divider
@@ -393,11 +380,10 @@ fun LoginScreen(
                                 .height(1.dp)
                                 .background(Color.LightGray)
                         )
-                        androidx.compose.material3.Text(
+                        Text(
                             text = "O continúe con",
                             modifier = Modifier.padding(horizontal = 8.dp),
                             color = Color.Gray,
-                            fontSize = 12.sp
                         )
                         Box(
                             modifier = Modifier
@@ -468,16 +454,15 @@ fun LoginScreen(
                         .padding(bottom = 16.dp),
                     horizontalArrangement = Arrangement.Center
                 ) {
-                    androidx.compose.material3.Text(
+                    Text(
                         text = "¿No tienes una cuenta? ",
+                        variant = TextVariant.P,
                         color = RikkaTheme.colors.onBackground,
-                        fontSize = 14.sp
                     )
-                    androidx.compose.material3.Text(
+                    Text(
                         text = "Regístrate",
-                        color = RikkaTheme.colors.destructive,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp,
+                        variant = TextVariant.Large,
+                        color = RikkaTheme.colors.primary,
                         modifier = Modifier.clickable {
                             navController.navigate(Destination.Registro.route)
                         }

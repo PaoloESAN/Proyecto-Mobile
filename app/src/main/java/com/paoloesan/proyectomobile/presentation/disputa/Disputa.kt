@@ -5,6 +5,8 @@ data class Disputa(
     val estado: String,
     val comprador: String,
     val vendedor: String,
-    val transaccion: String
+    val transaccion: String,
+    val monto: String,
+    val mensaje: String
 )
 

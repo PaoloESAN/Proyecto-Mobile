@@ -1,60 +1,64 @@
 package com.paoloesan.proyectomobile.presentation.auth
 
-import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.LinkAnnotation
-import androidx.compose.ui.text.LinkInteractionListener
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.paoloesan.proyectomobile.R
+import com.paoloesan.proyectomobile.presentation.navigation.Destination
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import zed.rainxch.rikkaui.components.ui.button.Button
+import zed.rainxch.rikkaui.components.ui.button.ButtonSize
+import zed.rainxch.rikkaui.components.ui.button.ButtonVariant
+import zed.rainxch.rikkaui.components.ui.icon.RikkaIcons
+import zed.rainxch.rikkaui.components.ui.input.Input
+import zed.rainxch.rikkaui.components.ui.label.Label
+import zed.rainxch.rikkaui.components.ui.text.Text
+import zed.rainxch.rikkaui.components.ui.text.TextVariant
+import zed.rainxch.rikkaui.components.ui.toast.ToastHost
+import zed.rainxch.rikkaui.components.ui.toast.ToastVariant
+import zed.rainxch.rikkaui.components.ui.toast.rememberToastHostState
+import zed.rainxch.rikkaui.foundation.RikkaTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -63,193 +67,280 @@ fun RegistroScreen(
     viewModel: RegistroViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val snackbarHostState = remember { SnackbarHostState() }
+    val toastState = rememberToastHostState()
+    val scope = rememberCoroutineScope()
 
     var passwordVisible by remember { mutableStateOf(false) }
     var confirmPasswordVisible by remember { mutableStateOf(false) }
 
     LaunchedEffect(uiState.errorMessage) {
         uiState.errorMessage?.let { message ->
-            snackbarHostState.showSnackbar(message)
+            scope.launch {
+                toastState.show(
+                    message = message,
+                    variant = ToastVariant.Destructive
+                )
+            }
         }
     }
 
     LaunchedEffect(uiState.isSuccess) {
         if (uiState.isSuccess) {
-            snackbarHostState.showSnackbar("Cuenta creada correctamente")
+            scope.launch {
+                toastState.show(
+                    message = "Cuenta creada correctamente",
+                    variant = ToastVariant.Success
+                )
+            }
             delay(800)
             viewModel.resetSuccess()
             navController.popBackStack()
         }
     }
 
-    Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        topBar = {
-            TopAppBar(
-                title = { Text("Crear Cuenta") },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Regresar"
-                        )
-                    }
-                }
-            )
-        }
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp, vertical = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Box(
-                modifier = Modifier.size(120.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Image(
-                    painter = painterResource(id = R.drawable.ic_launcher_foreground),
-                    contentDescription = "Logo de la aplicación"
+    // Gradient / Background Container
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(RikkaTheme.colors.background)
+    ) {
+        Scaffold(
+            containerColor = RikkaTheme.colors.background,
+            snackbarHost = {
+                ToastHost(
+                    hostState = toastState,
                 )
-            }
-
-            Text(
-                text = "Registro de Usuario",
-                style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.Bold
-            )
-
-            Text(
-                text = "Crea tu cuenta para comenzar a usar la aplicación",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            OutlinedTextField(
-                value = uiState.nombres,
-                onValueChange = viewModel::onNombresChange,
-                label = { Text("Nombres") },
-                leadingIcon = {
-                    Icon(imageVector = Icons.Default.Person, contentDescription = null)
-                },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                enabled = !uiState.isLoading
-            )
-
-            OutlinedTextField(
-                value = uiState.apellidos,
-                onValueChange = viewModel::onApellidosChange,
-                label = { Text("Apellidos") },
-                leadingIcon = {
-                    Icon(imageVector = Icons.Default.Person, contentDescription = null)
-                },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                enabled = !uiState.isLoading
-            )
-
-            OutlinedTextField(
-                value = uiState.correo,
-                onValueChange = viewModel::onCorreoChange,
-                label = { Text("Correo electrónico") },
-                placeholder = { Text("ejemplo@correo.com") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                leadingIcon = {
-                    Icon(imageVector = Icons.Default.Email, contentDescription = null)
-                },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                enabled = !uiState.isLoading
-            )
-
-            OutlinedTextField(
-                value = uiState.password,
-                onValueChange = viewModel::onPasswordChange,
-                label = { Text("Contraseña") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                leadingIcon = {
-                    Icon(imageVector = Icons.Default.Lock, contentDescription = null)
-                },
-                trailingIcon = {
-                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                        Icon(
-                            imageVector = if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                            contentDescription = if (passwordVisible) "Ocultar contraseña" else "Mostrar contraseña"
-                        )
-                    }
-                },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                enabled = !uiState.isLoading
-            )
-
-            OutlinedTextField(
-                value = uiState.confirmarPassword,
-                onValueChange = viewModel::onConfirmarPasswordChange,
-                label = { Text("Confirmar contraseña") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                visualTransformation = if (confirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                leadingIcon = {
-                    Icon(imageVector = Icons.Default.Lock, contentDescription = null)
-                },
-                trailingIcon = {
-                    IconButton(onClick = { confirmPasswordVisible = !confirmPasswordVisible }) {
-                        Icon(
-                            imageVector = if (confirmPasswordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                            contentDescription = if (confirmPasswordVisible) "Ocultar contraseña" else "Mostrar contraseña"
-                        )
-                    }
-                },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                enabled = !uiState.isLoading
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            if (uiState.isLoading) {
-                CircularProgressIndicator(modifier = Modifier.size(40.dp))
-            } else {
-                Button(
-                    onClick = { viewModel.register() },
-                    modifier = Modifier.fillMaxWidth()
+            },
+            topBar = {
+                // Transparent Top Bar with White Icons
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .statusBarsPadding()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Registrarse")
+                    Button(
+                        onClick = { navController.popBackStack() },
+                        variant = ButtonVariant.Ghost,
+                        size = ButtonSize.Icon,
+                    ) {
+                        androidx.compose.material3.Icon(
+                            imageVector = RikkaIcons.ArrowLeft,
+                            contentDescription = "Volver",
+                            tint = RikkaTheme.colors.onBackground
+                        )
+                    }
+
+                    Text(
+                        text = "Crear Cuenta",
+                        color = RikkaTheme.colors.onBackground,
+                        variant = TextVariant.Large,
+                    )
+
+                    Spacer(modifier = Modifier.size(40.dp))
                 }
             }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            val loginLinkInteractionListener = LinkInteractionListener {
-                navController.navigate("login")
-            }
-            Text(
-                text = buildAnnotatedString {
-                    withLink(
-                        LinkAnnotation.Clickable(
-                            "Iniciar sesión",
-                            linkInteractionListener = loginLinkInteractionListener
-                        )
+        ) { innerPadding ->
+            val focusManager = LocalFocusManager.current
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .verticalScroll(rememberScrollState())
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
                     ) {
-                        append("¿Ya tienes cuenta? Iniciar sesión")
+                        focusManager.clearFocus()
                     }
-                },
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(vertical = 8.dp)
-            )
+                    .padding(horizontal = 24.dp, vertical = 8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(24.dp)
+            ) {
 
-            Spacer(modifier = Modifier.height(16.dp))
+                // Welcome Header
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 16.dp),
+                    horizontalAlignment = Alignment.Start
+                ) {
+                    Text(
+                        text = "Crea tu cuenta",
+                        variant = TextVariant.H1,
+                        color = RikkaTheme.colors.onBackground
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Para empezar a intercambiar",
+                        variant = TextVariant.Large,
+                        color = Color.Gray
+                    )
+                }
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Column {
+                        // Nombres Label & Input
+                        Label("Nombres")
+                        Spacer(Modifier.height(4.dp))
+                        Input(
+                            value = uiState.nombres,
+                            onValueChange = viewModel::onNombresChange,
+                            placeholder = "Escribe tus nombres",
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
+                            leadingIcon = Icons.Default.Person,
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            enabled = !uiState.isLoading
+                        )
+                    }
+
+                    Column {
+                        // Apellidos Label & Input
+                        Label("Apellidos")
+                        Spacer(Modifier.height(4.dp))
+                        Input(
+                            value = uiState.apellidos,
+                            onValueChange = viewModel::onApellidosChange,
+                            placeholder = "Escribe tus apellidos",
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
+                            leadingIcon = Icons.Default.Person,
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            enabled = !uiState.isLoading
+                        )
+                    }
+
+                    Column {
+                        // Correo Label & Input
+                        Label("Correo electrónico")
+                        Spacer(Modifier.height(4.dp))
+                        Input(
+                            value = uiState.correo,
+                            onValueChange = viewModel::onCorreoChange,
+                            placeholder = "ejemplo@correo.com",
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                            leadingIcon = Icons.Default.Email,
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            enabled = !uiState.isLoading
+                        )
+                    }
+
+                    Column {
+                        // Contraseña Label & Input
+                        Label("Contraseña")
+                        Box(
+                            modifier = Modifier.fillMaxWidth(),
+                            contentAlignment = Alignment.CenterEnd
+                        ) {
+                            Input(
+                                value = uiState.password,
+                                onValueChange = viewModel::onPasswordChange,
+                                placeholder = "Por favor escribe tu contraseña",
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                                leadingIcon = Icons.Default.Lock,
+                                trailingIcon = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true,
+                                enabled = !uiState.isLoading
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .clickable(
+                                        enabled = !uiState.isLoading,
+                                        onClick = { passwordVisible = !passwordVisible }
+                                    )
+                            )
+                        }
+                    }
+
+                    Column {
+                        // Confirmar Contraseña Label & Input
+                        Label("Confirmar contraseña")
+                        Box(
+                            modifier = Modifier.fillMaxWidth(),
+                            contentAlignment = Alignment.CenterEnd
+                        ) {
+                            Input(
+                                value = uiState.confirmarPassword,
+                                onValueChange = viewModel::onConfirmarPasswordChange,
+                                placeholder = "Repite tu contraseña",
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                                visualTransformation = if (confirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                                leadingIcon = Icons.Default.Lock,
+                                trailingIcon = if (confirmPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true,
+                                enabled = !uiState.isLoading
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .clickable(
+                                        enabled = !uiState.isLoading,
+                                        onClick = {
+                                            confirmPasswordVisible = !confirmPasswordVisible
+                                        }
+                                    )
+                            )
+                        }
+                    }
+
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    // Registrarse Button
+                    if (uiState.isLoading) {
+                        Box(
+                            modifier = Modifier.fillMaxWidth(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(40.dp),
+                                color = RikkaTheme.colors.primary
+                            )
+                        }
+                    } else {
+                        Button(
+                            onClick = { viewModel.register() },
+                            modifier = Modifier.fillMaxWidth(),
+                            text = "Registrarse"
+                        )
+                    }
+                }
+
+                // Login Link Footer
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp),
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = "¿Ya tienes cuenta? ",
+                        variant = TextVariant.P,
+                        color = RikkaTheme.colors.onBackground,
+                    )
+                    Text(
+                        text = "Iniciar sesión",
+                        variant = TextVariant.Large,
+                        color = RikkaTheme.colors.primary,
+                        modifier = Modifier.clickable {
+                            navController.navigate(Destination.Login.route)
+                        }
+                    )
+                }
+            }
         }
     }
 }
