@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -22,7 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.Payment
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material3.AlertDialog
+import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
@@ -81,46 +82,7 @@ fun MatchScreen(navController: NavController) {
         )
     }
 
-    var showDialog by remember { mutableStateOf(false) }
-    var selectedMatch by remember { mutableStateOf<MatchedOffer?>(null) }
     val focusManager = LocalFocusManager.current
-
-    if (showDialog && selectedMatch != null) {
-        AlertDialog(
-            onDismissRequest = { showDialog = false },
-            containerColor = RikkaTheme.colors.background,
-            title = {
-                Text(
-                    text = "Iniciar Transaccion",
-                    variant = TextVariant.H2,
-                    color = RikkaTheme.colors.onBackground
-                )
-            },
-            text = {
-                Text(
-                    text = "¿Deseas iniciar una transaccion con ${selectedMatch!!.username}?",
-                    variant = TextVariant.P,
-                    color = RikkaTheme.colors.onBackground
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        showDialog = false
-                        navController.navigate("transactionStatus/TX001")
-                    },
-                    text = "Confirmar"
-                )
-            },
-            dismissButton = {
-                Button(
-                    onClick = { showDialog = false },
-                    variant = ButtonVariant.Outline,
-                    text = "Cancelar"
-                )
-            }
-        )
-    }
 
     Box(
         modifier = Modifier
@@ -193,130 +155,102 @@ fun MatchScreen(navController: NavController) {
                         val operationColor =
                             if (isCompra) RikkaTheme.colors.primary else RikkaTheme.colors.destructive
                         Card(
+                            onClick = {
+                                navController.navigate("offerDetail/${match.id}")
+                            },
                             modifier = Modifier.fillMaxWidth(),
                             animation = CardAnimation.Press
                         ) {
-                            Column(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                // User Header
+                            Column {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
                                         androidx.compose.material3.Icon(
                                             imageVector = Icons.Default.Person,
                                             contentDescription = null,
-                                            tint = RikkaTheme.colors.primary,
-                                            modifier = Modifier.size(24.dp)
+                                            tint = RikkaTheme.colors.primary
                                         )
-
+                                        Spacer(modifier = Modifier.width(8.dp))
                                         Text(
                                             text = match.username,
-                                            variant = TextVariant.Large,
+                                            variant = TextVariant.P,
                                             color = RikkaTheme.colors.onBackground
                                         )
                                     }
-
-                                    Box(
-                                        modifier = Modifier
-                                            .background(
-                                                color = operationColor.copy(alpha = 0.15f),
-                                                shape = RoundedCornerShape(4.dp)
-                                            )
-                                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                                    ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        androidx.compose.material3.Icon(
+                                            imageVector = Icons.Default.SwapHoriz,
+                                            contentDescription = null,
+                                            tint = if (isCompra) RikkaTheme.colors.primary else RikkaTheme.colors.destructive,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
                                         Text(
                                             text = match.type,
-                                            variant = TextVariant.Small,
-                                            color = operationColor
+                                            variant = TextVariant.P,
+                                            color = if (isCompra) RikkaTheme.colors.primary else RikkaTheme.colors.destructive
                                         )
                                     }
                                 }
 
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(1.dp)
-                                        .background(RikkaTheme.colors.muted.copy(alpha = 0.2f))
-                                )
+                                Spacer(modifier = Modifier.height(8.dp))
 
-                                // Financial details and payment method with limits
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    // Left Column: T.C. and Payment Method
-                                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                        ) {
-                                            androidx.compose.material3.Icon(
-                                                imageVector = Icons.Default.AttachMoney,
-                                                contentDescription = null,
-                                                tint = RikkaTheme.colors.primary,
-                                                modifier = Modifier.size(16.dp)
-                                            )
-                                            Text(
-                                                text = "T.C.: ${match.exchangeRate}",
-                                                variant = TextVariant.Small,
-                                                color = Color.Gray
-                                            )
-                                        }
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                        ) {
-                                            androidx.compose.material3.Icon(
-                                                imageVector = Icons.Default.Payment,
-                                                contentDescription = null,
-                                                tint = Color.Gray,
-                                                modifier = Modifier.size(16.dp)
-                                            )
-                                            Text(
-                                                text = match.paymentMethod,
-                                                variant = TextVariant.Small,
-                                                color = Color.Gray
-                                            )
-                                        }
-                                    }
-
-                                    // Right Column: Compatible Amount and Min/Max Limits
-                                    Column(
-                                        horizontalAlignment = Alignment.End,
-                                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
+                                    Text(
+                                        text = "${match.currency} ${match.compatibleAmount}",
+                                        variant = TextVariant.H3,
+                                        color = RikkaTheme.colors.onBackground
+                                    )
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        androidx.compose.material3.Icon(
+                                            imageVector = Icons.Default.AttachMoney,
+                                            contentDescription = null,
+                                            tint = RikkaTheme.colors.onBackground,
+                                            modifier = Modifier.width(18.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
                                         Text(
-                                            text = "${match.currency} ${match.compatibleAmount}",
-                                            variant = TextVariant.Large,
+                                            text = "T.C.: ${match.exchangeRate}",
+                                            variant = TextVariant.P,
                                             color = RikkaTheme.colors.onBackground
                                         )
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Limites: Min ${match.minAmount.toInt()} / Max ${match.maxAmount.toInt()}",
+                                        variant = TextVariant.Small,
+                                        color = Color.Gray
+                                    )
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        androidx.compose.material3.Icon(
+                                            imageVector = Icons.Default.Payment,
+                                            contentDescription = null,
+                                            modifier = Modifier.width(16.dp),
+                                            tint = Color.Gray
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
                                         Text(
-                                            text = "Min ${match.minAmount.toInt()} / Max ${match.maxAmount.toInt()}",
+                                            text = match.paymentMethod,
                                             variant = TextVariant.Small,
                                             color = Color.Gray
                                         )
                                     }
                                 }
-
-                                // Action Button
-                                Button(
-                                    onClick = {
-                                        selectedMatch = match
-                                        showDialog = true
-                                    },
-                                    size = ButtonSize.Sm,
-                                    modifier = Modifier.fillMaxWidth(),
-                                    text = "Iniciar transaccion"
-                                )
                             }
                         }
                     }
