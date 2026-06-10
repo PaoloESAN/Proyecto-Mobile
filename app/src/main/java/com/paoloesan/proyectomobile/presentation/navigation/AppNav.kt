@@ -23,7 +23,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.paoloesan.proyectomobile.presentation.admin.AdminUsersScreen
-import com.paoloesan.proyectomobile.presentation.alert.AlertScreen
 import com.paoloesan.proyectomobile.presentation.auth.LoginScreen
 import com.paoloesan.proyectomobile.presentation.auth.RecoverPasswordScreen
 import com.paoloesan.proyectomobile.presentation.auth.RegistroScreen
@@ -42,7 +41,6 @@ import com.paoloesan.proyectomobile.presentation.profile.SettingsScreen
 import com.paoloesan.proyectomobile.presentation.profile.EditProfileScreen
 import com.paoloesan.proyectomobile.presentation.transaction.BankDetailsScreen
 import com.paoloesan.proyectomobile.presentation.transaction.ChatScreen
-import com.paoloesan.proyectomobile.presentation.transaction.ConfirmPaymentScreen
 import com.paoloesan.proyectomobile.presentation.transaction.OfferDetailScreen
 import com.paoloesan.proyectomobile.presentation.transaction.TransactionStatusScreen
 import com.paoloesan.proyectomobile.presentation.verification.IdentityVerificationScreen
@@ -107,12 +105,6 @@ sealed class Destination(
         route = "reset_password",
         title = "Restablecer Contraseña",
         content = { navController -> ResetPasswordScreen(navController) }
-    )
-
-    object ConfirmPayment : Destination(
-        route = "confirm_payment",
-        title = "Confirmar Pago",
-        content = { navController -> ConfirmPaymentScreen(navController) }
     )
 
     object Chat : Destination(
@@ -209,9 +201,7 @@ sealed class Destination(
                 onChat = {
                     navController.navigate("chat/$transactionId")
                 },
-                onConfirmPayment = {
-                    navController.navigate("confirm_payment")
-                },
+                onConfirmPayment = {},
                 onUploadVoucher = {}
             )
         }
@@ -250,12 +240,6 @@ sealed class Destination(
                 }
             )
         }
-    )
-
-    object Alerts : Destination(
-        route = "alerts",
-        title = "Alertas de Tipo de Cambio",
-        content = { navController -> AlertScreen(navController) }
     )
 
     object Profile : Destination(
@@ -300,11 +284,9 @@ val appDestinations = listOf(
     Destination.Profile,
     Destination.Settings,
     Destination.EditProfile,
-    Destination.Alerts,
     Destination.OfferDetail,
     Destination.TransactionStatus,
     Destination.BankDetails,
-    Destination.ConfirmPayment,
     Destination.Chat,
     Destination.DisputaLista,
     Destination.AdminUsers

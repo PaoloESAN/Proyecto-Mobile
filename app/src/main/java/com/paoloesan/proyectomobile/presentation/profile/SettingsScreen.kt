@@ -122,17 +122,6 @@ fun SettingsScreen(navController: NavController) {
                                 .background(RikkaTheme.colors.muted.copy(alpha = 0.2f))
                         )
                         SettingsMenuItem(
-                            icon = Icons.Default.Notifications,
-                            title = "Alertas de tipo de cambio",
-                            onClick = { navController.navigate("alerts") }
-                        )
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(1.dp)
-                                .background(RikkaTheme.colors.muted.copy(alpha = 0.2f))
-                        )
-                        SettingsMenuItem(
                             icon = Icons.Default.LightMode,
                             title = "Tema de la aplicación",
                             subtitle = when (currentTheme) {

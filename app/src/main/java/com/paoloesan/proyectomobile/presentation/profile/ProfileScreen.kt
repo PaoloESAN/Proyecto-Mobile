@@ -30,6 +30,9 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
@@ -69,6 +72,11 @@ import zed.rainxch.rikkaui.components.ui.toast.ToastVariant
 import zed.rainxch.rikkaui.components.ui.toast.rememberToastHostState
 import zed.rainxch.rikkaui.foundation.RikkaTheme
 
+data class Alert(
+    val currency: String,
+    val rate: String
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
@@ -77,7 +85,13 @@ fun ProfileScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val sheetState = rememberModalBottomSheetState()
+    val alertSheetState = rememberModalBottomSheetState()
     var showBottomSheet by remember { mutableStateOf(false) }
+    var showAlertSheet by remember { mutableStateOf(false) }
+    var savedAlerts by remember { mutableStateOf(listOf<Alert>(
+        Alert("USD", "3.85"),
+        Alert("PEN", "3.72")
+    )) }
     val focusManager = LocalFocusManager.current
     val toastState = rememberToastHostState()
     val scope = rememberCoroutineScope()
@@ -349,6 +363,72 @@ fun ProfileScreen(
                     }
                 }
 
+                // Alertas de Tipo de Cambio Header
+                item {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 16.dp, bottom = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Alertas de Tipo de Cambio",
+                            variant = TextVariant.Large,
+                            color = RikkaTheme.colors.onBackground
+                        )
+
+                        Button(
+                            onClick = { showAlertSheet = true },
+                            variant = ButtonVariant.Outline,
+                            size = ButtonSize.Sm
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                androidx.compose.material3.Icon(
+                                    imageVector = Icons.Default.Add,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp),
+                                    tint = RikkaTheme.colors.onBackground
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "Agregar",
+                                    variant = TextVariant.Small,
+                                    color = RikkaTheme.colors.onBackground
+                                )
+                            }
+                        }
+                    }
+                }
+
+                if (savedAlerts.isEmpty()) {
+                    item {
+                        Card(
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = "No tienes alertas configuradas",
+                                variant = TextVariant.P,
+                                color = Color.Gray,
+                                modifier = Modifier.fillMaxWidth(),
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
+                        }
+                    }
+                } else {
+                    items(savedAlerts) { alert ->
+                        AlertCard(alert, onDelete = {
+                            savedAlerts = savedAlerts.filter { it != alert }
+                            scope.launch {
+                                toastState.show("Alerta eliminada", ToastVariant.Success)
+                            }
+                        })
+                    }
+                }
+
 
             }
         }
@@ -365,6 +445,25 @@ fun ProfileScreen(
                 onConfirm = { cuenta ->
                     viewModel.addCuenta(cuenta)
                     showBottomSheet = false
+                }
+            )
+        }
+    }
+
+    if (showAlertSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showAlertSheet = false },
+            sheetState = alertSheetState,
+            containerColor = RikkaTheme.colors.background
+        ) {
+            AddAlertSheet(
+                onCancel = { showAlertSheet = false },
+                onConfirm = { alert ->
+                    savedAlerts = savedAlerts + alert
+                    showAlertSheet = false
+                    scope.launch {
+                        toastState.show("Alerta registrada correctamente", ToastVariant.Success)
+                    }
                 }
             )
         }
@@ -575,6 +674,174 @@ private fun AddBankAccountSheet(
                                 )
                             )
                         }
+                    }
+                },
+                modifier = Modifier.weight(1f),
+                text = "Guardar"
+            )
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+    }
+}
+
+@Composable
+private fun AlertCard(alert: Alert, onDelete: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(
+                            color = RikkaTheme.colors.primary.copy(alpha = 0.12f),
+                            shape = RoundedCornerShape(8.dp)
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    androidx.compose.material3.Icon(
+                        imageVector = Icons.Default.Notifications,
+                        contentDescription = null,
+                        tint = RikkaTheme.colors.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                Text(
+                    text = alert.currency,
+                    variant = TextVariant.Large,
+                    color = RikkaTheme.colors.onBackground
+                )
+            }
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text(
+                    text = "T.C.: ${alert.rate}",
+                    variant = TextVariant.Large,
+                    color = RikkaTheme.colors.primary
+                )
+                
+                Button(
+                    onClick = onDelete,
+                    variant = ButtonVariant.Ghost,
+                    size = ButtonSize.Icon
+                ) {
+                    androidx.compose.material3.Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Eliminar",
+                        tint = RikkaTheme.colors.destructive,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AddAlertSheet(
+    onCancel: () -> Unit,
+    onConfirm: (Alert) -> Unit
+) {
+    val currencyOptions = listOf(
+        SelectOption("USD", "USD"),
+        SelectOption("PEN", "PEN")
+    )
+
+    var currency by remember { mutableStateOf("USD") }
+    var rate by remember { mutableStateOf("") }
+    var rateError by remember { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) {
+                focusManager.clearFocus()
+            }
+            .padding(24.dp)
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Text(
+            text = "Configurar alerta de tipo de cambio",
+            variant = TextVariant.H2,
+            color = RikkaTheme.colors.onBackground
+        )
+
+        // Moneda Dropdown
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Label(text = "Moneda")
+            Select(
+                selectedValue = currency,
+                onValueChange = { currency = it },
+                options = currencyOptions,
+                placeholder = "Seleccione una moneda...",
+                animation = PopupAnimation.Fade,
+                maxHeight = 300.dp,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+
+        // Tipo de Cambio Input
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Label(text = "Tipo de cambio")
+            Input(
+                value = rate,
+                onValueChange = { input ->
+                    if (input.all { it.isDigit() || it == '.' }) {
+                        rate = input
+                        rateError = false
+                    }
+                },
+                placeholder = "3.75",
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                leadingIcon = Icons.Default.AttachMoney,
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+            if (rateError) {
+                Text(
+                    text = "Ingrese un tipo de cambio válido",
+                    variant = TextVariant.Small,
+                    color = RikkaTheme.colors.destructive
+                )
+            }
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Button(
+                onClick = onCancel,
+                variant = ButtonVariant.Outline,
+                modifier = Modifier.weight(1f),
+                text = "Cancelar"
+            )
+            Button(
+                onClick = {
+                    val rateVal = rate.toDoubleOrNull()
+                    if (rate.isBlank() || rateVal == null || rateVal <= 0) {
+                        rateError = true
+                    } else {
+                        rateError = false
+                        onConfirm(Alert(currency = currency, rate = rate))
                     }
                 },
                 modifier = Modifier.weight(1f),
