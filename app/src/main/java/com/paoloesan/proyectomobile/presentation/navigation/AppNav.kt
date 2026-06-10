@@ -124,7 +124,7 @@ sealed class Destination(
 
     object MyOffers : Destination(
         route = "my_offers",
-        title = "Trades",
+        title = "Ofertas",
         icon = Icons.Default.Star,
         showInBottomBar = true,
         content = { navController -> MyOffersScreen(navController) }
@@ -165,8 +165,8 @@ sealed class Destination(
         title = "Detalle de Oferta",
         content = { navController ->
             OfferDetailScreen(
-                onStartTransaction = {
-                    navController.navigate("transactionStatus/TX001")
+                onStartTransaction = { amount, rate, bank, type ->
+                    navController.navigate("transactionStatus/TX001?isSeller=false&amount=$amount&rate=$rate&bank=$bank&type=$type")
                 },
                 onBack = {
                     navController.popBackStack()
@@ -176,14 +176,27 @@ sealed class Destination(
     )
 
     object TransactionStatus : Destination(
-        route = "transactionStatus/{transactionId}?isSeller={isSeller}",
+        route = "transactionStatus/{transactionId}?isSeller={isSeller}&amount={amount}&rate={rate}&bank={bank}&type={type}&status={status}&uploaded={uploaded}",
         title = "Estado de Transacción",
         content = { navController ->
             val arguments = navController.currentBackStackEntry?.arguments
             val transactionId = arguments?.getString("transactionId") ?: "TX001"
             val isSeller = arguments?.getString("isSeller")?.toBoolean() ?: false
+            val amount = arguments?.getString("amount") ?: "100.00"
+            val rate = arguments?.getString("rate") ?: "3.85"
+            val bank = arguments?.getString("bank") ?: "BCP - 191-99882211-0-45"
+            val type = arguments?.getString("type") ?: "Compra"
+            val status = arguments?.getString("status") ?: "Pendiente"
+            val uploaded = arguments?.getString("uploaded")?.toBoolean() ?: false
             TransactionStatusScreen(
                 isSeller = isSeller,
+                transactionId = transactionId,
+                amount = amount,
+                rate = rate,
+                bank = bank,
+                type = type,
+                status = status,
+                uploaded = uploaded,
                 onBack = {
                     navController.popBackStack()
                 },
@@ -195,6 +208,9 @@ sealed class Destination(
                 },
                 onConfirmPayment = {
                     navController.navigate("confirm_payment")
+                },
+                onUploadVoucher = {
+                    navController.navigate("uploadVoucher/$transactionId")
                 }
             )
         }
@@ -227,8 +243,17 @@ sealed class Destination(
                     navController.popBackStack()
                 },
                 onVoucherSent = {
-                    navController.navigate("transactionStatus/TX001") {
-                        popUpTo("transactionStatus/TX001") {
+                    val prevBackStackEntry = navController.previousBackStackEntry
+                    val prevArguments = prevBackStackEntry?.arguments
+                    val isSeller = prevArguments?.getString("isSeller")?.toBoolean() ?: false
+                    val amount = prevArguments?.getString("amount") ?: "100.00"
+                    val rate = prevArguments?.getString("rate") ?: "3.85"
+                    val bank = prevArguments?.getString("bank") ?: "BCP - 191-99882211-0-45"
+                    val type = prevArguments?.getString("type") ?: "Compra"
+                    val status = prevArguments?.getString("status") ?: "Pendiente"
+                    
+                    navController.navigate("transactionStatus/TX001?isSeller=$isSeller&amount=$amount&rate=$rate&bank=$bank&type=$type&status=$status&uploaded=true") {
+                        popUpTo("transactionStatus/TX001?isSeller=$isSeller&amount=$amount&rate=$rate&bank=$bank&type=$type&status=$status") {
                             inclusive = true
                         }
                     }

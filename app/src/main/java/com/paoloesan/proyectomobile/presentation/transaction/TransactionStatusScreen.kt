@@ -22,17 +22,23 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessTime
+import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CurrencyExchange
 import androidx.compose.material.icons.filled.HourglassEmpty
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,12 +46,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.border
 import kotlinx.coroutines.launch
 import zed.rainxch.rikkaui.components.ui.button.Button
 import zed.rainxch.rikkaui.components.ui.button.ButtonSize
 import zed.rainxch.rikkaui.components.ui.button.ButtonVariant
 import zed.rainxch.rikkaui.components.ui.card.Card
 import zed.rainxch.rikkaui.components.ui.icon.RikkaIcons
+import zed.rainxch.rikkaui.components.ui.input.Input
 import zed.rainxch.rikkaui.components.ui.text.Text
 import zed.rainxch.rikkaui.components.ui.text.TextVariant
 import zed.rainxch.rikkaui.components.ui.toast.ToastHost
@@ -53,18 +61,253 @@ import zed.rainxch.rikkaui.components.ui.toast.ToastVariant
 import zed.rainxch.rikkaui.components.ui.toast.rememberToastHostState
 import zed.rainxch.rikkaui.foundation.RikkaTheme
 
+enum class TransactionState(
+    val title: String,
+    val color: Color,
+    val icon: ImageVector,
+    val bgColor: Color
+) {
+    ESPERANDO_ACEPTACION("Esperando aceptación", Color(0xFFFFB74D), Icons.Default.HourglassEmpty, Color(0xFFFFF8E1)),
+    EN_PROCESO("En proceso (Pendiente de pago)", Color(0xFF1E88E5), Icons.Default.AccessTime, Color(0xFFE3F2FD)),
+    PAGADA_CON_VOUCHER("Pago enviado (Voucher subido)", Color(0xFF4CAF50), Icons.Default.CheckCircle, Color(0xFFE8F5E9)),
+    FINALIZADA("Finalizada", Color(0xFF2E7D32), Icons.Default.CheckCircle, Color(0xFFE8F5E9)),
+    RECHAZADA("Rechazada", Color(0xFFD32F2F), Icons.Default.Cancel, Color(0xFFFFEBEE))
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TransactionStatusScreen(
     isSeller: Boolean = false,
+    transactionId: String = "TX001",
+    amount: String = "100.00",
+    rate: String = "3.85",
+    bank: String = "BCP - 191-99882211-0-45 (PEN)",
+    type: String = "Compra",
+    status: String = "Pendiente",
+    uploaded: Boolean = false,
     onBack: () -> Unit,
     onViewBankDetails: () -> Unit,
     onChat: () -> Unit = {},
-    onConfirmPayment: () -> Unit = {}
+    onConfirmPayment: () -> Unit = {},
+    onUploadVoucher: () -> Unit = {}
 ) {
     val focusManager = LocalFocusManager.current
     val toastState = rememberToastHostState()
     val scope = rememberCoroutineScope()
+
+    val initialState = when (status) {
+        "Aceptada", "Aceptado" -> TransactionState.EN_PROCESO
+        "Rechazada", "Rechazado" -> TransactionState.RECHAZADA
+        else -> TransactionState.ESPERANDO_ACEPTACION
+    }
+    var currentState by remember { mutableStateOf(initialState) }
+    var showVoucherDialog by remember { mutableStateOf(false) }
+    var showBankDetailsDialog by remember { mutableStateOf(false) }
+    var showBuyerBankDetailsDialog by remember { mutableStateOf(false) }
+
+    var buyerVoucherUploaded by remember { mutableStateOf(!isSeller && uploaded) }
+    var sellerVoucherUploaded by remember { mutableStateOf(isSeller && uploaded) }
+    var buyerConfirmedReceipt by remember { mutableStateOf(false) }
+    var sellerConfirmedReceipt by remember { mutableStateOf(false) }
+
+    androidx.compose.runtime.LaunchedEffect(buyerVoucherUploaded, sellerVoucherUploaded) {
+        if (buyerVoucherUploaded && !sellerVoucherUploaded && !isSeller) {
+            kotlinx.coroutines.delay(2000)
+            sellerVoucherUploaded = true
+            toastState.show("El vendedor ha subido su comprobante", ToastVariant.Success)
+        } else if (sellerVoucherUploaded && !buyerVoucherUploaded && isSeller) {
+            kotlinx.coroutines.delay(2000)
+            buyerVoucherUploaded = true
+            toastState.show("El comprador ha subido su comprobante", ToastVariant.Success)
+        }
+        if (buyerVoucherUploaded && sellerVoucherUploaded && currentState == TransactionState.EN_PROCESO) {
+            currentState = TransactionState.PAGADA_CON_VOUCHER
+        }
+    }
+
+    val amountDouble = amount.toDoubleOrNull() ?: 100.0
+    val rateDouble = rate.toDoubleOrNull() ?: 3.85
+    val penAmount = amountDouble * rateDouble
+    val formattedPen = String.format(java.util.Locale.US, "%,.2f", penAmount)
+
+    // Dialog: Bank details for buyer (Seller's bank details)
+    if (showBankDetailsDialog) {
+        AlertDialog(
+            onDismissRequest = { showBankDetailsDialog = false },
+            containerColor = RikkaTheme.colors.background,
+            title = {
+                Text(
+                    text = "Datos de Cuenta del Vendedor",
+                    variant = TextVariant.Large,
+                    color = RikkaTheme.colors.onBackground
+                )
+            },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "Por favor realiza la transferencia a la siguiente cuenta del vendedor para completar el intercambio:",
+                        variant = TextVariant.P,
+                        color = RikkaTheme.colors.onBackground.copy(alpha = 0.8f)
+                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(RikkaTheme.colors.muted.copy(alpha = 0.08f), shape = RoundedCornerShape(8.dp))
+                            .padding(12.dp)
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(text = "Banco: BCP", variant = TextVariant.Small, color = RikkaTheme.colors.onBackground)
+                            Text(text = "Cuenta: 191-99882211-0-45", variant = TextVariant.Small, color = RikkaTheme.colors.onBackground)
+                            Text(text = "CCI: 002-191-199882211045-56", variant = TextVariant.Small, color = RikkaTheme.colors.onBackground)
+                            Text(text = "Titular: Juan Perez", variant = TextVariant.Small, color = RikkaTheme.colors.onBackground)
+                            Text(text = "Moneda: PEN", variant = TextVariant.Small, color = RikkaTheme.colors.onBackground)
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Monto a depositar: $formattedPen PEN",
+                                variant = TextVariant.P,
+                                color = RikkaTheme.colors.primary,
+                                style = androidx.compose.ui.text.TextStyle(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = { showBankDetailsDialog = false },
+                    text = "Entendido"
+                )
+            }
+        )
+    }
+
+    // Dialog: Bank details for seller (Buyer's bank details)
+    if (showBuyerBankDetailsDialog) {
+        AlertDialog(
+            onDismissRequest = { showBuyerBankDetailsDialog = false },
+            containerColor = RikkaTheme.colors.background,
+            title = {
+                Text(
+                    text = "Datos de Cuenta del Comprador",
+                    variant = TextVariant.Large,
+                    color = RikkaTheme.colors.onBackground
+                )
+            },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "Por favor realiza la transferencia a la siguiente cuenta elegida por el comprador:",
+                        variant = TextVariant.P,
+                        color = RikkaTheme.colors.onBackground.copy(alpha = 0.8f)
+                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(RikkaTheme.colors.muted.copy(alpha = 0.08f), shape = RoundedCornerShape(8.dp))
+                            .padding(12.dp)
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(text = "Detalles de Cuenta: $bank", variant = TextVariant.Small, color = RikkaTheme.colors.onBackground)
+                            Text(text = "Titular: Mateo Rojas", variant = TextVariant.Small, color = RikkaTheme.colors.onBackground)
+                            Text(text = "Moneda: USD", variant = TextVariant.Small, color = RikkaTheme.colors.onBackground)
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Monto a depositar: $amount USD",
+                                variant = TextVariant.P,
+                                color = RikkaTheme.colors.primary,
+                                style = androidx.compose.ui.text.TextStyle(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = { showBuyerBankDetailsDialog = false },
+                    text = "Entendido"
+                )
+            }
+        )
+    }
+
+    // Dialog: Voucher preview for seller or buyer
+    if (showVoucherDialog) {
+        val voucherTitle = if (isSeller) "Comprobante del Comprador (PEN)" else "Comprobante del Vendedor (USD)"
+        val voucherAmount = if (isSeller) "$formattedPen PEN" else "$amount USD"
+        val transactionCode = if (isSeller) "BCP-9081249-X" else "INT-5542123-Z"
+
+        AlertDialog(
+            onDismissRequest = { showVoucherDialog = false },
+            containerColor = RikkaTheme.colors.background,
+            title = {
+                Text(
+                    text = "Verificación de Depósito",
+                    variant = TextVariant.Large,
+                    color = RikkaTheme.colors.onBackground
+                )
+            },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "Se ha subido el siguiente comprobante de transferencia:",
+                        variant = TextVariant.P,
+                        color = RikkaTheme.colors.onBackground.copy(alpha = 0.8f)
+                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(180.dp)
+                            .background(Color.White, shape = RoundedCornerShape(8.dp))
+                            .border(1.dp, Color.LightGray, shape = RoundedCornerShape(8.dp))
+                            .padding(16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            androidx.compose.material3.Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = null,
+                                modifier = Modifier.size(36.dp),
+                                tint = Color(0xFF2E7D32)
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = voucherTitle,
+                                color = Color.Black,
+                                variant = TextVariant.P,
+                                style = androidx.compose.ui.text.TextStyle(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = "MONTO: $voucherAmount",
+                                color = Color(0xFF2E7D32),
+                                variant = TextVariant.Large
+                            )
+                            Text(
+                                text = "Transacción: $transactionCode",
+                                color = Color.DarkGray,
+                                variant = TextVariant.Small
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = { showVoucherDialog = false },
+                    text = "Cerrar"
+                )
+            }
+        )
+    }
 
     Box(
         modifier = Modifier
@@ -96,7 +339,7 @@ fun TransactionStatusScreen(
                     }
 
                     Text(
-                        text = "Estado de Transaccion",
+                        text = "Estado de Transacción",
                         color = RikkaTheme.colors.onBackground,
                         variant = TextVariant.Large,
                     )
@@ -135,7 +378,75 @@ fun TransactionStatusScreen(
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     contentPadding = PaddingValues(top = 12.dp, bottom = 24.dp)
                 ) {
-                    // Hero Dynamic Status Card
+                    // 1. Rating Form (only when transaction is finished)
+                    if (currentState == TransactionState.FINALIZADA) {
+                        item {
+                            Card(
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(
+                                    modifier = Modifier.fillMaxWidth().padding(4.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Text(
+                                        text = "¡Intercambio Completado con Éxito!",
+                                        variant = TextVariant.Large,
+                                        color = RikkaTheme.colors.primary
+                                    )
+                                    Text(
+                                        text = "¿Cómo calificarías a ${if (isSeller) "Mateo Rojas (Comprador)" else "Juan Perez (Vendedor)"}?",
+                                        variant = TextVariant.P,
+                                        color = RikkaTheme.colors.onBackground,
+                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                    )
+                                    
+                                    var ratingSelection by remember { mutableStateOf(5) }
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        for (i in 1..5) {
+                                            val isSelected = i <= ratingSelection
+                                            androidx.compose.material3.Icon(
+                                                imageVector = Icons.Default.Star,
+                                                contentDescription = null,
+                                                modifier = Modifier
+                                                    .size(36.dp)
+                                                    .clickable { ratingSelection = i },
+                                                tint = if (isSelected) Color(0xFFFFB74D) else Color.Gray.copy(alpha = 0.3f)
+                                            )
+                                        }
+                                    }
+                                    
+                                    var commentInput by remember { mutableStateOf("") }
+                                    Input(
+                                        value = commentInput,
+                                        onValueChange = { commentInput = it },
+                                        placeholder = "Escribe una reseña (opcional)...",
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                    
+                                    Button(
+                                        onClick = {
+                                            scope.launch {
+                                                toastState.show(
+                                                    message = "¡Gracias por calificar la transacción!",
+                                                    variant = ToastVariant.Success
+                                                )
+                                                kotlinx.coroutines.delay(1200)
+                                                onBack()
+                                            }
+                                        },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        text = "Enviar Calificación"
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // 2. Hero Dynamic Status Card
                     item {
                         Card(
                             modifier = Modifier.fillMaxWidth()
@@ -144,7 +455,7 @@ fun TransactionStatusScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .background(
-                                        color = Color(0xFFFFF8E1),
+                                        color = currentState.bgColor,
                                         shape = RoundedCornerShape(8.dp)
                                     )
                                     .padding(14.dp),
@@ -152,22 +463,22 @@ fun TransactionStatusScreen(
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
                                 androidx.compose.material3.Icon(
-                                    imageVector = Icons.Default.HourglassEmpty,
+                                    imageVector = currentState.icon,
                                     contentDescription = null,
                                     modifier = Modifier.size(36.dp),
-                                    tint = Color(0xFFFFB74D)
+                                    tint = currentState.color
                                 )
 
                                 Text(
-                                    text = "Esperando pago",
+                                    text = currentState.title,
                                     variant = TextVariant.Large,
-                                    color = Color(0xFFFFB74D)
+                                    color = currentState.color
                                 )
                             }
                         }
                     }
 
-                    // Operation Summary Card
+                    // 3. Operation Summary Card
                     item {
                         Card(
                             modifier = Modifier.fillMaxWidth()
@@ -187,7 +498,7 @@ fun TransactionStatusScreen(
                                         color = Color.Gray
                                     )
                                     Text(
-                                        text = "TX-001249",
+                                        text = transactionId,
                                         variant = TextVariant.Small,
                                         color = RikkaTheme.colors.onBackground
                                     )
@@ -203,19 +514,19 @@ fun TransactionStatusScreen(
                                 TransactionBriefRow(
                                     icon = Icons.Default.CurrencyExchange,
                                     label = "Operacion",
-                                    value = "Compra de 1,000.00 USD"
+                                    value = "$type de $amount USD"
                                 )
 
                                 TransactionBriefRow(
                                     icon = Icons.Default.Person,
                                     label = "Contraparte",
-                                    value = "Mateo Rojas"
+                                    value = if (isSeller) "Mateo Rojas (Comprador)" else "Juan Perez (Vendedor)"
                                 )
                             }
                         }
                     }
 
-                    // Stepper Timeline Card
+                    // 4. Stepper Timeline Card
                     item {
                         Card(
                             modifier = Modifier.fillMaxWidth()
@@ -234,24 +545,68 @@ fun TransactionStatusScreen(
                                     modifier = Modifier.fillMaxWidth(),
                                     verticalArrangement = Arrangement.spacedBy(0.dp)
                                 ) {
+                                    val step1Status = TimelineStepStatus.COMPLETED
+                                    val step2Status = when (currentState) {
+                                        TransactionState.ESPERANDO_ACEPTACION -> TimelineStepStatus.ACTIVE
+                                        TransactionState.RECHAZADA -> TimelineStepStatus.FAILED
+                                        else -> TimelineStepStatus.COMPLETED
+                                    }
+                                    val step3Status = when (currentState) {
+                                        TransactionState.ESPERANDO_ACEPTACION, TransactionState.RECHAZADA -> TimelineStepStatus.PENDING
+                                        TransactionState.EN_PROCESO -> TimelineStepStatus.ACTIVE
+                                        else -> TimelineStepStatus.COMPLETED
+                                    }
+                                    val step4Status = when (currentState) {
+                                        TransactionState.FINALIZADA -> TimelineStepStatus.COMPLETED
+                                        TransactionState.PAGADA_CON_VOUCHER -> TimelineStepStatus.ACTIVE
+                                        else -> TimelineStepStatus.PENDING
+                                    }
+
                                     TimelineStep(
-                                        status = TimelineStepStatus.COMPLETED,
-                                        title = "Transaccion creada",
-                                        subtitle = "24 May, 14:15",
+                                        status = step1Status,
+                                        title = "Transacción creada",
+                                        subtitle = "Monto e instrucciones fijados",
                                         isLast = false
                                     )
 
                                     TimelineStep(
-                                        status = TimelineStepStatus.COMPLETED,
-                                        title = "Pago realizado",
-                                        subtitle = "24 May, 14:28",
+                                        status = step2Status,
+                                        title = if (currentState == TransactionState.RECHAZADA) "Rechazada por el vendedor" else "Aceptada por el vendedor",
+                                        subtitle = when (currentState) {
+                                            TransactionState.ESPERANDO_ACEPTACION -> "Esperando confirmación del vendedor"
+                                            TransactionState.RECHAZADA -> "La operación fue rechazada"
+                                            else -> "Operación aceptada"
+                                        },
                                         isLast = false
                                     )
 
                                     TimelineStep(
-                                        status = TimelineStepStatus.ACTIVE,
-                                        title = "Verificando transferencia",
-                                        subtitle = "El vendedor debe confirmar la recepcion del dinero",
+                                        status = step3Status,
+                                        title = "Pago realizado (Voucher enviado)",
+                                        subtitle = when (currentState) {
+                                            TransactionState.ESPERANDO_ACEPTACION, TransactionState.RECHAZADA -> "Pendiente de aceptación de la transacción"
+                                            TransactionState.EN_PROCESO -> {
+                                                val mine = if (isSeller) sellerVoucherUploaded else buyerVoucherUploaded
+                                                val peer = if (isSeller) buyerVoucherUploaded else sellerVoucherUploaded
+                                                "Voucher: Tú (${if (mine) "Listo" else "Pendiente"}) | Contraparte (${if (peer) "Listo" else "Pendiente"})"
+                                            }
+                                            else -> "Comprobante de pago subido correctamente por ambos"
+                                        },
+                                        isLast = false
+                                    )
+
+                                    TimelineStep(
+                                        status = step4Status,
+                                        title = "Pago verificado y fondos liberados",
+                                        subtitle = when (currentState) {
+                                            TransactionState.FINALIZADA -> "Fondos liberados. Operación completada con éxito."
+                                            TransactionState.PAGADA_CON_VOUCHER -> {
+                                                val mineConf = if (isSeller) sellerConfirmedReceipt else buyerConfirmedReceipt
+                                                val peerConf = if (isSeller) buyerConfirmedReceipt else sellerConfirmedReceipt
+                                                "Confirmación: Tú (${if (mineConf) "Confirmado" else "Pendiente"}) | Contraparte (${if (peerConf) "Confirmado" else "Pendiente"})"
+                                            }
+                                            else -> "Pendiente de verificación del depósito."
+                                        },
                                         isLast = true
                                     )
                                 }
@@ -269,71 +624,202 @@ fun TransactionStatusScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     if (isSeller) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            Button(
-                                onClick = {
-                                    scope.launch {
-                                        toastState.show(
-                                            message = "Solicitud aceptada correctamente",
-                                            variant = ToastVariant.Success
-                                        )
-                                        kotlinx.coroutines.delay(1000)
-                                        onBack()
-                                    }
-                                },
-                                modifier = Modifier.weight(1f),
-                                text = "Aceptar"
-                            )
+                        // Seller View
+                        when (currentState) {
+                            TransactionState.ESPERANDO_ACEPTACION -> {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Button(
+                                        onClick = {
+                                            scope.launch {
+                                                toastState.show(
+                                                    message = "Solicitud aceptada correctamente",
+                                                    variant = ToastVariant.Success
+                                                )
+                                                currentState = TransactionState.EN_PROCESO
+                                            }
+                                        },
+                                        modifier = Modifier.weight(1f),
+                                        text = "Aceptar"
+                                    )
 
-                            Button(
-                                onClick = {
-                                    scope.launch {
-                                        toastState.show(
-                                            message = "Solicitud rechazada correctamente",
-                                            variant = ToastVariant.Destructive
-                                        )
-                                        kotlinx.coroutines.delay(1000)
-                                        onBack()
-                                    }
-                                },
-                                variant = ButtonVariant.Destructive,
-                                modifier = Modifier.weight(1f),
-                                text = "Rechazar"
-                            )
+                                    Button(
+                                        onClick = {
+                                            scope.launch {
+                                                toastState.show(
+                                                    message = "Solicitud rechazada correctamente",
+                                                    variant = ToastVariant.Destructive
+                                                )
+                                                currentState = TransactionState.RECHAZADA
+                                            }
+                                        },
+                                        variant = ButtonVariant.Destructive,
+                                        modifier = Modifier.weight(1f),
+                                        text = "Rechazar"
+                                    )
+                                }
+                            }
+                            TransactionState.RECHAZADA -> {
+                                Button(
+                                    onClick = { },
+                                    enabled = false,
+                                    variant = ButtonVariant.Outline,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    text = "Esta transacción ha sido rechazada"
+                                )
+                            }
+                            TransactionState.EN_PROCESO -> {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Button(
+                                        onClick = { showBuyerBankDetailsDialog = true },
+                                        variant = ButtonVariant.Outline,
+                                        modifier = Modifier.weight(1f),
+                                        text = "Ver cuenta"
+                                    )
+
+                                    val hasUploaded = sellerVoucherUploaded
+                                    Button(
+                                        onClick = onUploadVoucher,
+                                        enabled = !hasUploaded,
+                                        modifier = Modifier.weight(1f),
+                                        text = if (hasUploaded) "Comprobante subido" else "Subir comprobante"
+                                    )
+                                }
+                            }
+                            TransactionState.PAGADA_CON_VOUCHER -> {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Button(
+                                        onClick = { showVoucherDialog = true },
+                                        variant = ButtonVariant.Outline,
+                                        modifier = Modifier.weight(1f),
+                                        text = "Ver comprobante"
+                                    )
+
+                                    val hasConfirmed = sellerConfirmedReceipt
+                                    Button(
+                                        onClick = {
+                                            scope.launch {
+                                                sellerConfirmedReceipt = true
+                                                toastState.show(
+                                                    message = "Recepción confirmada",
+                                                    variant = ToastVariant.Success
+                                                )
+                                                if (buyerConfirmedReceipt) {
+                                                    currentState = TransactionState.FINALIZADA
+                                                }
+                                            }
+                                        },
+                                        enabled = !hasConfirmed,
+                                        modifier = Modifier.weight(1f),
+                                        text = if (hasConfirmed) "Confirmado" else "Confirmar recepción"
+                                    )
+                                }
+                            }
+                            TransactionState.FINALIZADA -> {
+                                // No action buttons needed, rating card is shown
+                            }
                         }
 
-                        Button(
-                            onClick = onChat,
-                            variant = ButtonVariant.Outline,
-                            modifier = Modifier.fillMaxWidth(),
-                            text = "Chat"
-                        )
-                    } else {
-                        Button(
-                            onClick = onViewBankDetails,
-                            modifier = Modifier.fillMaxWidth(),
-                            text = "Ver instrucciones bancarias"
-                        )
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
+                        if (currentState == TransactionState.EN_PROCESO || currentState == TransactionState.PAGADA_CON_VOUCHER) {
                             Button(
                                 onClick = onChat,
                                 variant = ButtonVariant.Outline,
-                                modifier = Modifier.weight(1f),
+                                modifier = Modifier.fillMaxWidth(),
                                 text = "Chat"
                             )
+                        }
+                    } else {
+                        // Buyer View
+                        when (currentState) {
+                            TransactionState.ESPERANDO_ACEPTACION -> {
+                                Button(
+                                    onClick = { },
+                                    enabled = false,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    text = "Esperando aceptación de la transacción..."
+                                )
+                            }
+                            TransactionState.RECHAZADA -> {
+                                Button(
+                                    onClick = { },
+                                    enabled = false,
+                                    variant = ButtonVariant.Outline,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    text = "Esta transacción ha sido rechazada"
+                                )
+                            }
+                            TransactionState.EN_PROCESO -> {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Button(
+                                        onClick = { showBankDetailsDialog = true },
+                                        variant = ButtonVariant.Outline,
+                                        modifier = Modifier.weight(1f),
+                                        text = "Ver datos de cuenta"
+                                    )
 
+                                    val hasUploaded = buyerVoucherUploaded
+                                    Button(
+                                        onClick = onUploadVoucher,
+                                        enabled = !hasUploaded,
+                                        modifier = Modifier.weight(1f),
+                                        text = if (hasUploaded) "Comprobante subido" else "Subir comprobante"
+                                    )
+                                }
+                            }
+                            TransactionState.PAGADA_CON_VOUCHER -> {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Button(
+                                        onClick = { showVoucherDialog = true },
+                                        variant = ButtonVariant.Outline,
+                                        modifier = Modifier.weight(1f),
+                                        text = "Ver comprobante"
+                                    )
+
+                                    val hasConfirmed = buyerConfirmedReceipt
+                                    Button(
+                                        onClick = {
+                                            scope.launch {
+                                                buyerConfirmedReceipt = true
+                                                toastState.show(
+                                                    message = "Recepción confirmada",
+                                                    variant = ToastVariant.Success
+                                                )
+                                                if (sellerConfirmedReceipt) {
+                                                    currentState = TransactionState.FINALIZADA
+                                                }
+                                            }
+                                        },
+                                        enabled = !hasConfirmed,
+                                        modifier = Modifier.weight(1f),
+                                        text = if (hasConfirmed) "Confirmado" else "Confirmar recepción"
+                                    )
+                                }
+                            }
+                            TransactionState.FINALIZADA -> {
+                                // No actions needed, rating card is shown
+                            }
+                        }
+
+                        if (currentState == TransactionState.EN_PROCESO || currentState == TransactionState.PAGADA_CON_VOUCHER) {
                             Button(
-                                onClick = onConfirmPayment,
+                                onClick = onChat,
                                 variant = ButtonVariant.Outline,
-                                modifier = Modifier.weight(1f),
-                                text = "Confirmar recepcion"
+                                modifier = Modifier.fillMaxWidth(),
+                                text = "Chat"
                             )
                         }
                     }
@@ -381,7 +867,8 @@ private fun TransactionBriefRow(
 enum class TimelineStepStatus {
     COMPLETED,
     ACTIVE,
-    PENDING
+    PENDING,
+    FAILED
 }
 
 @Composable
@@ -408,6 +895,7 @@ private fun TimelineStep(
                             TimelineStepStatus.COMPLETED -> Color(0xFF4CAF50)
                             TimelineStepStatus.ACTIVE -> Color(0xFFFFB74D)
                             TimelineStepStatus.PENDING -> RikkaTheme.colors.muted.copy(alpha = 0.2f)
+                            TimelineStepStatus.FAILED -> Color(0xFFD32F2F)
                         }
                     ),
                 contentAlignment = Alignment.Center
@@ -417,6 +905,7 @@ private fun TimelineStep(
                         TimelineStepStatus.COMPLETED -> Icons.Default.CheckCircle
                         TimelineStepStatus.ACTIVE -> Icons.Default.HourglassEmpty
                         TimelineStepStatus.PENDING -> Icons.Default.RadioButtonUnchecked
+                        TimelineStepStatus.FAILED -> Icons.Default.Cancel
                     },
                     contentDescription = null,
                     modifier = Modifier.size(16.dp),

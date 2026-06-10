@@ -33,17 +33,26 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
+import com.paoloesan.proyectomobile.presentation.profile.BankAccount
+import zed.rainxch.rikkaui.components.ui.PopupAnimation
 import zed.rainxch.rikkaui.components.ui.button.Button
 import zed.rainxch.rikkaui.components.ui.button.ButtonSize
 import zed.rainxch.rikkaui.components.ui.button.ButtonVariant
 import zed.rainxch.rikkaui.components.ui.card.Card
 import zed.rainxch.rikkaui.components.ui.icon.RikkaIcons
+import zed.rainxch.rikkaui.components.ui.input.Input
+import zed.rainxch.rikkaui.components.ui.label.Label
+import zed.rainxch.rikkaui.components.ui.select.Select
+import zed.rainxch.rikkaui.components.ui.select.SelectOption
 import zed.rainxch.rikkaui.components.ui.text.Text
 import zed.rainxch.rikkaui.components.ui.text.TextVariant
 import zed.rainxch.rikkaui.foundation.RikkaTheme
@@ -51,10 +60,29 @@ import zed.rainxch.rikkaui.foundation.RikkaTheme
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OfferDetailScreen(
-    onStartTransaction: () -> Unit,
+    onStartTransaction: (amount: String, rate: String, bank: String, type: String) -> Unit,
     onBack: () -> Unit
 ) {
     val focusManager = LocalFocusManager.current
+    var amountInput by remember { mutableStateOf("100") }
+    
+    val bankAccounts = listOf(
+        BankAccount(banco = "BCP", numeroCuenta = "1234567890", titular = "Freddy Delgado", moneda = "PEN"),
+        BankAccount(banco = "Yape", numeroCuenta = "9876543210", titular = "Freddy Delgado", moneda = "PEN"),
+        BankAccount(banco = "Interbank", numeroCuenta = "5432109876", titular = "Freddy Delgado", moneda = "USD")
+    )
+    
+    val accountOptions = bankAccounts.map {
+        SelectOption(value = "${it.banco} - ${it.numeroCuenta} (${it.moneda})", label = "${it.banco} - ${it.numeroCuenta} (${it.moneda})")
+    }
+
+    var selectedAccount by remember { mutableStateOf(accountOptions.first().value) }
+
+    val amountDouble = amountInput.toDoubleOrNull() ?: 0.0
+    val minLimit = 50.0
+    val maxLimit = 200.0
+    val rate = 3.85
+    val isValidAmount = amountDouble >= minLimit && amountDouble <= maxLimit
 
     Box(
         modifier = Modifier
@@ -149,6 +177,50 @@ fun OfferDetailScreen(
                         }
                     }
 
+                    // Input & Bank account details card
+                    Card(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Label(text = "Monto a recibir (USD)")
+                                Input(
+                                    value = amountInput,
+                                    onValueChange = { input ->
+                                        if (input.all { it.isDigit() || it == '.' }) {
+                                            amountInput = input
+                                        }
+                                    },
+                                    placeholder = "Ingrese monto...",
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                if (!isValidAmount && amountInput.isNotEmpty()) {
+                                    Text(
+                                        text = "El monto debe estar entre $minLimit y $maxLimit USD",
+                                        color = RikkaTheme.colors.destructive,
+                                        variant = TextVariant.Small
+                                    )
+                                }
+                            }
+
+                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Label(text = "Recibir en mi cuenta bancaria")
+                                Select(
+                                    selectedValue = selectedAccount,
+                                    onValueChange = { selectedAccount = it },
+                                    options = accountOptions,
+                                    placeholder = "Seleccione cuenta...",
+                                    animation = PopupAnimation.Fade,
+                                    maxHeight = 200.dp,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+                        }
+                    }
+
                     // Conversion Card (Premium exchange rates stacked presentation)
                     Card(
                         modifier = Modifier.fillMaxWidth()
@@ -168,8 +240,9 @@ fun OfferDetailScreen(
                                     variant = TextVariant.P,
                                     color = Color.Gray
                                 )
+                                val enviasValue = String.format(java.util.Locale.US, "%,.2f", amountDouble * rate)
                                 Text(
-                                    text = "3,850.00 PEN",
+                                    text = "$enviasValue PEN",
                                     variant = TextVariant.H2,
                                     color = RikkaTheme.colors.onBackground
                                 )
@@ -212,8 +285,9 @@ fun OfferDetailScreen(
                                     variant = TextVariant.P,
                                     color = Color.Gray
                                 )
+                                val recibesValue = String.format(java.util.Locale.US, "%,.2f", amountDouble)
                                 Text(
-                                    text = "1,000.00 USD",
+                                    text = "$recibesValue USD",
                                     variant = TextVariant.H2,
                                     color = RikkaTheme.colors.primary
                                 )
@@ -237,7 +311,7 @@ fun OfferDetailScreen(
                                     color = Color.Gray
                                 )
                                 Text(
-                                    text = "1 USD = 3.85 PEN",
+                                    text = "1 USD = $rate PEN",
                                     variant = TextVariant.P,
                                     color = RikkaTheme.colors.onBackground
                                 )
@@ -266,7 +340,7 @@ fun OfferDetailScreen(
                             DetailItemRow(
                                 icon = Icons.Default.Tune,
                                 label = "Limites permitidos",
-                                value = "Minimo 50.00 / Maximo 200.00"
+                                value = "Minimo $minLimit / Maximo $maxLimit"
                             )
                             DetailItemRow(
                                 icon = Icons.Default.AccessTime,
@@ -285,7 +359,10 @@ fun OfferDetailScreen(
                         .padding(horizontal = 24.dp, vertical = 16.dp)
                 ) {
                     Button(
-                        onClick = onStartTransaction,
+                        onClick = {
+                            onStartTransaction(amountInput, rate.toString(), selectedAccount, "Compra")
+                        },
+                        enabled = isValidAmount,
                         modifier = Modifier.fillMaxWidth(),
                         text = "Iniciar transaccion"
                     )
