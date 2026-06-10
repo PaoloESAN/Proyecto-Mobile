@@ -108,9 +108,13 @@ sealed class Destination(
     )
 
     object Chat : Destination(
-        route = "chat/{transactionId}",
+        route = "chat/{transactionId}?readOnly={readOnly}",
         title = "Chat de Transacción",
-        content = { navController -> ChatScreen(navController) }
+        content = { navController ->
+            val arguments = navController.currentBackStackEntry?.arguments
+            val readOnly = arguments?.getString("readOnly")?.toBoolean() ?: false
+            ChatScreen(navController = navController, readOnly = readOnly)
+        }
     )
 
     object MyOffers : Destination(

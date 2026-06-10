@@ -22,6 +22,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
@@ -68,7 +69,7 @@ fun getCurrentTime(): String {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ChatScreen(navController: NavController) {
+fun ChatScreen(navController: NavController, readOnly: Boolean = false) {
     var messageInput by remember { mutableStateOf("") }
     val messages = remember {
         mutableStateListOf(
@@ -123,12 +124,12 @@ fun ChatScreen(navController: NavController) {
                         verticalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
                         Text(
-                            text = "Chat de Transaccion",
+                            text = if (readOnly) "Historial de Mensajes" else "Chat de Transaccion",
                             color = RikkaTheme.colors.onBackground,
                             variant = TextVariant.Large,
                         )
                         Text(
-                            text = "Carlos Rodriguez",
+                            text = if (readOnly) "Modo Solo Lectura (Arbitraje)" else "Carlos Rodriguez",
                             color = Color.Gray,
                             variant = TextVariant.Small
                         )
@@ -138,53 +139,85 @@ fun ChatScreen(navController: NavController) {
                 }
             },
             bottomBar = {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(RikkaTheme.colors.background)
-                        .navigationBarsPadding()
-                        .padding(horizontal = 16.dp, vertical = 12.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                if (readOnly) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(RikkaTheme.colors.background)
+                            .navigationBarsPadding()
+                            .padding(horizontal = 16.dp, vertical = 16.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Input(
-                            value = messageInput,
-                            onValueChange = { messageInput = it },
-                            placeholder = "Escribe un mensaje...",
-                            modifier = Modifier.weight(1f),
-                            singleLine = true
-                        )
-
-                        Button(
-                            onClick = {
-                                if (messageInput.isNotBlank()) {
-                                    messages.add(
-                                        ChatMessage(
-                                            id = UUID.randomUUID().toString(),
-                                            text = messageInput.trim(),
-                                            isOwn = true,
-                                            time = getCurrentTime()
-                                        )
-                                    )
-                                    messageInput = ""
-                                    scope.launch {
-                                        if (messages.isNotEmpty()) {
-                                            listState.animateScrollToItem(messages.size - 1)
-                                        }
-                                    }
-                                }
-                            },
-                            variant = ButtonVariant.Default,
-                            size = ButtonSize.Icon
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(RikkaTheme.colors.muted.copy(alpha = 0.05f), RoundedCornerShape(8.dp))
+                                .padding(12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             androidx.compose.material3.Icon(
-                                imageVector = Icons.Default.Send,
-                                contentDescription = "Enviar",
-                                tint = Color.White
+                                imageVector = Icons.Default.Info,
+                                contentDescription = null,
+                                tint = Color.Gray,
+                                modifier = Modifier.size(16.dp)
                             )
+                            Text(
+                                text = "Historial en modo solo lectura para arbitraje.",
+                                variant = TextVariant.Small,
+                                color = Color.Gray
+                            )
+                        }
+                    }
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(RikkaTheme.colors.background)
+                            .navigationBarsPadding()
+                            .padding(horizontal = 16.dp, vertical = 12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Input(
+                                value = messageInput,
+                                onValueChange = { messageInput = it },
+                                placeholder = "Escribe un mensaje...",
+                                modifier = Modifier.weight(1f),
+                                singleLine = true
+                            )
+
+                            Button(
+                                onClick = {
+                                    if (messageInput.isNotBlank()) {
+                                        messages.add(
+                                            ChatMessage(
+                                                id = UUID.randomUUID().toString(),
+                                                text = messageInput.trim(),
+                                                isOwn = true,
+                                                time = getCurrentTime()
+                                            )
+                                        )
+                                        messageInput = ""
+                                        scope.launch {
+                                            if (messages.isNotEmpty()) {
+                                                listState.animateScrollToItem(messages.size - 1)
+                                            }
+                                        }
+                                    }
+                                },
+                                variant = ButtonVariant.Default,
+                                size = ButtonSize.Icon
+                            ) {
+                                androidx.compose.material3.Icon(
+                                    imageVector = Icons.Default.Send,
+                                    contentDescription = "Enviar",
+                                    tint = Color.White
+                                )
+                            }
                         }
                     }
                 }

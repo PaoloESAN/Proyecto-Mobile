@@ -22,6 +22,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Receipt
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.ZoomIn
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
@@ -67,6 +68,8 @@ fun DisputaDetalleScreen(
     val scope = rememberCoroutineScope()
 
     var showZoomDialog by remember { mutableStateOf(false) }
+    var zoomTitle by remember { mutableStateOf("") }
+    var zoomImageRes by remember { mutableStateOf(R.drawable.voucher_demo) }
     var pendingResolveForBuyer by remember { mutableStateOf<Boolean?>(null) }
 
     if (disputa == null) {
@@ -252,64 +255,193 @@ fun DisputaDetalleScreen(
                     }
                 }
 
-                // Section: Voucher Sent
+                // Section: Party Details
                 item {
                     Text(
-                        text = "Comprobante Adjunto",
+                        text = "Detalles de las Cuentas",
                         variant = TextVariant.Large,
                         color = RikkaTheme.colors.onBackground,
                         modifier = Modifier.padding(vertical = 4.dp)
                     )
 
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        animation = CardAnimation.Press
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        // Comprador Card
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            animation = CardAnimation.None
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(180.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(Color.Black.copy(alpha = 0.05f))
-                                    .clickable { showZoomDialog = true },
-                                contentAlignment = Alignment.Center
+                            Column(
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                Image(
-                                    painter = painterResource(id = R.drawable.voucher_demo),
-                                    contentDescription = "Voucher en disputa",
-                                    contentScale = ContentScale.Fit,
-                                    modifier = Modifier.fillMaxSize()
-                                )
-
-                                Box(
-                                    modifier = Modifier
-                                        .align(Alignment.BottomEnd)
-                                        .padding(8.dp)
-                                        .background(Color.Black.copy(alpha = 0.6f), CircleShape)
-                                        .padding(8.dp)
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                    androidx.compose.material3.Icon(
-                                        imageVector = Icons.Default.ZoomIn,
-                                        contentDescription = "Zoom",
-                                        tint = Color.White,
-                                        modifier = Modifier.size(16.dp)
+                                    Box(
+                                        modifier = Modifier
+                                            .size(24.dp)
+                                            .background(RikkaTheme.colors.primary.copy(alpha = 0.1f), CircleShape),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        androidx.compose.material3.Icon(
+                                            imageVector = Icons.Default.Person,
+                                            contentDescription = null,
+                                            tint = RikkaTheme.colors.primary,
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                    }
+                                    Text(
+                                        text = "Comprador (Recibe USD / Envía PEN)",
+                                        variant = TextVariant.Small,
+                                        color = RikkaTheme.colors.primary
                                     )
                                 }
-                            }
+                                
+                                HorizontalDivider(color = RikkaTheme.colors.muted.copy(alpha = 0.1f))
 
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { showZoomDialog = true }
-                                    .padding(vertical = 4.dp),
-                                horizontalArrangement = Arrangement.Center,
-                                verticalAlignment = Alignment.CenterVertically
+                                DetailRow(label = "Titular", value = disputa.comprador)
+                                DetailRow(label = "Banco Destino", value = "Interbank")
+                                DetailRow(label = "Cuenta de Ahorros", value = "200-98765432-1-09")
+                                DetailRow(label = "CCI", value = "003-20098765432109-12")
+                            }
+                        }
+
+                        // Vendedor Card
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            animation = CardAnimation.None
+                        ) {
+                            Column(
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(24.dp)
+                                            .background(RikkaTheme.colors.onBackground.copy(alpha = 0.1f), CircleShape),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        androidx.compose.material3.Icon(
+                                            imageVector = Icons.Default.Person,
+                                            contentDescription = null,
+                                            tint = RikkaTheme.colors.onBackground.copy(alpha = 0.6f),
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                    }
+                                    Text(
+                                        text = "Vendedor (Envía USD / Recibe PEN)",
+                                        variant = TextVariant.Small,
+                                        color = RikkaTheme.colors.onBackground.copy(alpha = 0.6f)
+                                    )
+                                }
+                                
+                                HorizontalDivider(color = RikkaTheme.colors.muted.copy(alpha = 0.1f))
+
+                                DetailRow(label = "Titular", value = disputa.vendedor)
+                                DetailRow(label = "Banco Origen/Destino", value = "BCP")
+                                DetailRow(label = "Cuenta de Ahorros", value = "191-45678901-2-34")
+                                DetailRow(label = "CCI", value = "002-19145678901234-45")
+                            }
+                        }
+                    }
+                }
+
+                // Section: Vouchers Sent
+                item {
+                    Text(
+                        text = "Comprobantes Adjuntos",
+                        variant = TextVariant.Large,
+                        color = RikkaTheme.colors.onBackground,
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        // Buyer Voucher Card
+                        Card(
+                            modifier = Modifier.weight(1f),
+                            animation = CardAnimation.Press
+                        ) {
+                            Column(
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 Text(
-                                    text = "Presiona para ampliar comprobante",
+                                    text = "Comprador (${disputa.comprador})",
+                                    variant = TextVariant.Small,
+                                    color = RikkaTheme.colors.onBackground.copy(alpha = 0.6f)
+                                )
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(130.dp)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(Color.Black.copy(alpha = 0.05f))
+                                        .clickable { 
+                                            zoomTitle = "Comprobante de Comprador"
+                                            zoomImageRes = R.drawable.voucher_demo
+                                            showZoomDialog = true 
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Image(
+                                        painter = painterResource(id = R.drawable.voucher_demo),
+                                        contentDescription = "Voucher Comprador",
+                                        contentScale = ContentScale.Fit,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                }
+                                Text(
+                                    text = "Ampliar",
+                                    variant = TextVariant.Small,
+                                    color = RikkaTheme.colors.primary,
+                                )
+                            }
+                        }
+
+                        // Seller Voucher Card
+                        Card(
+                            modifier = Modifier.weight(1f),
+                            animation = CardAnimation.Press
+                        ) {
+                            Column(
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    text = "Vendedor (${disputa.vendedor})",
+                                    variant = TextVariant.Small,
+                                    color = RikkaTheme.colors.onBackground.copy(alpha = 0.6f)
+                                )
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(130.dp)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(Color.Black.copy(alpha = 0.05f))
+                                        .clickable { 
+                                            zoomTitle = "Comprobante de Vendedor"
+                                            zoomImageRes = R.drawable.voucher_demo
+                                            showZoomDialog = true 
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Image(
+                                        painter = painterResource(id = R.drawable.voucher_demo),
+                                        contentDescription = "Voucher Vendedor",
+                                        contentScale = ContentScale.Fit,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                }
+                                Text(
+                                    text = "Ampliar",
                                     variant = TextVariant.Small,
                                     color = RikkaTheme.colors.primary,
                                 )
@@ -320,46 +452,75 @@ fun DisputaDetalleScreen(
 
                 // Section: Chat History
                 item {
-                    Text(
-                        text = "Historial de Mensajes",
-                        variant = TextVariant.Large,
-                        color = RikkaTheme.colors.onBackground,
-                        modifier = Modifier.padding(vertical = 4.dp)
-                    )
-
                     Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 8.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        ChatBubble(
-                            sender = disputa.comprador,
-                            message = "Hola, ¿ya realizaste la transferencia?",
-                            time = "10:00",
-                            isBuyer = true
+                        Text(
+                            text = "Historial de Mensajes",
+                            variant = TextVariant.Large,
+                            color = RikkaTheme.colors.onBackground,
+                            modifier = Modifier.padding(vertical = 4.dp)
                         )
 
-                        ChatBubble(
-                            sender = disputa.vendedor,
-                            message = "Si, acabo de transferir el monto.",
-                            time = "10:02",
-                            isBuyer = false
-                        )
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    navController.navigate("chat/${disputa.transaccion}?readOnly=true")
+                                },
+                            animation = CardAnimation.Press
+                        ) {
+                            Column(
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                ChatBubble(
+                                    sender = disputa.comprador,
+                                    message = "Hola, ¿ya realizaste la transferencia?",
+                                    time = "10:00",
+                                    isBuyer = true
+                                )
 
-                        ChatBubble(
-                            sender = disputa.comprador,
-                            message = "Perfecto, dejame verificarlo.",
-                            time = "10:03",
-                            isBuyer = true
-                        )
+                                ChatBubble(
+                                    sender = disputa.vendedor,
+                                    message = "Si, acabo de transferir el monto.",
+                                    time = "10:02",
+                                    isBuyer = false
+                                )
 
-                        ChatBubble(
-                            sender = disputa.vendedor,
-                            message = "Te envie el comprobante por aqui.",
-                            time = "10:05",
-                            isBuyer = false
-                        )
+                                ChatBubble(
+                                    sender = disputa.comprador,
+                                    message = "Perfecto, dejame verificarlo.",
+                                    time = "10:03",
+                                    isBuyer = true
+                                )
+
+                                ChatBubble(
+                                    sender = disputa.vendedor,
+                                    message = "Te envie el comprobante por aqui.",
+                                    time = "10:05",
+                                    isBuyer = false
+                                )
+
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(1.dp)
+                                        .background(RikkaTheme.colors.muted.copy(alpha = 0.15f))
+                                )
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.Center,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Ver chat completo",
+                                        variant = TextVariant.Small,
+                                        color = RikkaTheme.colors.primary
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -436,7 +597,7 @@ fun DisputaDetalleScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Comprobante de Pago",
+                        text = zoomTitle,
                         variant = TextVariant.Large,
                         color = RikkaTheme.colors.onBackground
                     )
@@ -464,7 +625,7 @@ fun DisputaDetalleScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Image(
-                        painter = painterResource(id = R.drawable.voucher_demo),
+                        painter = painterResource(id = zoomImageRes),
                         contentDescription = "Comprobante ampliado",
                         contentScale = ContentScale.Fit,
                         modifier = Modifier.fillMaxSize()
@@ -491,7 +652,7 @@ fun DisputaDetalleScreen(
             },
             text = {
                 Text(
-                    text = "¿Estás seguro de darle la razón al $roleName ($targetName)? Los fondos serán liberados de forma inmediata y esta acción es irreversible.",
+                    text = "¿Estás seguro de darle la razón al $roleName ($targetName)? Esta acción es irreversible.",
                     variant = TextVariant.P,
                     color = RikkaTheme.colors.onBackground
                 )
@@ -628,5 +789,25 @@ private fun ChatBubble(
                 Spacer(modifier = Modifier.weight(1f))
             }
         }
+    }
+}
+
+@Composable
+private fun DetailRow(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            variant = TextVariant.Small,
+            color = RikkaTheme.colors.onBackground.copy(alpha = 0.6f)
+        )
+        Text(
+            text = value,
+            variant = TextVariant.P,
+            color = RikkaTheme.colors.onBackground
+        )
     }
 }

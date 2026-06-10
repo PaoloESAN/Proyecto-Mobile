@@ -55,14 +55,18 @@ private val disputasResueltasMock = listOf(
         estado = "Resuelta",
         comprador = "Sofía Castro",
         vendedor = "Diego Martínez",
-        transaccion = "TX-099"
+        transaccion = "TX-099",
+        monto = "S/ 100.00",
+        mensaje = "La transferencia no se vio reflejada en la cuenta destino de inmediato."
     ),
     Disputa(
         id = 100,
         estado = "Resuelta",
         comprador = "Lucía Blanco",
         vendedor = "Martín Silva",
-        transaccion = "TX-100"
+        transaccion = "TX-100",
+        monto = "S/ 400.00",
+        mensaje = "Comisión interbancaria no acordada fue descontada por el banco."
     )
 )
 
@@ -199,8 +203,6 @@ fun DisputaListaScreen(
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        StatusBadge(disputa.estado)
-
                                         Row(
                                             verticalAlignment = Alignment.CenterVertically,
                                             horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -213,11 +215,16 @@ fun DisputaListaScreen(
                                             )
                                             Text(
                                                 text = disputa.transaccion,
-                                                variant = TextVariant.Small,
-                                                color = RikkaTheme.colors.onBackground,
-                                                modifier = Modifier.padding(top = 1.dp)
+                                                variant = TextVariant.P,
+                                                color = RikkaTheme.colors.onBackground
                                             )
                                         }
+
+                                        Text(
+                                            text = disputa.monto,
+                                            variant = TextVariant.P,
+                                            color = RikkaTheme.colors.primary
+                                        )
                                     }
 
                                     HorizontalDivider(
@@ -336,35 +343,21 @@ fun DisputaListaScreen(
                                         )
                                     )
 
-                                    // Bottom Row
-                                    Row(
+                                    // Bottom Row: Dispute message
+                                    Column(
                                         modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
+                                        verticalArrangement = Arrangement.spacedBy(4.dp)
                                     ) {
                                         Text(
-                                            text = "Monto: S/ 500.00",
+                                            text = "Motivo de la disputa:",
                                             variant = TextVariant.Small,
-                                            color = RikkaTheme.colors.primary,
-                                            modifier = Modifier.padding(top = 2.dp)
+                                            color = RikkaTheme.colors.onBackground.copy(alpha = 0.6f)
                                         )
-
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                        ) {
-                                            Text(
-                                                text = "Arbitraje",
-                                                variant = TextVariant.Small,
-                                                color = RikkaTheme.colors.onBackground.copy(alpha = 0.6f)
-                                            )
-                                            androidx.compose.material3.Icon(
-                                                imageVector = Icons.Default.ChevronRight,
-                                                contentDescription = null,
-                                                tint = RikkaTheme.colors.onBackground.copy(alpha = 0.6f),
-                                                modifier = Modifier.size(16.dp)
-                                            )
-                                        }
+                                        Text(
+                                            text = disputa.mensaje,
+                                            variant = TextVariant.P,
+                                            color = RikkaTheme.colors.onBackground.copy(alpha = 0.8f)
+                                        )
                                     }
                                 }
                             }

@@ -53,6 +53,7 @@ import zed.rainxch.rikkaui.components.ui.button.ButtonSize
 import zed.rainxch.rikkaui.components.ui.button.ButtonVariant
 import zed.rainxch.rikkaui.components.ui.card.Card
 import zed.rainxch.rikkaui.components.ui.icon.RikkaIcons
+import zed.rainxch.rikkaui.components.ui.input.Input
 import zed.rainxch.rikkaui.components.ui.text.Text
 import zed.rainxch.rikkaui.components.ui.text.TextVariant
 import zed.rainxch.rikkaui.components.ui.toast.ToastHost
@@ -103,6 +104,7 @@ fun BankDetailsScreen(
     var currentTransactionStatus by remember { mutableStateOf(status) }
 
     var showDisputeDialog by remember { mutableStateOf(false) }
+    var disputeReason by remember { mutableStateOf("") }
     var showVoucherDialog by remember { mutableStateOf(false) }
     var selectedVoucherTitle by remember { mutableStateOf("") }
     var selectedVoucherAmount by remember { mutableStateOf("") }
@@ -235,7 +237,10 @@ fun BankDetailsScreen(
     // Dialog: Dispute details
     if (showDisputeDialog) {
         AlertDialog(
-            onDismissRequest = { showDisputeDialog = false },
+            onDismissRequest = {
+                showDisputeDialog = false
+                disputeReason = ""
+            },
             containerColor = RikkaTheme.colors.background,
             title = {
                 Text(
@@ -245,30 +250,58 @@ fun BankDetailsScreen(
                 )
             },
             text = {
-                Text(
-                    text = "¿Está seguro de iniciar una disputa? Esto pausará el proceso de intercambio de divisas y un administrador intervendrá para verificar los comprobantes de pago de ambas partes.",
-                    variant = TextVariant.P,
-                    color = RikkaTheme.colors.onBackground.copy(alpha = 0.8f)
-                )
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        text = "¿Está seguro de iniciar una disputa? Esto pausará el proceso de intercambio de divisas y un administrador intervendrá para verificar los comprobantes de pago de ambas partes.",
+                        variant = TextVariant.P,
+                        color = RikkaTheme.colors.onBackground.copy(alpha = 0.8f)
+                    )
+                    Text(
+                        text = "Motivo de la disputa (Obligatorio)",
+                        variant = TextVariant.Small,
+                        color = RikkaTheme.colors.onBackground.copy(alpha = 0.6f)
+                    )
+                    Input(
+                        value = disputeReason,
+                        onValueChange = { disputeReason = it },
+                        placeholder = "Describa detalladamente el problema...",
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             },
             confirmButton = {
                 Button(
                     onClick = {
                         showDisputeDialog = false
+                        currentTransactionStatus = "En disputa"
+                        disputeReason = ""
                         scope.launch {
                             toastState.show(
                                 message = "Disputa iniciada correctamente. Soporte revisará el caso.",
                                 variant = ToastVariant.Success
                             )
+                            kotlinx.coroutines.delay(1000)
+                            navController.navigate("transactionStatus/$transactionId?isSeller=$isSeller&amount=$amount&rate=$rate&bank=$bank&type=$type&status=En disputa&uploaded=${buyerVoucherUploaded || sellerVoucherUploaded}&currency=$currency&isRated=false") {
+                                popUpTo("transactionStatus/$transactionId?isSeller=$isSeller&amount=$amount&rate=$rate&bank=$bank&type=$type&status=$status") {
+                                    inclusive = true
+                                }
+                            }
                         }
                     },
+                    enabled = disputeReason.isNotBlank(),
                     variant = ButtonVariant.Destructive,
                     text = "Iniciar Disputa"
                 )
             },
             dismissButton = {
                 Button(
-                    onClick = { showDisputeDialog = false },
+                    onClick = {
+                        showDisputeDialog = false
+                        disputeReason = ""
+                    },
                     variant = ButtonVariant.Outline,
                     text = "Cancelar"
                 )
