@@ -20,7 +20,6 @@ data class BankAccount(
 data class ProfileUiState(
     val nombres: String = "Freddy",
     val apellidos: String = "Delgado",
-    val telefono: String = "987654321",
     val isVerified: Boolean = false,
     val cuentas: List<BankAccount> = listOf(
         BankAccount(
@@ -49,13 +48,11 @@ class ProfileViewModel : ViewModel() {
         val isVerified = SessionManager.isVerified(context)
         val nombres = SessionManager.getNombres(context)
         val apellidos = SessionManager.getApellidos(context)
-        val telefono = SessionManager.getTelefono(context)
         _uiState.update {
             it.copy(
                 isVerified = isVerified,
                 nombres = nombres,
-                apellidos = apellidos,
-                telefono = telefono
+                apellidos = apellidos
             )
         }
     }
@@ -70,11 +67,6 @@ class ProfileViewModel : ViewModel() {
         _uiState.update { it.copy(apellidos = filtered, errorMessage = null) }
     }
 
-    fun onTelefonoChange(value: String) {
-        val filtered = value.filter { it.isDigit() }
-        _uiState.update { it.copy(telefono = filtered, errorMessage = null) }
-    }
-
     fun addCuenta(cuenta: BankAccount) {
         _uiState.update { it.copy(cuentas = it.cuentas + cuenta) }
     }
@@ -85,22 +77,14 @@ class ProfileViewModel : ViewModel() {
 
     fun saveChanges(context: Context) {
         val current = _uiState.value
-
-        if (current.nombres.isBlank() || current.apellidos.isBlank() || current.telefono.isBlank()) {
+        if (current.nombres.isBlank() || current.apellidos.isBlank()) {
             _uiState.update {
                 it.copy(errorMessage = "Complete todos los campos obligatorios")
             }
             return
         }
 
-        if (current.telefono.length < 9) {
-            _uiState.update {
-                it.copy(errorMessage = "El teléfono debe tener al menos 9 dígitos")
-            }
-            return
-        }
-
-        SessionManager.saveProfileInfo(context, current.nombres, current.apellidos, current.telefono)
+        SessionManager.saveProfileInfo(context, current.nombres, current.apellidos)
 
         _uiState.update {
             it.copy(isSuccess = true, errorMessage = null)

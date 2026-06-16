@@ -187,18 +187,7 @@ fun EditProfileScreen(
                                 )
                             }
 
-                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Label(text = "Teléfono")
-                                Input(
-                                    value = uiState.telefono,
-                                    onValueChange = viewModel::onTelefonoChange,
-                                    placeholder = "987654321",
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                                    leadingIcon = Icons.Default.Phone,
-                                    modifier = Modifier.fillMaxWidth(),
-                                    singleLine = true
-                                )
-                            }
+
 
                             Spacer(modifier = Modifier.height(4.dp))
 

@@ -13,7 +13,6 @@ object SessionManager {
     private const val KEY_VERIFIED = "user_verified"
     private const val KEY_NOMBRES = "user_nombres"
     private const val KEY_APELLIDOS = "user_apellidos"
-    private const val KEY_TELEFONO = "user_telefono"
 
     private val _themeState = mutableStateOf("system")
     val themeState: State<String> = _themeState
@@ -54,11 +53,10 @@ object SessionManager {
     fun isVerified(context: Context): Boolean =
         prefs(context).getBoolean(KEY_VERIFIED, false)
 
-    fun saveProfileInfo(context: Context, nombres: String, apellidos: String, telefono: String) {
+    fun saveProfileInfo(context: Context, nombres: String, apellidos: String) {
         prefs(context).edit()
             .putString(KEY_NOMBRES, nombres)
             .putString(KEY_APELLIDOS, apellidos)
-            .putString(KEY_TELEFONO, telefono)
             .apply()
     }
 
@@ -67,8 +65,5 @@ object SessionManager {
 
     fun getApellidos(context: Context): String =
         prefs(context).getString(KEY_APELLIDOS, "Delgado") ?: "Delgado"
-
-    fun getTelefono(context: Context): String =
-        prefs(context).getString(KEY_TELEFONO, "987654321") ?: "987654321"
 }
 

@@ -40,13 +40,14 @@ Para el desarrollo y mantenimiento de la aplicación móvil, el agente debe domi
 
 - **Límites de Oferta**: Una oferta tiene un `monto_total` (inventario del usuario) y límites por transacción (`monto_minimo` y `monto_maximo`). El monto mínimo NUNCA puede superar al máximo.
 - **Seguridad Transaccional**: El flujo de intercambio bloquea la edición/cancelación de una oferta en Supabase. Si una oferta tiene transacciones en estado `Pendiente`, `En Proceso`, `Pagado` o `Disputa`, no puede ser modificada (`update`) ni cancelada/eliminada (`delete`).
-- **Ciclo de Transacciones**:
-  1. `Pendiente`: El comprador inicia la transacción reservando fondos de la oferta insertando un registro en la tabla `transacciones`.
-  2. `Pagado`: El comprador transfiere el dinero al vendedor por transferencia bancaria externa, sube el comprobante al bucket `vouchers` de Supabase Storage, inserta un registro en la tabla `comprobantes` (almacenando el `transaccion_id` y la `imagen_url` del voucher), y actualiza el estado a `Pagado` de la transacción en la tabla `transacciones`.
-  3. `Finalizado` o `Disputa`: El vendedor confirma la recepción del dinero (Finalizado) o cualquiera de los dos abre un conflicto (Disputa).
+- **Ciclo de Transacciones (Doble Confirmación)**:
+  1. `Pendiente`: El comprador inicia la transacción seleccionando su método/cuenta de recepción. Ambos participantes ven sus cuentas bancarias cruzadas en la aplicación.
+  2. `Pagado` o `Confirmación Parcial`: Ambos participantes deben realizar sus transferencias cruzadas y subir sus respectivos comprobantes de pago al bucket `vouchers` de Supabase Storage, insertando un registro en la tabla `comprobantes` (almacenando `transaccion_id`, `usuario_id` de quien sube el voucher e `imagen_url` del voucher).
+  3. `Finalizado` o `Disputa`: Ambos participantes deben verificar el comprobante de la contraparte y presionar "Confirmar Pago Correcto" (lo que actualiza `confirmado_comprador` o `confirmado_vendedor` a `true` en la tabla `transacciones`). Solo cuando ambos confirman, la transacción cambia al estado `Finalizado`. Cualquiera de las partes puede abrir un conflicto (`Disputa`) antes de confirmar.
 - **Resolución de Disputas**: Exclusivo para administradores. La resolución es binaria:
   - **A favor del comprador**: La transacción se cambia a estado `Cancelado` en Supabase y la oferta vuelve a estar `Activa` (los fondos vuelven a estar disponibles para el vendedor).
   - **A favor del vendedor**: La transacción se cambia a estado `Finalizado` (los fondos quedan liquidados).
+- **Calificación del Usuario**: Cada usuario posee un atributo `calificacion` (promedio del 1.00 al 5.00) en la tabla `usuarios`. Este promedio se actualiza de forma automática cada vez que otro usuario registra una nueva calificación para él en la tabla `calificaciones`.
 - **Verificación de Vouchers con IA**:
   - La validación de los comprobantes de pago subidos por el comprador se procesa automáticamente mediante Inteligencia Artificial (por ejemplo, modelos de visión como Gemini 3.1 Flash Lite ejecutados a través de una Supabase Edge Function: `verificar-voucher-ia`).
   - La Edge Function analiza la imagen en busca de datos clave: banco emisor, cuenta de origen y destino, monto transferido, número de operación y fecha/hora.
@@ -77,13 +78,13 @@ data class UserProfileModel(
     @SerialName("apellidos") val apellidos: String,
     @SerialName("correo") val correo: String,
     @SerialName("contrasena_hash") val contrasenaHash: String,
-    @SerialName("telefono") val telefono: String? = null,
     @SerialName("rol") val rol: String = "Usuario", // "Usuario" | "Administrador"
     @SerialName("estado") val estado: String = "Activo", // "Activo" | "Suspendido" | "Bloqueado"
     @SerialName("fecha_registro") val fechaRegistro: String? = null, // ISO String / timestamptz
     @SerialName("es_verificado") val esVerificado: Boolean = false,
     @SerialName("dni_frontal_url") val dniFrontalUrl: String? = null,
-    @SerialName("dni_posterior_url") val dniPosteriorUrl: String? = null
+    @SerialName("dni_posterior_url") val dniPosteriorUrl: String? = null,
+    @SerialName("calificacion") val calificacion: Double = 5.00 // Rango 1.00 a 5.00, promedio auto-calculado
 )
 ```
 
@@ -155,6 +156,9 @@ data class TransactionModel(
     @SerialName("monto_operacion") val amount: Double,
     @SerialName("tipo_cambio_aplicado") val tipoCambioAplicado: Double,
     @SerialName("estado") val status: String = "Pendiente", // "Pendiente" | "En Proceso" | "Pagado" | "Finalizado" | "Disputa" | "Cancelado"
+    @SerialName("confirmado_comprador") val confirmadoComprador: Boolean = false,
+    @SerialName("confirmado_vendedor") val confirmadoVendedor: Boolean = false,
+    @SerialName("ya_calificado") val yaCalificado: Boolean = false,
     @SerialName("fecha_inicio") val createDate: String? = null,
     @SerialName("fecha_actualizacion") val fechaActualizacion: String? = null
 )
@@ -174,6 +178,7 @@ import kotlinx.serialization.Serializable
 data class ComprobanteModel(
     @SerialName("comprobante_id") val comprobanteId: Int? = null, // PK Autogenerada
     @SerialName("transaccion_id") val transaccionId: Int, // FK a transacciones
+    @SerialName("usuario_id") val usuarioId: Int, // FK a usuarios (quien sube el voucher)
     @SerialName("imagen_url") val imagenUrl: String, // URL pública del voucher en Storage
     @SerialName("fecha_subida") val fechaSubida: String? = null
 )
@@ -381,18 +386,19 @@ suspend fun actualizarOferta(ofertaId: Int, nuevoMonto: Double) {
 import io.github.jan.supabase.storage.storage
 import io.github.jan.supabase.postgrest.postgrest
 
-suspend fun subirYCrearComprobante(transaccionId: Int, fileBytes: ByteArray, fileName: String): ComprobanteModel {
+suspend fun subirYCrearComprobante(transaccionId: Int, usuarioId: Int, fileBytes: ByteArray, fileName: String): ComprobanteModel {
     val bucket = Supabase.client.storage["vouchers"]
-    // 1. Subir archivo binario al storage de Supabase
-    bucket.upload(path = "$transaccionId/$fileName", data = fileBytes) {
+    // 1. Subir archivo binario al storage de Supabase en la ruta por transacción y usuario
+    bucket.upload(path = "$transaccionId/$usuarioId/$fileName", data = fileBytes) {
         upsert = true
     }
     // 2. Retornar la URL pública del voucher
-    val publicUrl = bucket.publicUrl("$transaccionId/$fileName")
+    val publicUrl = bucket.publicUrl("$transaccionId/$usuarioId/$fileName")
 
     // 3. Crear el modelo de datos para insertar
     val comprobante = ComprobanteModel(
         transaccionId = transaccionId,
+        usuarioId = usuarioId,
         imagenUrl = publicUrl
     )
 
@@ -432,6 +438,46 @@ suspend fun solicitarVerificacionIa(comprobanteId: Int, transaccionId: Int): Ver
         function = "verificar-voucher-ia",
         body = request
     )
+}
+```
+
+#### 5. Doble Confirmación de la Transacción (Postgrest)
+
+##### Confirmación de Pago por Participante
+
+Cada participante de la transacción (comprador y vendedor) debe confirmar el pago. Cuando ambos confirmen (`confirmadoComprador` y `confirmadoVendedor` sean `true`), el estado de la transacción pasará automáticamente a `Finalizado`.
+
+```kotlin
+import io.github.jan.supabase.postgrest.postgrest
+
+suspend fun confirmarPagoTransaccion(transaccionId: Int, esComprador: Boolean): TransactionModel {
+    val campoConfirmacion = if (esComprador) "confirmado_comprador" else "confirmado_vendedor"
+    
+    // 1. Actualizar el campo de confirmación correspondiente
+    val txActualizada = Supabase.client.postgrest["transacciones"]
+        .update({
+            set(campoConfirmacion, true)
+        }) {
+            filter {
+                eq("transaccion_id", transaccionId)
+            }
+            select()
+        }.decodeSingle<TransactionModel>()
+
+    // 2. Si ambos han confirmado, actualizar el estado global de la transacción a "Finalizado"
+    if (txActualizada.confirmadoComprador && txActualizada.confirmadoVendedor) {
+        return Supabase.client.postgrest["transacciones"]
+            .update({
+                set("estado", "Finalizado")
+            }) {
+                filter {
+                    eq("transaccion_id", transaccionId)
+                }
+                select()
+            }.decodeSingle<TransactionModel>()
+    }
+
+    return txActualizada
 }
 ```
 
@@ -482,3 +528,25 @@ suspend fun enviarMensaje(mensaje: ChatMessageModel) {
     Supabase.client.postgrest["mensajes_chat"].insert(mensaje)
 }
 ```
+
+---
+
+## 6. Flujo de Transacción P2P, Cuentas Bancarias Cruzadas y Doble Confirmación
+
+La vista detallada de la transacción en la aplicación Android (pantallas como `TransactionStatusScreen` y `BankDetailsScreen`) implementa un flujo interactivo estructurado y seguro para ambas partes:
+
+### A. Cuentas Bancarias Cruzadas
+Para facilitar el intercambio fiat sin confusiones sobre a dónde enviar el dinero, el sistema calcula y muestra de forma cruzada las cuentas bancarias de las partes:
+1. **Cuenta Destino (Enviar Pago)**: Representa la cuenta bancaria de la **contraparte**. El usuario actual debe transferir fondos a este banco, número de cuenta y titular.
+2. **Tu Cuenta de Recepción (Recibir Pago)**: Representa la cuenta del **usuario actual** configurada para esta transacción. Es el destino donde la contraparte depositará los fondos del intercambio.
+
+### B. Desglose de Montos Exactos
+La interfaz de usuario calcula dinámicamente y muestra de manera clara:
+* **Monto a Enviar**: En la moneda destino, aplicando el tipo de cambio pactado en la oferta si la divisa es distinta al activo base.
+* **Monto a Recibir**: El monto y divisa esperada en la cuenta receptora del usuario.
+Esto asegura que ambos usuarios sepan exactamente cuántas unidades de fiat enviar y recibir.
+
+### C. Flujo de Doble Confirmación y Voucher
+1. **Envío de Comprobante**: Ambas partes deben realizar su transferencia correspondiente y subir su comprobante de pago (mediante `subirYCrearComprobante`).
+2. **Habilitación de Confirmación**: El botón **"Confirmar Pago Correcto"** (que marca `confirmadoComprador` o `confirmadoVendedor` en `true` en la transacción) está estrictamente condicionado a que la contraparte ya haya subido su comprobante (`contraparteVoucher != null`). Si no lo ha hecho, se muestra un banner de advertencia animando a esperar. Esto previene liberaciones accidentales de fondos antes de verificar el recibo.
+3. **Mecanismo de Disputa**: El botón **"Abrir Disputa"** permanece habilitado e interactivo en todo momento si surge algún inconveniente, y debe contar con un **Modal de Confirmación** para evitar aperturas accidentales.
