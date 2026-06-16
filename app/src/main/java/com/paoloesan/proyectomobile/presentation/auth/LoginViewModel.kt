@@ -3,8 +3,7 @@ package com.paoloesan.proyectomobile.presentation.auth
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.paoloesan.proyectomobile.data.local.SessionManager
-import kotlinx.coroutines.delay
+import com.paoloesan.proyectomobile.data.repository.AuthRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -24,9 +23,6 @@ class LoginViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(LoginUiState())
     val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
 
-    private val validEmail = "admin@test.com"
-    private val validPassword = "123456"
-
     fun onCorreoChange(value: String) {
         _uiState.update { it.copy(correo = value, errorMessage = null) }
     }
@@ -43,30 +39,20 @@ class LoginViewModel : ViewModel() {
         val current = _uiState.value
 
         if (current.correo.isBlank() || current.password.isBlank()) {
-            _uiState.update {
-                it.copy(errorMessage = "Complete los campos requeridos")
-            }
+            _uiState.update { it.copy(errorMessage = "Complete los campos requeridos") }
             return
         }
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-            delay(1000)
-            val isValid = current.correo == validEmail && current.password == validPassword
-            if (!isValid) {
+            try {
+                AuthRepository.login(context, current.correo, current.password)
+                _uiState.update { it.copy(isLoading = false, isSuccess = true) }
+            } catch (e: Exception) {
                 _uiState.update {
                     it.copy(
                         isLoading = false,
                         errorMessage = "Correo o contraseña incorrectos"
-                    )
-                }
-            } else {
-                SessionManager.saveToken(context, "fake_jwt_token_123")
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        isSuccess = true,
-                        errorMessage = null
                     )
                 }
             }
