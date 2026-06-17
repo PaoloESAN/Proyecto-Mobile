@@ -8,6 +8,7 @@ import com.paoloesan.proyectomobile.data.model.OfertaMatch
 import com.paoloesan.proyectomobile.data.model.OfferModel
 import com.paoloesan.proyectomobile.data.model.UserProfileModel
 import io.github.jan.supabase.auth.auth
+import com.paoloesan.proyectomobile.data.currentUserAwaitInit
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
 import io.github.jan.supabase.postgrest.rpc
@@ -53,7 +54,7 @@ class MatchViewModel : ViewModel() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             try {
-                val authId = Supabase.client.auth.currentUserOrNull()?.id
+                val authId = Supabase.client.auth.currentUserAwaitInit()?.id
                 if (authId == null) {
                     _uiState.update {
                         it.copy(

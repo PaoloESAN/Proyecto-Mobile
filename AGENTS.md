@@ -335,6 +335,24 @@ suspend fun iniciarSesion(context: Context, correo: String, contrasenia: String)
 }
 ```
 
+##### Obtener Usuario Autenticado de Forma Segura (Condición de Carrera al Inicio)
+
+> [!IMPORTANT]
+> Dado que el SDK de Supabase restaura la sesión persistida en el caché local de forma asíncrona al iniciar la aplicación, llamar directamente a `Supabase.client.auth.currentUserOrNull()` durante la inicialización de la pantalla o ViewModel (como en un bloque `init {}`) puede retornar `null` porque la inicialización del SDK aún no ha terminado.
+>
+> Para evitar esto, se **DEBE** utilizar la función de extensión personalizada `currentUserAwaitInit()` (declarada en `com.paoloesan.proyectomobile.data.SupabaseClient.kt`), la cual espera a que termine de cargar el caché local antes de verificar la sesión.
+
+```kotlin
+import com.paoloesan.proyectomobile.data.currentUserAwaitInit
+import io.github.jan.supabase.auth.auth
+
+suspend fun obtenerUsuarioActual(): String? {
+    // Retorna el auth_id (UUID) de forma segura esperando la inicialización asíncrona
+    val authId = Supabase.client.auth.currentUserAwaitInit()?.id
+    return authId
+}
+```
+
 #### 2. Operaciones de Base de Datos con `Supabase.client.postgrest`
 
 ##### Obtener Ofertas Filtradas
