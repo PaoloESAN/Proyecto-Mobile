@@ -7,6 +7,7 @@ import com.paoloesan.proyectomobile.data.model.OfferModel
 import com.paoloesan.proyectomobile.data.model.PaymentMethodModel
 import com.paoloesan.proyectomobile.data.model.UserProfileModel
 import io.github.jan.supabase.auth.auth
+import com.paoloesan.proyectomobile.data.currentUserAwaitInit
 import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -36,8 +37,8 @@ class PublishOfferViewModel : ViewModel() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             try {
-                // 1. Obtener auth_id del usuario logueado
-                val authId = Supabase.client.auth.currentUserOrNull()?.id
+                // 1. Obtener auth_id del usuario logueado esperando a que inicialice
+                val authId = Supabase.client.auth.currentUserAwaitInit()?.id
                 if (authId == null) {
                     _uiState.update { it.copy(isLoading = false, errorMessage = "Usuario no autenticado") }
                     return@launch

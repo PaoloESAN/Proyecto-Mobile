@@ -3,7 +3,10 @@ package com.paoloesan.proyectomobile.data
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.auth.Auth
+import io.github.jan.supabase.auth.status.SessionStatus
 import io.github.jan.supabase.storage.Storage
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
 
 /**
  * Cliente singleton de Supabase configurado con los módulos de Postgrest (Base de Datos),
@@ -22,3 +25,13 @@ object Supabase {
         install(Storage)
     }
 }
+
+/**
+ * Retorna el usuario actual de Supabase Auth una vez completada la inicialización
+ * asíncrona de la sesión en caché.
+ */
+suspend fun Auth.currentUserAwaitInit() = this.run {
+    sessionStatus.filter { it !is SessionStatus.Initializing }.first()
+    currentUserOrNull()
+}
+

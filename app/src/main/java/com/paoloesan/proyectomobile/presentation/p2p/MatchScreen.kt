@@ -1,6 +1,7 @@
 package com.paoloesan.proyectomobile.presentation.p2p
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -9,23 +10,27 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AttachMoney
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Payment
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.SwapHoriz
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -36,6 +41,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import zed.rainxch.rikkaui.components.ui.button.Button
 import zed.rainxch.rikkaui.components.ui.button.ButtonSize
@@ -47,42 +54,15 @@ import zed.rainxch.rikkaui.components.ui.text.Text
 import zed.rainxch.rikkaui.components.ui.text.TextVariant
 import zed.rainxch.rikkaui.foundation.RikkaTheme
 
-data class MatchedOffer(
-    val id: String,
-    val username: String,
-    val exchangeRate: Double,
-    val compatibleAmount: Double,
-    val currency: String,
-    val paymentMethod: String,
-    val type: String,
-    val minAmount: Double,
-    val maxAmount: Double
-)
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MatchScreen(navController: NavController) {
-    val matches = remember {
-        listOf(
-            MatchedOffer("1", "Carlos Perez", 3.75, 150.0, "USD", "BCP", "Compra", 50.0, 200.0),
-            MatchedOffer("2", "Ana Gomez", 3.76, 200.0, "USD", "Yape", "Venta", 100.0, 500.0),
-            MatchedOffer(
-                "3",
-                "Luis Rodriguez",
-                3.74,
-                500.0,
-                "PEN",
-                "Interbank",
-                "Compra",
-                200.0,
-                1000.0
-            ),
-            MatchedOffer("4", "Maria Lopez", 3.77, 300.0, "USD", "BCP", "Venta", 100.0, 400.0),
-            MatchedOffer("5", "Juan Castro", 3.75, 100.0, "PEN", "Yape", "Compra", 20.0, 150.0)
-        )
-    }
-
+fun MatchScreen(
+    navController: NavController,
+    viewModel: MatchViewModel = viewModel()
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val focusManager = LocalFocusManager.current
+    var showBottomSheet by remember { mutableStateOf(false) }
 
     Box(
         modifier = Modifier
@@ -113,7 +93,7 @@ fun MatchScreen(navController: NavController) {
                     }
 
                     Text(
-                        text = "Coincidencias Automaticas",
+                        text = "Coincidencias Automáticas",
                         color = RikkaTheme.colors.onBackground,
                         variant = TextVariant.Large,
                     )
@@ -122,134 +102,334 @@ fun MatchScreen(navController: NavController) {
                 }
             }
         ) { innerPadding ->
-            if (matches.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "No se encontraron coincidencias disponibles",
-                        variant = TextVariant.P,
-                        color = Color.Gray
-                    )
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+            ) {
+                // Si hay error en la UI, mostrarlo
+                if (uiState.errorMessage != null) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 24.dp, vertical = 12.dp)
+                            .background(
+                                RikkaTheme.colors.destructive.copy(alpha = 0.1f),
+                                RoundedCornerShape(8.dp)
+                            )
+                            .border(
+                                1.dp,
+                                RikkaTheme.colors.destructive.copy(alpha = 0.2f),
+                                RoundedCornerShape(8.dp)
+                            )
+                            .padding(16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = uiState.errorMessage ?: "",
+                            variant = TextVariant.P,
+                            color = RikkaTheme.colors.destructive
+                        )
+                    }
                 }
-            } else {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding)
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null
+
+                if (uiState.myActiveOffers.isEmpty() && !uiState.isLoading) {
+                    // El usuario no tiene ofertas activas para emparejar
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(24.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
-                            focusManager.clearFocus()
+                            Text(
+                                text = "No tienes ofertas activas publicadas",
+                                variant = TextVariant.H3,
+                                color = RikkaTheme.colors.onBackground
+                            )
+                            Text(
+                                text = "Para usar el Matching Automático, primero debes publicar una oferta de compra o venta en el mercado.",
+                                variant = TextVariant.P,
+                                color = Color.Gray,
+                                modifier = Modifier.padding(horizontal = 16.dp)
+                            )
+                            Button(
+                                onClick = {
+                                    navController.navigate("publish_offer")
+                                },
+                                variant = ButtonVariant.Outline,
+                                text = "Publicar Oferta"
+                            )
                         }
-                        .padding(horizontal = 24.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                    contentPadding = PaddingValues(vertical = 12.dp)
-                ) {
-                    items(matches, key = { it.id }) { match ->
-                        val isCompra = match.type == "Compra"
-                        val operationColor =
-                            if (isCompra) RikkaTheme.colors.primary else RikkaTheme.colors.destructive
-                        Card(
-                            onClick = {
-                                navController.navigate("offerDetail/${match.id}")
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                            animation = CardAnimation.Press
+                    }
+                } else {
+                    // Sección 1: Botón selector de ofertas activas del usuario (abre Bottom Sheet)
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 24.dp, vertical = 8.dp),
+                        onClick = { showBottomSheet = true },
+                        animation = CardAnimation.Press
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        androidx.compose.material3.Icon(
-                                            imageVector = Icons.Default.Person,
-                                            contentDescription = null,
-                                            tint = RikkaTheme.colors.primary
-                                        )
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Text(
-                                            text = match.username,
-                                            variant = TextVariant.P,
-                                            color = RikkaTheme.colors.onBackground
-                                        )
-                                    }
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        androidx.compose.material3.Icon(
-                                            imageVector = Icons.Default.SwapHoriz,
-                                            contentDescription = null,
-                                            tint = if (isCompra) RikkaTheme.colors.primary else RikkaTheme.colors.destructive,
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                        Text(
-                                            text = match.type,
-                                            variant = TextVariant.P,
-                                            color = if (isCompra) RikkaTheme.colors.primary else RikkaTheme.colors.destructive
-                                        )
-                                    }
-                                }
-
-                                Spacer(modifier = Modifier.height(8.dp))
-
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
+                                Text(
+                                    text = "Oferta seleccionada para matching:",
+                                    variant = TextVariant.Small,
+                                    color = Color.Gray
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                uiState.selectedOffer?.let { offer ->
                                     Text(
-                                        text = "${match.currency} ${match.compatibleAmount}",
-                                        variant = TextVariant.H3,
+                                        text = "${offer.tipoOperacion} - ${offer.currency} ${offer.montoTotal} (T.C. ${offer.price})",
+                                        variant = TextVariant.P,
                                         color = RikkaTheme.colors.onBackground
                                     )
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        androidx.compose.material3.Icon(
-                                            imageVector = Icons.Default.AttachMoney,
-                                            contentDescription = null,
-                                            tint = RikkaTheme.colors.onBackground,
-                                            modifier = Modifier.width(18.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                        Text(
-                                            text = "T.C.: ${match.exchangeRate}",
-                                            variant = TextVariant.P,
-                                            color = RikkaTheme.colors.onBackground
-                                        )
+                                } ?: Text(
+                                    text = "Seleccione una oferta...",
+                                    variant = TextVariant.P,
+                                    color = RikkaTheme.colors.onBackground
+                                )
+                            }
+                            androidx.compose.material3.Icon(
+                                imageVector = Icons.Default.ChevronRight,
+                                contentDescription = null,
+                                tint = Color.Gray
+                            )
+                        }
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(1.dp)
+                            .background(RikkaTheme.colors.muted.copy(alpha = 0.15f))
+                    )
+
+                    // Sección 2: Resultados del matching
+                    if (uiState.isLoading) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(top = 40.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(
+                                color = RikkaTheme.colors.primary,
+                                modifier = Modifier.size(40.dp)
+                            )
+                        }
+                    } else if (uiState.matches.isEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(top = 40.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "No se encontraron ofertas compatibles en el mercado",
+                                variant = TextVariant.P,
+                                color = Color.Gray
+                            )
+                        }
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null
+                                ) {
+                                    focusManager.clearFocus()
+                                }
+                                .padding(horizontal = 24.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                            contentPadding = PaddingValues(vertical = 16.dp)
+                        ) {
+                            items(uiState.matches, key = { it.ofertaId }) { match ->
+                                val isCompra = match.tipoOperacion == "Compra"
+                                Card(
+                                    onClick = {
+                                        navController.navigate("offerDetail/${match.ofertaId}")
+                                    },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    animation = CardAnimation.Press
+                                ) {
+                                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                androidx.compose.material3.Icon(
+                                                    imageVector = Icons.Default.Person,
+                                                    contentDescription = null,
+                                                    tint = RikkaTheme.colors.primary,
+                                                    modifier = Modifier.size(20.dp)
+                                                )
+                                                Spacer(modifier = Modifier.width(8.dp))
+                                                Text(
+                                                    text = match.nombreCreador,
+                                                    variant = TextVariant.P,
+                                                    color = RikkaTheme.colors.onBackground
+                                                )
+                                            }
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                androidx.compose.material3.Icon(
+                                                    imageVector = Icons.Default.SwapHoriz,
+                                                    contentDescription = null,
+                                                    tint = if (isCompra) RikkaTheme.colors.primary else RikkaTheme.colors.destructive,
+                                                    modifier = Modifier.size(18.dp)
+                                                )
+                                                Spacer(modifier = Modifier.width(4.dp))
+                                                Text(
+                                                    text = match.tipoOperacion,
+                                                    variant = TextVariant.P,
+                                                    color = if (isCompra) RikkaTheme.colors.primary else RikkaTheme.colors.destructive
+                                                )
+                                            }
+                                        }
+
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = "${match.moneda} ${match.montoTotal}",
+                                                variant = TextVariant.H3,
+                                                color = RikkaTheme.colors.onBackground
+                                            )
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                androidx.compose.material3.Icon(
+                                                    imageVector = Icons.Default.AttachMoney,
+                                                    contentDescription = null,
+                                                    tint = RikkaTheme.colors.onBackground,
+                                                    modifier = Modifier.size(18.dp)
+                                                )
+                                                Spacer(modifier = Modifier.width(4.dp))
+                                                Text(
+                                                    text = "T.C.: ${match.tipoCambio}",
+                                                    variant = TextVariant.P,
+                                                    color = RikkaTheme.colors.onBackground
+                                                )
+                                            }
+                                        }
+
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = "Límites: Min ${match.montoMinimo.toInt()} / Max ${match.montoMaximo.toInt()}",
+                                                variant = TextVariant.Small,
+                                                color = Color.Gray
+                                            )
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                androidx.compose.material3.Icon(
+                                                    imageVector = Icons.Default.Payment,
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(16.dp),
+                                                    tint = Color.Gray
+                                                )
+                                                Spacer(modifier = Modifier.width(4.dp))
+                                                Text(
+                                                    text = match.banco,
+                                                    variant = TextVariant.Small,
+                                                    color = Color.Gray
+                                                )
+                                            }
+                                        }
                                     }
                                 }
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
-                                Spacer(modifier = Modifier.height(8.dp))
+        // Modal Bottom Sheet para la selección de ofertas en 2 columnas
+        if (showBottomSheet) {
+            val sheetState = rememberModalBottomSheetState()
+            ModalBottomSheet(
+                onDismissRequest = { showBottomSheet = false },
+                sheetState = sheetState,
+                containerColor = RikkaTheme.colors.background
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 32.dp)
+                ) {
+                    Text(
+                        text = "Selecciona una Oferta Activa",
+                        variant = TextVariant.Large,
+                        color = RikkaTheme.colors.onBackground,
+                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)
+                    )
 
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = "Limites: Min ${match.minAmount.toInt()} / Max ${match.maxAmount.toInt()}",
-                                        variant = TextVariant.Small,
-                                        color = Color.Gray
-                                    )
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        androidx.compose.material3.Icon(
-                                            imageVector = Icons.Default.Payment,
-                                            contentDescription = null,
-                                            modifier = Modifier.width(16.dp),
-                                            tint = Color.Gray
+                    val chunkedOffers = uiState.myActiveOffers.chunked(2)
+                    LazyColumn(
+                        contentPadding = PaddingValues(horizontal = 24.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(chunkedOffers) { rowOffers ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                rowOffers.forEach { offer ->
+                                    val isSelected = uiState.selectedOffer?.offerId == offer.offerId
+                                    val borderColor =
+                                        if (isSelected) RikkaTheme.colors.primary else RikkaTheme.colors.muted.copy(
+                                            alpha = 0.2f
                                         )
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                        Text(
-                                            text = match.paymentMethod,
-                                            variant = TextVariant.Small,
-                                            color = Color.Gray
-                                        )
+                                    val bgColor =
+                                        if (isSelected) RikkaTheme.colors.primary.copy(alpha = 0.05f) else RikkaTheme.colors.background
+
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .border(1.5.dp, borderColor, RoundedCornerShape(12.dp))
+                                            .background(bgColor, RoundedCornerShape(12.dp))
+                                            .clickable {
+                                                viewModel.selectOffer(offer)
+                                                showBottomSheet = false
+                                            }
+                                            .padding(12.dp)
+                                    ) {
+                                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                            Text(
+                                                text = "${offer.tipoOperacion} - ${offer.currency}",
+                                                variant = TextVariant.Small,
+                                                color = if (offer.tipoOperacion == "Compra") RikkaTheme.colors.primary else RikkaTheme.colors.destructive
+                                            )
+                                            Text(
+                                                text = "Monto: ${offer.currency} ${offer.montoTotal}",
+                                                variant = TextVariant.P,
+                                                color = RikkaTheme.colors.onBackground
+                                            )
+                                            Text(
+                                                text = "T.C.: ${offer.price}",
+                                                variant = TextVariant.Small,
+                                                color = Color.Gray
+                                            )
+                                        }
                                     }
+                                }
+                                if (rowOffers.size < 2) {
+                                    Spacer(modifier = Modifier.weight(1f))
                                 }
                             }
                         }
