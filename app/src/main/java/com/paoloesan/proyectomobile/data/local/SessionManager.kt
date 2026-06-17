@@ -13,12 +13,31 @@ object SessionManager {
     private const val KEY_VERIFIED = "user_verified"
     private const val KEY_NOMBRES = "user_nombres"
     private const val KEY_APELLIDOS = "user_apellidos"
+    private const val KEY_REMEMBER_ME = "remember_me"
 
     private val _themeState = mutableStateOf("system")
     val themeState: State<String> = _themeState
 
     private fun prefs(context: Context): SharedPreferences =
         context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+
+    fun saveRememberMe(context: Context, remember: Boolean) {
+        prefs(context).edit().putBoolean(KEY_REMEMBER_ME, remember).apply()
+    }
+
+    fun shouldRememberMe(context: Context): Boolean =
+        prefs(context).getBoolean(KEY_REMEMBER_ME, false)
+
+    fun initSession(context: Context) {
+        if (!shouldRememberMe(context)) {
+            clearToken(context)
+            prefs(context).edit()
+                .remove(KEY_NOMBRES)
+                .remove(KEY_APELLIDOS)
+                .remove(KEY_VERIFIED)
+                .apply()
+        }
+    }
 
     fun saveToken(context: Context, token: String) {
         prefs(context).edit().putString(KEY_TOKEN, token).apply()

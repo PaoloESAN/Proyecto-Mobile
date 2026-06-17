@@ -12,6 +12,7 @@ import com.paoloesan.proyectomobile.presentation.navigation.AppNav
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        SessionManager.initSession(this)
         enableEdgeToEdge()
         setContent {
             SessionManager.initTheme(this)

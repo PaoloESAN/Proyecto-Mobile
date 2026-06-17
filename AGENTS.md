@@ -74,10 +74,10 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class UserProfileModel(
     @SerialName("usuario_id") val usuarioId: Int? = null, // PK Autogenerada
+    @SerialName("auth_id") val authId: String? = null, // UUID de Supabase Auth
     @SerialName("nombres") val nombres: String,
     @SerialName("apellidos") val apellidos: String,
     @SerialName("correo") val correo: String,
-    @SerialName("contrasena_hash") val contrasenaHash: String,
     @SerialName("rol") val rol: String = "Usuario", // "Usuario" | "Administrador"
     @SerialName("estado") val estado: String = "Activo", // "Activo" | "Suspendido" | "Bloqueado"
     @SerialName("fecha_registro") val fechaRegistro: String? = null, // ISO String / timestamptz
@@ -153,6 +153,7 @@ data class TransactionModel(
     @SerialName("oferta_id") val offerId: Int, // FK a ofertas
     @SerialName("usuario_comprador_id") val usuarioCompradorId: Int, // FK a usuarios
     @SerialName("usuario_vendedor_id") val usuarioVendedorId: Int, // FK a usuarios
+    @SerialName("metodo_pago_comprador_id") val metodoPagoCompradorId: Int? = null, // FK a metodos_pago del comprador
     @SerialName("monto_operacion") val amount: Double,
     @SerialName("tipo_cambio_aplicado") val tipoCambioAplicado: Double,
     @SerialName("estado") val status: String = "Pendiente", // "Pendiente" | "En Proceso" | "Pagado" | "Finalizado" | "Disputa" | "Cancelado"
