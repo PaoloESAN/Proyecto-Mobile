@@ -31,6 +31,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -43,6 +44,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import kotlinx.coroutines.launch
 import zed.rainxch.rikkaui.components.ui.PopupAnimation
@@ -64,7 +67,12 @@ import zed.rainxch.rikkaui.foundation.RikkaTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PublishOfferScreen(navController: NavController) {
+fun PublishOfferScreen(
+    navController: NavController,
+    viewModel: PublishOfferViewModel = viewModel()
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
     // Listado de ofertas activas ("Mis Ofertas")
     var offers by remember {
         mutableStateOf(
@@ -97,7 +105,7 @@ fun PublishOfferScreen(navController: NavController) {
     var rate by remember { mutableStateOf("") }
     var minAmount by remember { mutableStateOf("") }
     var maxAmount by remember { mutableStateOf("") }
-    var paymentMethod by remember { mutableStateOf("BCP") }
+    var paymentMethod by remember { mutableStateOf("") }
 
     // Estados para edición y cancelación
     var showCancelDialog by remember { mutableStateOf(false) }
@@ -119,11 +127,50 @@ fun PublishOfferScreen(navController: NavController) {
         SelectOption("PEN", "PEN")
     )
 
-    val paymentOptions = listOf(
-        SelectOption("BCP", "BCP"),
-        SelectOption("Yape", "Yape"),
-        SelectOption("Interbank", "Interbank")
-    )
+    val paymentOptions = remember(uiState.paymentMethods) {
+        uiState.paymentMethods.map {
+            SelectOption(
+                value = it.metodoPagoId.toString(),
+                label = "${it.banco} - ${it.numeroCuenta} (${it.tipoMoneda})"
+            )
+        }
+    }
+
+    LaunchedEffect(uiState.paymentMethods) {
+        if (uiState.paymentMethods.isNotEmpty() && paymentMethod.isBlank()) {
+            paymentMethod = uiState.paymentMethods.first().metodoPagoId.toString()
+        }
+    }
+
+    LaunchedEffect(uiState.isSuccess) {
+        if (uiState.isSuccess) {
+            viewModel.consumeSuccess()
+            scope.launch {
+                toastState.show(
+                    message = "Oferta publicada correctamente",
+                    variant = ToastVariant.Success
+                )
+            }
+            amount = ""
+            rate = ""
+            minAmount = ""
+            maxAmount = ""
+            paymentMethod = ""
+            navController.popBackStack()
+        }
+    }
+
+    LaunchedEffect(uiState.errorMessage) {
+        uiState.errorMessage?.let { message ->
+            scope.launch {
+                toastState.show(
+                    message = message,
+                    variant = ToastVariant.Destructive
+                )
+            }
+            viewModel.consumeError()
+        }
+    }
 
     // Validaciones de publicación
     val isMinMaxError by remember {
@@ -151,13 +198,15 @@ fun PublishOfferScreen(navController: NavController) {
         derivedStateOf {
             val min = minAmount.toDoubleOrNull()
             val max = maxAmount.toDoubleOrNull()
-            minAmount.isNotBlank() && maxAmount.isNotBlank() &&
+            !uiState.isLoading &&
+                    minAmount.isNotBlank() && maxAmount.isNotBlank() &&
                     amount.isNotBlank() && rate.isNotBlank() &&
                     (amount.toDoubleOrNull() ?: 0.0) > 0 &&
                     (rate.toDoubleOrNull() ?: 0.0) > 0 &&
                     min != null && min > 0 &&
                     max != null && max > 0 &&
-                    !isMinMaxError
+                    !isMinMaxError &&
+                    paymentMethod.isNotBlank()
         }
     }
 
@@ -605,29 +654,17 @@ fun PublishOfferScreen(navController: NavController) {
                             val rt = rate.toDoubleOrNull() ?: 0.0
                             val min = minAmount.toDoubleOrNull() ?: 0.0
                             val max = maxAmount.toDoubleOrNull() ?: 0.0
+                            val selectedMethodId = paymentMethod.toIntOrNull()
 
-                            val newOffer = MyOffer(
-                                id = java.util.UUID.randomUUID().toString(),
-                                type = type,
-                                currency = currency,
-                                amount = amt,
-                                rate = rt,
-                                minLimit = min,
-                                maxLimit = max,
-                                paymentMethod = paymentMethod
-                            )
-                            offers = offers + newOffer
-
-                            // Limpiar campos
-                            amount = ""
-                            rate = ""
-                            minAmount = ""
-                            maxAmount = ""
-
-                            scope.launch {
-                                toastState.show(
-                                    message = "Oferta publicada correctamente",
-                                    variant = ToastVariant.Success
+                            if (selectedMethodId != null) {
+                                viewModel.publishOffer(
+                                    metodoPagoId = selectedMethodId,
+                                    tipoOperacion = type,
+                                    moneda = currency,
+                                    montoTotal = amt,
+                                    montoMinimo = min,
+                                    montoMaximo = max,
+                                    tipoCambio = rt
                                 )
                             }
                         },
@@ -821,31 +858,19 @@ fun PublishOfferScreen(navController: NavController) {
                                 val rt = rate.toDoubleOrNull() ?: 0.0
                                 val min = minAmount.toDoubleOrNull() ?: 0.0
                                 val max = maxAmount.toDoubleOrNull() ?: 0.0
+                                val selectedMethodId = paymentMethod.toIntOrNull()
 
-                                val newOffer = MyOffer(
-                                    id = java.util.UUID.randomUUID().toString(),
-                                    type = type,
-                                    currency = currency,
-                                    amount = amt,
-                                    rate = rt,
-                                    minLimit = min,
-                                    maxLimit = max,
-                                    paymentMethod = paymentMethod
-                                )
-                                offers = offers + newOffer
-                                showPublishSheet = false
-
-                                // Limpiar campos
-                                amount = ""
-                                rate = ""
-                                minAmount = ""
-                                maxAmount = ""
-
-                                scope.launch {
-                                    toastState.show(
-                                        message = "Oferta publicada correctamente",
-                                        variant = ToastVariant.Success
+                                if (selectedMethodId != null) {
+                                    viewModel.publishOffer(
+                                        metodoPagoId = selectedMethodId,
+                                        tipoOperacion = type,
+                                        moneda = currency,
+                                        montoTotal = amt,
+                                        montoMinimo = min,
+                                        montoMaximo = max,
+                                        tipoCambio = rt
                                     )
+                                    showPublishSheet = false
                                 }
                             },
                             modifier = Modifier.weight(1f),

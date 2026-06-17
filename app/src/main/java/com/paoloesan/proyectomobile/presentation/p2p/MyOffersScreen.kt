@@ -67,6 +67,7 @@ data class MyOffer(
     val minLimit: Double,
     val maxLimit: Double,
     val paymentMethod: String,
+    val status: String = "Activa",
     val hasActiveTransaction: Boolean = false
 )
 
@@ -103,8 +104,8 @@ fun MyOffersScreen(navController: NavController) {
     var offers by remember {
         mutableStateOf(
             listOf(
-                MyOffer("1", "Compra", "USD", 150.0, 3.75, 50.0, 200.0, "BCP"),
-                MyOffer("2", "Venta", "PEN", 500.0, 1.0, 10.0, 500.0, "Yape"),
+                MyOffer("1", "Compra", "USD", 150.0, 3.75, 50.0, 200.0, "BCP", status = "Activa"),
+                MyOffer("2", "Venta", "PEN", 500.0, 1.0, 10.0, 500.0, "Yape", status = "Activa"),
                 MyOffer(
                     "3",
                     "Compra",
@@ -114,9 +115,10 @@ fun MyOffersScreen(navController: NavController) {
                     100.0,
                     400.0,
                     "Interbank",
+                    status = "En Proceso",
                     hasActiveTransaction = true
                 ),
-                MyOffer("4", "Venta", "USD", 200.0, 3.74, 50.0, 250.0, "BCP")
+                MyOffer("4", "Venta", "USD", 200.0, 3.74, 50.0, 250.0, "BCP", status = "Finalizada")
             )
         )
     }
@@ -231,8 +233,6 @@ fun MyOffersScreen(navController: NavController) {
             )
         )
     }
-
-    var expandedOfferIds by remember { mutableStateOf(setOf<String>()) }
 
     // Estados para edición y cancelación (Tab 0)
     var showCancelDialog by remember { mutableStateOf(false) }
@@ -379,12 +379,24 @@ fun MyOffersScreen(navController: NavController) {
                         variant = TextVariant.Small,
                         color = RikkaTheme.colors.onBackground
                     )
+                    // TODO: El método de pago debe ser un selector (Dropdown/Select) de los métodos de pago registrados por el usuario
                     Input(
                         value = editPaymentMethod,
                         onValueChange = { editPaymentMethod = it },
                         placeholder = "BCP, Yape, etc.",
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Button(
+                        onClick = {
+                            showEditDialog = false
+                            showCancelDialog = true
+                        },
+                        variant = ButtonVariant.Destructive,
+                        modifier = Modifier.fillMaxWidth(),
+                        text = "Eliminar Oferta"
                     )
                 }
             },
@@ -648,14 +660,22 @@ fun MyOffersScreen(navController: NavController) {
                                     verticalArrangement = Arrangement.spacedBy(12.dp),
                                     contentPadding = PaddingValues(vertical = 12.dp)
                                 ) {
-                                    items(offers, key = { it.id }) { offer ->
-                                        val isExpanded = expandedOfferIds.contains(offer.id)
+                                    items(offers.filter { it.status != "Finalizada" }, key = { it.id }) { offer ->
                                         Card(
                                             onClick = {
-                                                expandedOfferIds = if (isExpanded) {
-                                                    expandedOfferIds - offer.id
-                                                } else {
-                                                    expandedOfferIds + offer.id
+                                                if (offer.status == "En Proceso") {
+                                                    val req = incomingRequests.firstOrNull { it.offerId == offer.id }
+                                                    if (req != null) {
+                                                        navController.navigate("transactionStatus/TX001?isSeller=${offer.type == "Venta"}&amount=${req.amount}&rate=${offer.rate}&bank=${offer.paymentMethod}&type=${offer.type}&status=${req.status}&currency=${offer.currency}")
+                                                    }
+                                                } else if (offer.status == "Activa") {
+                                                    selectedOffer = offer
+                                                    editAmount = offer.amount.toString()
+                                                    editRate = offer.rate.toString()
+                                                    editMinLimit = offer.minLimit.toString()
+                                                    editMaxLimit = offer.maxLimit.toString()
+                                                    editPaymentMethod = offer.paymentMethod
+                                                    showEditDialog = true
                                                 }
                                             },
                                             modifier = Modifier.fillMaxWidth(),
@@ -673,15 +693,42 @@ fun MyOffersScreen(navController: NavController) {
                                                         variant = TextVariant.Large,
                                                         color = if (isCompra) RikkaTheme.colors.primary else RikkaTheme.colors.destructive
                                                     )
-                                                    Text(
-                                                        text = "${offer.currency} ${offer.amount}",
-                                                        variant = TextVariant.Large,
-                                                        color = RikkaTheme.colors.onBackground
-                                                    )
+
+                                                    // Status Badge
+                                                    val badgeBgColor = when (offer.status) {
+                                                        "Activa" -> RikkaTheme.colors.success.copy(alpha = 0.15f)
+                                                        "En Proceso" -> RikkaTheme.colors.warning.copy(alpha = 0.15f)
+                                                        else -> RikkaTheme.colors.muted.copy(alpha = 0.15f)
+                                                    }
+                                                    val badgeTextColor = when (offer.status) {
+                                                        "Activa" -> RikkaTheme.colors.success
+                                                        "En Proceso" -> RikkaTheme.colors.warning
+                                                        else -> Color.Gray
+                                                    }
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .background(
+                                                                color = badgeBgColor,
+                                                                shape = RoundedCornerShape(4.dp)
+                                                            )
+                                                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                                                    ) {
+                                                        Text(
+                                                            text = offer.status,
+                                                            variant = TextVariant.Small,
+                                                            color = badgeTextColor
+                                                        )
+                                                    }
                                                 }
 
                                                 Spacer(modifier = Modifier.height(6.dp))
 
+                                                Text(
+                                                    text = "Monto: ${offer.currency} ${offer.amount}",
+                                                    variant = TextVariant.Large,
+                                                    color = RikkaTheme.colors.onBackground
+                                                )
+                                                Spacer(modifier = Modifier.height(4.dp))
                                                 Text(
                                                     text = "T.C.: ${offer.rate}  |  Metodo: ${offer.paymentMethod}",
                                                     variant = TextVariant.Small,
@@ -693,145 +740,61 @@ fun MyOffersScreen(navController: NavController) {
                                                     color = Color.Gray
                                                 )
 
-                                                val relatedRequests = incomingRequests.filter { it.offerId == offer.id }
-                                                val reqCount = relatedRequests.size
-
-                                                Spacer(modifier = Modifier.height(8.dp))
-
-                                                Row(
-                                                    modifier = Modifier.fillMaxWidth(),
-                                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                                    verticalAlignment = Alignment.CenterVertically
-                                                ) {
-                                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                                        Button(
-                                                            onClick = {
-                                                                selectedOffer = offer
-                                                                editAmount = offer.amount.toString()
-                                                                editRate = offer.rate.toString()
-                                                                editMinLimit = offer.minLimit.toString()
-                                                                editMaxLimit = offer.maxLimit.toString()
-                                                                editPaymentMethod = offer.paymentMethod
-                                                                showEditDialog = true
-                                                            },
-                                                            enabled = reqCount == 0,
-                                                            variant = ButtonVariant.Outline,
-                                                            size = ButtonSize.Sm,
-                                                            text = "Editar"
+                                                if (offer.status == "En Proceso") {
+                                                    val req = incomingRequests.firstOrNull { it.offerId == offer.id }
+                                                    if (req != null) {
+                                                        Spacer(modifier = Modifier.height(12.dp))
+                                                        Box(
+                                                            modifier = Modifier
+                                                                .fillMaxWidth()
+                                                                .height(1.dp)
+                                                                .background(RikkaTheme.colors.muted.copy(alpha = 0.15f))
                                                         )
-
-                                                        Button(
-                                                            onClick = {
-                                                                selectedOffer = offer
-                                                                showCancelDialog = true
-                                                            },
-                                                            variant = ButtonVariant.Destructive,
-                                                            size = ButtonSize.Sm,
-                                                            text = "Eliminar"
-                                                        )
-                                                    }
-
-                                                    Text(
-                                                        text = if (isExpanded) "Ocultar solicitudes ($reqCount) ▲" else "Ver solicitudes ($reqCount) ▼",
-                                                        variant = TextVariant.Small,
-                                                        color = RikkaTheme.colors.primary
-                                                    )
-                                                }
-
-                                                if (isExpanded) {
-                                                    Spacer(modifier = Modifier.height(12.dp))
-                                                    Box(
-                                                        modifier = Modifier
-                                                            .fillMaxWidth()
-                                                            .height(1.dp)
-                                                            .background(RikkaTheme.colors.muted.copy(alpha = 0.15f))
-                                                    )
-                                                    Spacer(modifier = Modifier.height(8.dp))
-                                                    Text(
-                                                        text = "Solicitudes recibidas ($reqCount):",
-                                                        variant = TextVariant.Small,
-                                                        color = Color.Gray
-                                                    )
-                                                    Spacer(modifier = Modifier.height(6.dp))
-
-                                                    if (relatedRequests.isEmpty()) {
+                                                        Spacer(modifier = Modifier.height(8.dp))
                                                         Text(
-                                                            text = "No hay solicitudes para esta oferta aún.",
+                                                            text = "Solicitud recibida (En Proceso):",
                                                             variant = TextVariant.Small,
-                                                            color = Color.Gray,
-                                                            modifier = Modifier.padding(vertical = 4.dp)
+                                                            color = Color.Gray
                                                         )
-                                                    } else {
-                                                        Column(
-                                                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                                                            modifier = Modifier.fillMaxWidth()
+                                                        Spacer(modifier = Modifier.height(6.dp))
+                                                        Box(
+                                                            modifier = Modifier
+                                                                .fillMaxWidth()
+                                                                .clip(RoundedCornerShape(8.dp))
+                                                                .background(RikkaTheme.colors.muted.copy(alpha = 0.05f))
+                                                                .border(
+                                                                    1.dp,
+                                                                    RikkaTheme.colors.muted.copy(alpha = 0.15f),
+                                                                    RoundedCornerShape(8.dp)
+                                                                )
+                                                                .padding(12.dp)
                                                         ) {
-                                                            relatedRequests.forEach { req ->
-                                                                Box(
-                                                                    modifier = Modifier
-                                                                        .fillMaxWidth()
-                                                                        .clip(RoundedCornerShape(8.dp))
-                                                                        .background(RikkaTheme.colors.muted.copy(alpha = 0.05f))
-                                                                        .border(
-                                                                            1.dp,
-                                                                            RikkaTheme.colors.muted.copy(alpha = 0.15f),
-                                                                            RoundedCornerShape(8.dp)
-                                                                        )
-                                                                        .clickable {
-                                                                            navController.navigate("transactionStatus/TX001?isSeller=true&amount=${req.amount}&rate=${offer.rate}&bank=${offer.paymentMethod}&type=${offer.type}&status=${req.status}")
-                                                                        }
-                                                                        .padding(12.dp)
+                                                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                                                Row(
+                                                                    modifier = Modifier.fillMaxWidth(),
+                                                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                                                    verticalAlignment = Alignment.CenterVertically
                                                                 ) {
-                                                                    Column(
-                                                                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                                                                    ) {
-                                                                        Row(
-                                                                            modifier = Modifier.fillMaxWidth(),
-                                                                            horizontalArrangement = Arrangement.SpaceBetween,
-                                                                            verticalAlignment = Alignment.CenterVertically
-                                                                        ) {
-                                                                            Text(
-                                                                                text = "Solicitud de ${req.buyerName}",
-                                                                                variant = TextVariant.P,
-                                                                                color = RikkaTheme.colors.onBackground,
-                                                                                style = androidx.compose.ui.text.TextStyle(
-                                                                                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
-                                                                                )
-                                                                            )
-
-                                                                            val badgeBgColor = when (req.status) {
-                                                                                "Aceptada" -> RikkaTheme.colors.primary.copy(alpha = 0.15f)
-                                                                                "Rechazada", "En disputa" -> RikkaTheme.colors.destructive.copy(alpha = 0.15f)
-                                                                                else -> RikkaTheme.colors.warning.copy(alpha = 0.15f)
-                                                                            }
-                                                                            val badgeTextColor = when (req.status) {
-                                                                                "Aceptada" -> RikkaTheme.colors.primary
-                                                                                "Rechazada", "En disputa" -> RikkaTheme.colors.destructive
-                                                                                else -> RikkaTheme.colors.warning
-                                                                            }
-                                                                            Box(
-                                                                                modifier = Modifier
-                                                                                    .background(
-                                                                                        color = badgeBgColor,
-                                                                                        shape = RoundedCornerShape(4.dp)
-                                                                                    )
-                                                                                    .padding(horizontal = 6.dp, vertical = 2.dp)
-                                                                            ) {
-                                                                                Text(
-                                                                                    text = req.status,
-                                                                                    variant = TextVariant.Small,
-                                                                                    color = badgeTextColor
-                                                                                )
-                                                                            }
-                                                                        }
-
-                                                                        Text(
-                                                                            text = "Quiere ${if (req.type == "Compra") "comprar" else "vender"} ${req.currency} ${req.amount}",
-                                                                            variant = TextVariant.Small,
-                                                                            color = RikkaTheme.colors.onBackground
+                                                                    Text(
+                                                                        text = "Comprador: ${req.buyerName}",
+                                                                        variant = TextVariant.P,
+                                                                        color = RikkaTheme.colors.onBackground,
+                                                                        style = androidx.compose.ui.text.TextStyle(
+                                                                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
                                                                         )
-                                                                    }
+                                                                    )
+                                                                    Text(
+                                                                        text = "Monto: ${req.currency} ${req.amount}",
+                                                                        variant = TextVariant.Small,
+                                                                        color = RikkaTheme.colors.onBackground
+                                                                    )
                                                                 }
+                                                                Spacer(modifier = Modifier.height(4.dp))
+                                                                Text(
+                                                                    text = "Toca la tarjeta para ver y gestionar la transacción",
+                                                                    variant = TextVariant.Small,
+                                                                    color = RikkaTheme.colors.primary
+                                                                )
                                                             }
                                                         }
                                                     }
