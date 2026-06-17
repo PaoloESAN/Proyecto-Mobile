@@ -2,7 +2,7 @@
 
 ## 1. Visión General del Proyecto
 
-Este proyecto es la plataforma FinTech de intercambio de divisas P2P (Peer-to-Peer) en versión móvil para Android. Permite a los usuarios realizar operaciones de compra/venta de dinero fiat directamente, eliminando intermediarios bancarios tradicionales. La aplicación facilita la publicación de ofertas, el emparejamiento automático (matching), la gestión del flujo de transacciones (congelamiento de fondos, chat en tiempo real, carga de comprobantes), calificaciones y resolución de disputas mediante un panel de administración.
+Este proyecto es la plataforma FinTech de intercambio de divisas P2P (Peer-to-Peer) en versión móvil para Android. Permite a los usuarios realizar operaciones de compra/venta de dinero fiat directamente, eliminando intermediarios bancarios tradicionales. La aplicación actúa como un intermediario puramente informativo para facilitar la publicación de ofertas, el emparejamiento automático (matching), el chat en tiempo real, el intercambio de datos bancarios para transferencias directas P2P (externas a la app), la carga de comprobantes y la resolución de disputas mediante un panel de administración.
 
 > [!IMPORTANT]
 > Toda la persistencia de datos, la gestión de autenticación, la mensajería en tiempo real y el almacenamiento de archivos residen en **Supabase** (PostgreSQL + Auth + Storage + Realtime + Functions). La aplicación Android se integra de forma exclusiva y directa con Supabase mediante su SDK oficial para Kotlin (`io.github.jan-tennert.supabase`).
@@ -38,15 +38,20 @@ Para el desarrollo y mantenimiento de la aplicación móvil, el agente debe domi
 
 ## 3. Reglas de Negocio Críticas
 
+- **Rol Intermediario P2P (Sin Custodia de Fondos)**: La aplicación no almacena, recibe ni custodia dinero. Las transferencias bancarias se realizan de forma externa y directa entre los usuarios de banco a banco (P2P). La app actúa únicamente como facilitador para mostrar la información bancaria de destino/recepción y los comprobantes de pago correspondientes.
 - **Límites de Oferta**: Una oferta tiene un `monto_total` (inventario del usuario) y límites por transacción (`monto_minimo` y `monto_maximo`). El monto mínimo NUNCA puede superar al máximo.
 - **Seguridad Transaccional**: El flujo de intercambio bloquea la edición/cancelación de una oferta en Supabase. Si una oferta tiene transacciones en estado `Pendiente`, `En Proceso`, `Pagado` o `Disputa`, no puede ser modificada (`update`) ni cancelada/eliminada (`delete`).
+- **Flujo de Ofertas y Gestión ("Mis Ofertas")**:
+  - Cada oferta en estado `"En Proceso"` se asocia con a lo más una transacción/solicitud activa (el emparejamiento es directo de 1 a 1).
+  - En la lista de ofertas del usuario (`MyOffersScreen`), se ocultan las ofertas en estado `"Finalizada"`, mostrando únicamente las ofertas con estado `"Activa"` y `"En Proceso"`.
+  - La edición y eliminación de una oferta solo está permitida si está en estado `"Activa"`. El flujo se realiza haciendo clic sobre la tarjeta de la oferta para abrir un modal de edición. Dicho modal contiene el botón de "Eliminar Oferta", el cual solicita confirmación a través de un diálogo adicional.
 - **Ciclo de Transacciones (Doble Confirmación)**:
   1. `Pendiente`: El comprador inicia la transacción seleccionando su método/cuenta de recepción. Ambos participantes ven sus cuentas bancarias cruzadas en la aplicación.
   2. `Pagado` o `Confirmación Parcial`: Ambos participantes deben realizar sus transferencias cruzadas y subir sus respectivos comprobantes de pago al bucket `vouchers` de Supabase Storage, insertando un registro en la tabla `comprobantes` (almacenando `transaccion_id`, `usuario_id` de quien sube el voucher e `imagen_url` del voucher).
   3. `Finalizado` o `Disputa`: Ambos participantes deben verificar el comprobante de la contraparte y presionar "Confirmar Pago Correcto" (lo que actualiza `confirmado_comprador` o `confirmado_vendedor` a `true` en la tabla `transacciones`). Solo cuando ambos confirman, la transacción cambia al estado `Finalizado`. Cualquiera de las partes puede abrir un conflicto (`Disputa`) antes de confirmar.
-- **Resolución de Disputas**: Exclusivo para administradores. La resolución es binaria:
-  - **A favor del comprador**: La transacción se cambia a estado `Cancelado` en Supabase y la oferta vuelve a estar `Activa` (los fondos vuelven a estar disponibles para el vendedor).
-  - **A favor del vendedor**: La transacción se cambia a estado `Finalizado` (los fondos quedan liquidados).
+- **Resolución de Disputas**: Exclusivo para administradores. La resolución es binaria en cuanto al estado informativo de la transacción dentro del sistema:
+  - **A favor del comprador**: La transacción se cambia a estado `Cancelado` en Supabase y la oferta vuelve a estar `Activa` (disponible para recibir solicitudes de intercambio).
+  - **A favor del vendedor**: La transacción se cambia a estado `Finalizado` (la transacción se marca como completada de forma definitiva en el sistema).
 - **Calificación del Usuario**: Cada usuario posee un atributo `calificacion` (promedio del 1.00 al 5.00) en la tabla `usuarios`. Este promedio se actualiza de forma automática cada vez que otro usuario registra una nueva calificación para él en la tabla `calificaciones`.
 - **Verificación de Vouchers con IA**:
   - La validación de los comprobantes de pago subidos por el comprador se procesa automáticamente mediante Inteligencia Artificial (por ejemplo, modelos de visión como Gemini 3.1 Flash Lite ejecutados a través de una Supabase Edge Function: `verificar-voucher-ia`).
