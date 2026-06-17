@@ -3,7 +3,7 @@ package com.paoloesan.proyectomobile.presentation.auth
 import android.util.Patterns
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.delay
+import com.paoloesan.proyectomobile.data.repository.AuthRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -25,12 +25,6 @@ class RegistroViewModel : ViewModel() {
 
     private val _uiState = MutableStateFlow(RegistroUiState())
     val uiState: StateFlow<RegistroUiState> = _uiState.asStateFlow()
-
-    private val registeredEmails = setOf(
-        "admin@test.com",
-        "user@test.com",
-        "paolo@test.com"
-    )
 
     private val emailRegex = Patterns.EMAIL_ADDRESS
 
@@ -80,13 +74,6 @@ class RegistroViewModel : ViewModel() {
             return
         }
 
-        if (current.correo.lowercase() in registeredEmails.map { it.lowercase() }) {
-            _uiState.update {
-                it.copy(errorMessage = "El correo ya se encuentra registrado")
-            }
-            return
-        }
-
         if (current.password.length < 8) {
             _uiState.update {
                 it.copy(errorMessage = "La contraseña debe tener al menos 8 caracteres")
@@ -112,13 +99,27 @@ class RegistroViewModel : ViewModel() {
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-            delay(1500)
-            _uiState.update {
-                it.copy(
-                    isLoading = false,
-                    isSuccess = true,
-                    errorMessage = null
+            try {
+                AuthRepository.register(
+                    nombres = current.nombres.trim(),
+                    apellidos = current.apellidos.trim(),
+                    correo = current.correo.trim(),
+                    contrasenia = current.password
                 )
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        isSuccess = true,
+                        errorMessage = null
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        errorMessage = e.localizedMessage ?: "Error al registrar usuario"
+                    )
+                }
             }
         }
     }

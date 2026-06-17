@@ -7,6 +7,8 @@ import com.paoloesan.proyectomobile.data.model.UserProfileModel
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.postgrest.postgrest
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 object AuthRepository {
 
@@ -42,6 +44,26 @@ object AuthRepository {
         SessionManager.saveProfileInfo(context, perfil.nombres, perfil.apellidos)
 
         return perfil
+    }
+
+    /**
+     * Registra un nuevo usuario en Supabase Auth y crea su perfil
+     * correspondiente en la tabla `public.usuarios` de la base de datos.
+     */
+    suspend fun register(nombres: String, apellidos: String, correo: String, contrasenia: String) {
+        // 1. Crear el usuario en Supabase Auth enviando los nombres y apellidos como metadatos
+        Supabase.client.auth.signUpWith(Email) {
+            email = correo
+            password = contrasenia
+            data = buildJsonObject {
+                put("nombres", nombres)
+                put("apellidos", apellidos)
+            }
+        }
+
+        // No es necesario insertar manualmente en la tabla `usuarios` porque el trigger
+        // `on_auth_user_created` de base de datos se encarga de crear el perfil de forma
+        // automática a partir de los metadatos 'nombres' y 'apellidos'.
     }
 
     /**
