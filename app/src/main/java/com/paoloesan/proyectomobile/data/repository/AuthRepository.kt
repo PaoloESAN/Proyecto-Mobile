@@ -17,7 +17,7 @@ object AuthRepository {
      * @return [UserProfileModel] con los datos del usuario autenticado
      * @throws Exception si las credenciales son incorrectas o hay error de red
      */
-    suspend fun login(context: Context, correo: String, password: String): UserProfileModel {
+    suspend fun login(context: Context, correo: String, password: String, rememberMe: Boolean): UserProfileModel {
         // 1. Autenticar con Supabase Auth
         Supabase.client.auth.signInWith(Email) {
             email = correo
@@ -37,6 +37,7 @@ object AuthRepository {
             .decodeSingle<UserProfileModel>()
 
         // 4. Persistir sesión localmente
+        SessionManager.saveRememberMe(context, rememberMe)
         SessionManager.saveToken(context, authId)
         SessionManager.saveProfileInfo(context, perfil.nombres, perfil.apellidos)
 

@@ -35,7 +35,7 @@ class LoginViewModel : ViewModel() {
         _uiState.update { it.copy(isSuccess = false) }
     }
 
-    fun login(context: Context) {
+    fun login(context: Context, rememberMe: Boolean) {
         val current = _uiState.value
 
         if (current.correo.isBlank() || current.password.isBlank()) {
@@ -46,7 +46,7 @@ class LoginViewModel : ViewModel() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             try {
-                AuthRepository.login(context, current.correo, current.password)
+                AuthRepository.login(context, current.correo, current.password, rememberMe)
                 _uiState.update { it.copy(isLoading = false, isSuccess = true) }
             } catch (e: Exception) {
                 _uiState.update {
