@@ -53,7 +53,6 @@ import kotlinx.coroutines.launch
 import zed.rainxch.rikkaui.components.ui.button.Button
 import zed.rainxch.rikkaui.components.ui.button.ButtonSize
 import zed.rainxch.rikkaui.components.ui.button.ButtonVariant
-import zed.rainxch.rikkaui.components.ui.checkbox.Checkbox
 import zed.rainxch.rikkaui.components.ui.icon.RikkaIcons
 import zed.rainxch.rikkaui.components.ui.input.Input
 import zed.rainxch.rikkaui.components.ui.label.Label
@@ -148,7 +147,6 @@ fun LoginScreen(
     val context = LocalContext.current
 
     var passwordVisible by remember { mutableStateOf(false) }
-    var rememberMe by remember { mutableStateOf(false) }
 
     LaunchedEffect(uiState.errorMessage) {
         uiState.errorMessage?.let { message ->
@@ -323,19 +321,12 @@ fun LoginScreen(
                         }
                     }
 
-                    // Remember Me & Forgot Password Row
+                    // Forgot Password Row
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
+                        horizontalArrangement = Arrangement.End,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Checkbox(
-                            checked = rememberMe,
-                            onCheckedChange = { rememberMe = it },
-                            enabled = !uiState.isLoading,
-                            label = "Recordarme"
-                        )
-
                         Text(
                             text = "Olvide mi contraseña",
                             variant = TextVariant.Small,
@@ -368,81 +359,115 @@ fun LoginScreen(
                     }
 
                     // Or With Divider
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(1.dp)
-                                .background(Color.LightGray)
-                        )
-                        Text(
-                            text = "O continúe con",
-                            modifier = Modifier.padding(horizontal = 8.dp),
-                            color = Color.Gray,
-                        )
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(1.dp)
-                                .background(Color.LightGray)
-                        )
-                    }
+//                    Row(
+//                        modifier = Modifier
+//                            .fillMaxWidth()
+//                            .padding(vertical = 8.dp),
+//                        verticalAlignment = Alignment.CenterVertically
+//                    ) {
+//                        Box(
+//                            modifier = Modifier
+//                                .weight(1f)
+//                                .height(1.dp)
+//                                .background(Color.LightGray)
+//                        )
+//                        Text(
+//                            text = "O continúe con",
+//                            modifier = Modifier.padding(horizontal = 8.dp),
+//                            color = Color.Gray,
+//                        )
+//                        Box(
+//                            modifier = Modifier
+//                                .weight(1f)
+//                                .height(1.dp)
+//                                .background(Color.LightGray)
+//                        )
+//                    }
 
                     // Social Buttons
+//                    Row(
+//                        modifier = Modifier.fillMaxWidth(),
+//                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+//                    ) {
+//                        Button(
+//                            onClick = {},
+//                            variant = ButtonVariant.Outline,
+//                            modifier = Modifier.weight(1f)
+//                        ) {
+//                            Row(
+//                                verticalAlignment = Alignment.CenterVertically,
+//                                horizontalArrangement = Arrangement.Center
+//                            ) {
+//                                androidx.compose.material3.Icon(
+//                                    imageVector = GitHubIcon,
+//                                    contentDescription = "GitHub",
+//                                    modifier = Modifier.size(18.dp),
+//                                    tint = Color.Unspecified
+//                                )
+//                                Spacer(modifier = Modifier.width(8.dp))
+//                                Text(
+//                                    text = "GitHub",
+//                                    variant = TextVariant.P,
+//                                )
+//                            }
+//                        }
+//
+//                        Button(
+//                            onClick = {},
+//                            variant = ButtonVariant.Outline,
+//                            modifier = Modifier.weight(1f)
+//                        ) {
+//                            Row(
+//                                verticalAlignment = Alignment.CenterVertically,
+//                                horizontalArrangement = Arrangement.Center
+//                            ) {
+//                                androidx.compose.material3.Icon(
+//                                    imageVector = GitLabIcon,
+//                                    contentDescription = "GitLab",
+//                                    modifier = Modifier.size(18.dp),
+//                                    tint = Color.Unspecified
+//                                )
+//                                Spacer(modifier = Modifier.width(8.dp))
+//                                Text(
+//                                    text = "GitLab",
+//                                    variant = TextVariant.P,
+//                                )
+//                            }
+//                        }
+//                    }
+
+                    // Botones de acceso rápido
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Button(
-                            onClick = {},
+                            onClick = {
+                                viewModel.onCorreoChange("julioprofe@email.com")
+                                viewModel.onPasswordChange("123456")
+                            },
                             variant = ButtonVariant.Outline,
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center
-                            ) {
-                                androidx.compose.material3.Icon(
-                                    imageVector = GitHubIcon,
-                                    contentDescription = "GitHub",
-                                    modifier = Modifier.size(18.dp),
-                                    tint = Color.Unspecified
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = "GitHub",
-                                    variant = TextVariant.P,
-                                )
-                            }
-                        }
-
+                            modifier = Modifier.weight(1f),
+                            text = "Usuario 1"
+                        )
                         Button(
-                            onClick = {},
+                            onClick = {
+                                viewModel.onCorreoChange("juanjose@email.com")
+                                viewModel.onPasswordChange("123456")
+                            },
                             variant = ButtonVariant.Outline,
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center
-                            ) {
-                                androidx.compose.material3.Icon(
-                                    imageVector = GitLabIcon,
-                                    contentDescription = "GitLab",
-                                    modifier = Modifier.size(18.dp),
-                                    tint = Color.Unspecified
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = "GitLab",
-                                    variant = TextVariant.P,
-                                )
-                            }
-                        }
+                            modifier = Modifier.weight(1f),
+                            text = "Usuario 2"
+                        )
+                        Button(
+                            onClick = {
+                                viewModel.onCorreoChange("admin@exchange.com")
+                                viewModel.onPasswordChange("admin123")
+                            },
+                            variant = ButtonVariant.Outline,
+                            modifier = Modifier.weight(1f),
+                            text = "Admin"
+                        )
                     }
                 }
 
