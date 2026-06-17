@@ -127,18 +127,23 @@ fun PublishOfferScreen(
         SelectOption("PEN", "PEN")
     )
 
-    val paymentOptions = remember(uiState.paymentMethods) {
-        uiState.paymentMethods.map {
-            SelectOption(
-                value = it.metodoPagoId.toString(),
-                label = "${it.banco} - ${it.numeroCuenta} (${it.tipoMoneda})"
-            )
-        }
+    val paymentOptions = remember(uiState.paymentMethods, currency) {
+        uiState.paymentMethods
+            .filter { it.tipoMoneda.equals(currency, ignoreCase = true) }
+            .map {
+                SelectOption(
+                    value = it.metodoPagoId.toString(),
+                    label = "${it.banco} - ${it.numeroCuenta} (${it.tipoMoneda})"
+                )
+            }
     }
 
-    LaunchedEffect(uiState.paymentMethods) {
-        if (uiState.paymentMethods.isNotEmpty() && paymentMethod.isBlank()) {
-            paymentMethod = uiState.paymentMethods.first().metodoPagoId.toString()
+    LaunchedEffect(uiState.paymentMethods, currency) {
+        val filtered = uiState.paymentMethods.filter { it.tipoMoneda.equals(currency, ignoreCase = true) }
+        if (filtered.isNotEmpty()) {
+            paymentMethod = filtered.first().metodoPagoId.toString()
+        } else {
+            paymentMethod = ""
         }
     }
 
