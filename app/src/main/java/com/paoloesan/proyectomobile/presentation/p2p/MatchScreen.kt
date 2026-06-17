@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -29,10 +28,14 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -59,6 +62,7 @@ fun MatchScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val focusManager = LocalFocusManager.current
+    var showBottomSheet by remember { mutableStateOf(false) }
 
     Box(
         modifier = Modifier
@@ -109,8 +113,15 @@ fun MatchScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 24.dp, vertical = 12.dp)
-                            .background(RikkaTheme.colors.destructive.copy(alpha = 0.1f), RoundedCornerShape(8.dp))
-                            .border(1.dp, RikkaTheme.colors.destructive.copy(alpha = 0.2f), RoundedCornerShape(8.dp))
+                            .background(
+                                RikkaTheme.colors.destructive.copy(alpha = 0.1f),
+                                RoundedCornerShape(8.dp)
+                            )
+                            .border(
+                                1.dp,
+                                RikkaTheme.colors.destructive.copy(alpha = 0.2f),
+                                RoundedCornerShape(8.dp)
+                            )
                             .padding(16.dp),
                         contentAlignment = Alignment.Center
                     ) {
@@ -155,51 +166,44 @@ fun MatchScreen(
                         }
                     }
                 } else {
-                    // Sección 1: Selector de ofertas activas del usuario
-                    Text(
-                        text = "Selecciona una de tus ofertas para buscar coincidencias:",
-                        variant = TextVariant.Small,
-                        color = Color.Gray,
-                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
-                    )
-
-                    LazyRow(
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        contentPadding = PaddingValues(horizontal = 24.dp),
+                    // Sección 1: Botón selector de ofertas activas del usuario (abre Bottom Sheet)
+                    Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(bottom = 16.dp)
+                            .padding(horizontal = 24.dp, vertical = 8.dp),
+                        onClick = { showBottomSheet = true },
+                        animation = CardAnimation.Press
                     ) {
-                        items(uiState.myActiveOffers, key = { it.offerId ?: 0 }) { offer ->
-                            val isSelected = uiState.selectedOffer?.offerId == offer.offerId
-                            val borderColor = if (isSelected) RikkaTheme.colors.primary else RikkaTheme.colors.muted.copy(alpha = 0.2f)
-                            val bgColor = if (isSelected) RikkaTheme.colors.primary.copy(alpha = 0.05f) else RikkaTheme.colors.background
-                            
-                            Box(
-                                modifier = Modifier
-                                    .border(1.5.dp, borderColor, RoundedCornerShape(12.dp))
-                                    .background(bgColor, RoundedCornerShape(12.dp))
-                                    .clickable { viewModel.selectOffer(offer) }
-                                    .padding(horizontal = 16.dp, vertical = 12.dp)
-                            ) {
-                                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text(
+                                    text = "Oferta seleccionada para matching:",
+                                    variant = TextVariant.Small,
+                                    color = Color.Gray
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                uiState.selectedOffer?.let { offer ->
                                     Text(
-                                        text = "${offer.tipoOperacion} - ${offer.currency}",
-                                        variant = TextVariant.Small,
-                                        color = if (offer.tipoOperacion == "Compra") RikkaTheme.colors.primary else RikkaTheme.colors.destructive
-                                    )
-                                    Text(
-                                        text = "Monto: ${offer.currency} ${offer.montoTotal}",
+                                        text = "${offer.tipoOperacion} - ${offer.currency} ${offer.montoTotal} (T.C. ${offer.price})",
                                         variant = TextVariant.P,
                                         color = RikkaTheme.colors.onBackground
                                     )
-                                    Text(
-                                        text = "T.C. Propuesto: ${offer.price}",
-                                        variant = TextVariant.Small,
-                                        color = Color.Gray
-                                    )
-                                }
+                                } ?: Text(
+                                    text = "Seleccione una oferta...",
+                                    variant = TextVariant.P,
+                                    color = RikkaTheme.colors.onBackground
+                                )
                             }
+                            androidx.compose.material3.Icon(
+                                imageVector = Icons.Default.ChevronRight,
+                                contentDescription = null,
+                                tint = Color.Gray
+                            )
                         }
                     }
 
@@ -215,7 +219,7 @@ fun MatchScreen(
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(innerPadding),
+                                .padding(top = 40.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             CircularProgressIndicator(
@@ -227,7 +231,7 @@ fun MatchScreen(
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(innerPadding),
+                                .padding(top = 40.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
@@ -347,6 +351,85 @@ fun MatchScreen(
                                             }
                                         }
                                     }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Modal Bottom Sheet para la selección de ofertas en 2 columnas
+        if (showBottomSheet) {
+            val sheetState = rememberModalBottomSheetState()
+            ModalBottomSheet(
+                onDismissRequest = { showBottomSheet = false },
+                sheetState = sheetState,
+                containerColor = RikkaTheme.colors.background
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 32.dp)
+                ) {
+                    Text(
+                        text = "Selecciona una Oferta Activa",
+                        variant = TextVariant.Large,
+                        color = RikkaTheme.colors.onBackground,
+                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)
+                    )
+
+                    val chunkedOffers = uiState.myActiveOffers.chunked(2)
+                    LazyColumn(
+                        contentPadding = PaddingValues(horizontal = 24.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(chunkedOffers) { rowOffers ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                rowOffers.forEach { offer ->
+                                    val isSelected = uiState.selectedOffer?.offerId == offer.offerId
+                                    val borderColor =
+                                        if (isSelected) RikkaTheme.colors.primary else RikkaTheme.colors.muted.copy(
+                                            alpha = 0.2f
+                                        )
+                                    val bgColor =
+                                        if (isSelected) RikkaTheme.colors.primary.copy(alpha = 0.05f) else RikkaTheme.colors.background
+
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .border(1.5.dp, borderColor, RoundedCornerShape(12.dp))
+                                            .background(bgColor, RoundedCornerShape(12.dp))
+                                            .clickable {
+                                                viewModel.selectOffer(offer)
+                                                showBottomSheet = false
+                                            }
+                                            .padding(12.dp)
+                                    ) {
+                                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                            Text(
+                                                text = "${offer.tipoOperacion} - ${offer.currency}",
+                                                variant = TextVariant.Small,
+                                                color = if (offer.tipoOperacion == "Compra") RikkaTheme.colors.primary else RikkaTheme.colors.destructive
+                                            )
+                                            Text(
+                                                text = "Monto: ${offer.currency} ${offer.montoTotal}",
+                                                variant = TextVariant.P,
+                                                color = RikkaTheme.colors.onBackground
+                                            )
+                                            Text(
+                                                text = "T.C.: ${offer.price}",
+                                                variant = TextVariant.Small,
+                                                color = Color.Gray
+                                            )
+                                        }
+                                    }
+                                }
+                                if (rowOffers.size < 2) {
+                                    Spacer(modifier = Modifier.weight(1f))
                                 }
                             }
                         }
