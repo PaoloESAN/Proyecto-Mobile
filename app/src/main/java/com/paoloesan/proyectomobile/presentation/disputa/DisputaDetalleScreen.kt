@@ -28,11 +28,13 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -63,9 +65,20 @@ fun DisputaDetalleScreen(
     viewModel: DisputaViewModel,
     disputaId: Int
 ) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val disputa = viewModel.getDisputaById(disputaId)
     val toastState = rememberToastHostState()
     val scope = rememberCoroutineScope()
+
+    LaunchedEffect(uiState.transientMessage) {
+        uiState.transientMessage?.let { message ->
+            toastState.show(
+                message = message,
+                variant = ToastVariant.Success
+            )
+            viewModel.consumeMessage()
+        }
+    }
 
     var showZoomDialog by remember { mutableStateOf(false) }
     var zoomTitle by remember { mutableStateOf("") }
@@ -660,12 +673,8 @@ fun DisputaDetalleScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        viewModel.resolverDisputa(disputaId)
+                        viewModel.resolverDisputa(disputaId, resolveForBuyer)
                         scope.launch {
-                            toastState.show(
-                                message = "Fondos liberados a favor de $targetName",
-                                variant = ToastVariant.Success
-                            )
                             delay(1500)
                             navController.popBackStack()
                         }
