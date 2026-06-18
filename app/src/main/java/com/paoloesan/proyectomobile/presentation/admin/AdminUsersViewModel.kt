@@ -1,14 +1,18 @@
 package com.paoloesan.proyectomobile.presentation.admin
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.paoloesan.proyectomobile.data.Supabase
+import com.paoloesan.proyectomobile.data.model.UserProfileModel
+import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-import java.util.UUID
+import kotlinx.coroutines.launch
 
 data class User(
-    val id: String = UUID.randomUUID().toString(),
+    val id: String,
     val nombre: String,
     val correo: String,
     val estado: String = "Activo",
@@ -17,38 +21,8 @@ data class User(
 )
 
 data class AdminUsersUiState(
-    val usuarios: List<User> = listOf(
-        User(
-            nombre = "Juan Pérez",
-            correo = "juan.perez@test.com",
-            fechaRegistro = "15/01/2024",
-            bloqueosAnteriores = 1
-        ),
-        User(
-            nombre = "María López",
-            correo = "maria.lopez@test.com",
-            fechaRegistro = "20/02/2024",
-            bloqueosAnteriores = 0
-        ),
-        User(
-            nombre = "Carlos Ruiz",
-            correo = "carlos.ruiz@test.com",
-            fechaRegistro = "10/03/2024",
-            bloqueosAnteriores = 2
-        ),
-        User(
-            nombre = "Ana Gómez",
-            correo = "ana.gomez@test.com",
-            fechaRegistro = "05/04/2024",
-            bloqueosAnteriores = 0
-        ),
-        User(
-            nombre = "Luis Torres",
-            correo = "luis.torres@test.com",
-            fechaRegistro = "18/05/2024",
-            bloqueosAnteriores = 3
-        )
-    ),
+    val usuarios: List<User> = emptyList(),
+    val isLoading: Boolean = false,
     val transientMessage: String? = null
 )
 
@@ -57,32 +31,112 @@ class AdminUsersViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(AdminUsersUiState())
     val uiState: StateFlow<AdminUsersUiState> = _uiState.asStateFlow()
 
+    init {
+        loadUsers()
+    }
+
+    fun loadUsers() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            try {
+                val usuarios = Supabase.client.postgrest["usuarios"]
+                    .select {
+                        filter {
+                            neq("rol", "Administrador")
+                        }
+                    }
+                    .decodeList<UserProfileModel>()
+
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        usuarios = usuarios.map { perfil ->
+                            User(
+                                id = perfil.usuarioId.toString(),
+                                nombre = "${perfil.nombres} ${perfil.apellidos}",
+                                correo = perfil.correo,
+                                estado = perfil.estado,
+                                fechaRegistro = perfil.fechaRegistro ?: "Sin fecha",
+                                bloqueosAnteriores = perfil.bloqueosAnteriores
+                            )
+                        }
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        transientMessage = "Error al cargar usuarios: ${e.localizedMessage}"
+                    )
+                }
+            }
+        }
+    }
+
     fun activateUser(userId: String) {
-        _uiState.update { state ->
-            state.copy(
-                usuarios = state.usuarios.map { user ->
-                    if (user.id == userId) user.copy(estado = "Activo") else user
-                },
-                transientMessage = "Usuario activado correctamente"
-            )
+        viewModelScope.launch {
+            try {
+                Supabase.client.postgrest["usuarios"]
+                    .update({
+                        set("estado", "Activo")
+                    }) {
+                        filter {
+                            eq("usuario_id", userId.toInt())
+                        }
+                    }
+
+                _uiState.update { state ->
+                    state.copy(
+                        usuarios = state.usuarios.map { user ->
+                            if (user.id == userId) user.copy(estado = "Activo") else user
+                        },
+                        transientMessage = "Usuario activado correctamente"
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(transientMessage = "Error al activar usuario: ${e.localizedMessage}")
+                }
+            }
         }
     }
 
     fun blockUser(userId: String, duracion: String = "indefinidamente") {
-        _uiState.update { state ->
-            state.copy(
-                usuarios = state.usuarios.map { user ->
-                    if (user.id == userId) {
-                        user.copy(
-                            estado = "Bloqueado",
-                            bloqueosAnteriores = user.bloqueosAnteriores + 1
-                        )
-                    } else {
-                        user
+        viewModelScope.launch {
+            try {
+                val user = _uiState.value.usuarios.firstOrNull { it.id == userId }
+                val bloqueosAnteriores = user?.bloqueosAnteriores ?: 0
+
+                Supabase.client.postgrest["usuarios"]
+                    .update({
+                        set("estado", "Bloqueado")
+                        set("bloqueos_anteriores", bloqueosAnteriores + 1)
+                    }) {
+                        filter {
+                            eq("usuario_id", userId.toInt())
+                        }
                     }
-                },
-                transientMessage = "Usuario bloqueado por $duracion"
-            )
+
+                _uiState.update { state ->
+                    state.copy(
+                        usuarios = state.usuarios.map { u ->
+                            if (u.id == userId) {
+                                u.copy(
+                                    estado = "Bloqueado",
+                                    bloqueosAnteriores = u.bloqueosAnteriores + 1
+                                )
+                            } else {
+                                u
+                            }
+                        },
+                        transientMessage = "Usuario bloqueado por $duracion"
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(transientMessage = "Error al bloquear usuario: ${e.localizedMessage}")
+                }
+            }
         }
     }
 
