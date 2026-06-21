@@ -5,12 +5,13 @@ import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.auth.status.SessionStatus
 import io.github.jan.supabase.storage.Storage
+import io.github.jan.supabase.realtime.Realtime
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 
 /**
  * Cliente singleton de Supabase configurado con los módulos de Postgrest (Base de Datos),
- * Auth (Autenticación) y Storage (Almacenamiento en Buckets).
+ * Auth (Autenticación), Storage (Almacenamiento en Buckets) y Realtime (Mensajería en Tiempo Real).
  */
 object Supabase {
     const val URL = "https://kakfuayeosauhtzhbotf.supabase.co"
@@ -23,6 +24,7 @@ object Supabase {
         install(Postgrest)
         install(Auth)
         install(Storage)
+        install(Realtime)
     }
 }
 

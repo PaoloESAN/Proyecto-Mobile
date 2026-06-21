@@ -28,8 +28,8 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -40,6 +40,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import kotlinx.coroutines.launch
 import zed.rainxch.rikkaui.components.ui.button.Button
@@ -51,43 +52,42 @@ import zed.rainxch.rikkaui.components.ui.text.Text
 import zed.rainxch.rikkaui.components.ui.text.TextVariant
 import zed.rainxch.rikkaui.foundation.RikkaTheme
 import java.text.SimpleDateFormat
-import java.util.Date
 import java.util.Locale
-import java.util.UUID
 
-data class ChatMessage(
-    val id: String,
-    val text: String,
-    val isOwn: Boolean,
-    val time: String
-)
-
-fun getCurrentTime(): String {
-    val sdf = SimpleDateFormat("HH:mm", Locale.getDefault())
-    return sdf.format(Date())
+fun formatChatTime(isoDate: String?): String {
+    if (isoDate == null) return ""
+    return try {
+        val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
+        val outputFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+        val date = inputFormat.parse(isoDate.take(19))
+        date?.let { outputFormat.format(it) } ?: ""
+    } catch (_: Exception) {
+        isoDate.takeLast(5)
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ChatScreen(navController: NavController, readOnly: Boolean = false) {
+fun ChatScreen(
+    navController: NavController,
+    transactionId: String,
+    readOnly: Boolean = false,
+    viewModel: ChatViewModel = viewModel()
+) {
+    val uiState by viewModel.uiState.collectAsState()
     var messageInput by remember { mutableStateOf("") }
-    val messages = remember {
-        mutableStateListOf(
-            ChatMessage("1", "Hola, ¿ya realizaste la transferencia?", false, "10:00"),
-            ChatMessage("2", "Si, acabo de transferir el monto.", true, "10:02"),
-            ChatMessage("3", "Perfecto, dejame verificarlo.", false, "10:03"),
-            ChatMessage("4", "Te envie el comprobante por aqui.", true, "10:05"),
-        )
-    }
 
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
     val focusManager = LocalFocusManager.current
 
-    // Auto scroll al ultimo mensaje
-    LaunchedEffect(messages.size) {
-        if (messages.isNotEmpty()) {
-            listState.animateScrollToItem(messages.size - 1)
+    LaunchedEffect(transactionId) {
+        viewModel.initialize(transactionId.toIntOrNull() ?: 0)
+    }
+
+    LaunchedEffect(uiState.messages.size) {
+        if (uiState.messages.isNotEmpty()) {
+            listState.animateScrollToItem(uiState.messages.size - 1)
         }
     }
 
@@ -129,7 +129,7 @@ fun ChatScreen(navController: NavController, readOnly: Boolean = false) {
                             variant = TextVariant.Large,
                         )
                         Text(
-                            text = if (readOnly) "Modo Solo Lectura (Arbitraje)" else "Carlos Rodriguez",
+                            text = if (readOnly) "Modo Solo Lectura (Arbitraje)" else "Transaccion #$transactionId",
                             color = Color.Gray,
                             variant = TextVariant.Small
                         )
@@ -193,18 +193,11 @@ fun ChatScreen(navController: NavController, readOnly: Boolean = false) {
                             Button(
                                 onClick = {
                                     if (messageInput.isNotBlank()) {
-                                        messages.add(
-                                            ChatMessage(
-                                                id = UUID.randomUUID().toString(),
-                                                text = messageInput.trim(),
-                                                isOwn = true,
-                                                time = getCurrentTime()
-                                            )
-                                        )
+                                        viewModel.sendMessage(messageInput.trim())
                                         messageInput = ""
                                         scope.launch {
-                                            if (messages.isNotEmpty()) {
-                                                listState.animateScrollToItem(messages.size - 1)
+                                            if (uiState.messages.isNotEmpty()) {
+                                                listState.animateScrollToItem(uiState.messages.size)
                                             }
                                         }
                                     }
@@ -223,60 +216,87 @@ fun ChatScreen(navController: NavController, readOnly: Boolean = false) {
                 }
             }
         ) { innerPadding ->
-            LazyColumn(
-                state = listState,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null
-                    ) {
-                        focusManager.clearFocus()
-                    }
-                    .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(vertical = 12.dp)
-            ) {
-                items(messages, key = { it.id }) { message ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = if (message.isOwn) Arrangement.End else Arrangement.Start
-                    ) {
-                        Column(
-                            horizontalAlignment = if (message.isOwn) Alignment.End else Alignment.Start
+            if (uiState.isLoading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Cargando mensajes...",
+                        color = Color.Gray,
+                        variant = TextVariant.P
+                    )
+                }
+            } else if (uiState.errorMessage != null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = uiState.errorMessage ?: "",
+                        color = RikkaTheme.colors.destructive,
+                        variant = TextVariant.P
+                    )
+                }
+            } else {
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .widthIn(max = 280.dp)
-                                    .clip(
-                                        RoundedCornerShape(
-                                            topStart = 16.dp,
-                                            topEnd = 16.dp,
-                                            bottomStart = if (message.isOwn) 16.dp else 4.dp,
-                                            bottomEnd = if (message.isOwn) 4.dp else 16.dp
-                                        )
-                                    )
-                                    .background(
-                                        if (message.isOwn)
-                                            RikkaTheme.colors.primary
-                                        else
-                                            RikkaTheme.colors.muted
-                                    )
-                                    .padding(horizontal = 12.dp, vertical = 8.dp)
+                            focusManager.clearFocus()
+                        }
+                        .padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(vertical = 12.dp)
+                ) {
+                    items(uiState.messages, key = { it.mensajeId ?: it.hashCode() }) { message ->
+                        val isOwn = message.remitenteId == uiState.currentUserId
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = if (isOwn) Arrangement.End else Arrangement.Start
+                        ) {
+                            Column(
+                                horizontalAlignment = if (isOwn) Alignment.End else Alignment.Start
                             ) {
+                                Box(
+                                    modifier = Modifier
+                                        .widthIn(max = 280.dp)
+                                        .clip(
+                                            RoundedCornerShape(
+                                                topStart = 16.dp,
+                                                topEnd = 16.dp,
+                                                bottomStart = if (isOwn) 16.dp else 4.dp,
+                                                bottomEnd = if (isOwn) 4.dp else 16.dp
+                                            )
+                                        )
+                                        .background(
+                                            if (isOwn) RikkaTheme.colors.primary
+                                            else RikkaTheme.colors.muted
+                                        )
+                                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                                ) {
+                                    Text(
+                                        text = message.contenido,
+                                        variant = TextVariant.P,
+                                        color = if (isOwn) Color.White else RikkaTheme.colors.onBackground
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(2.dp))
                                 Text(
-                                    text = message.text,
-                                    variant = TextVariant.P,
-                                    color = if (message.isOwn) Color.White else RikkaTheme.colors.onBackground
+                                    text = formatChatTime(message.fechaEnvio),
+                                    variant = TextVariant.Small,
+                                    color = Color.Gray
                                 )
                             }
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = message.time,
-                                variant = TextVariant.Small,
-                                color = Color.Gray
-                            )
                         }
                     }
                 }
