@@ -138,9 +138,9 @@ fun BankDetailsScreen(
     }
 
     val esComprador = !isSeller
-    val currencyClean = currency.uppercase()
-    val amountDouble = amount.toDoubleOrNull() ?: 100.0
-    val rateDouble = rate.toDoubleOrNull() ?: 3.85
+    val currencyClean = (if (uiState.currency.isNotEmpty()) uiState.currency else currency).uppercase()
+    val amountDouble = if (uiState.transactionAmount > 0.0) uiState.transactionAmount else amount.toDoubleOrNull() ?: 100.0
+    val rateDouble = if (uiState.exchangeRate > 0.0) uiState.exchangeRate else rate.toDoubleOrNull() ?: 3.85
 
     val (usdAmount, penAmount) = if (currencyClean == "PEN") {
         (amountDouble / rateDouble) to amountDouble
@@ -154,12 +154,12 @@ fun BankDetailsScreen(
     val isTransferringPen = !isSeller
     val displayAmount = if (isTransferringPen) "$formattedPen PEN" else "$formattedUsd USD"
     val displayCurrency = if (isTransferringPen) "PEN" else "USD"
-    val displayTitular = if (isSeller) "Mateo Rojas (Comprador)" else "Juan Perez (Vendedor)"
 
     val bankParts = bank.split(" - ")
-    val parsedBankName = bankParts.getOrNull(0) ?: "BCP"
-    val parsedAccountNumber = bankParts.getOrNull(1)?.replace(Regex("\\(.*\\)"), "")?.trim() ?: "191-99882211-0-45"
-    val parsedCCI = if (parsedBankName.contains("BCP")) "002-$parsedAccountNumber-45" else "003-$parsedAccountNumber-12"
+    val parsedBankName = if (uiState.bankName.isNotEmpty()) uiState.bankName else bankParts.getOrNull(0) ?: "BCP"
+    val parsedAccountNumber = if (uiState.accountNumber.isNotEmpty()) uiState.accountNumber else bankParts.getOrNull(1)?.replace(Regex("\\(.*\\)"), "")?.trim() ?: "191-99882211-0-45"
+    val parsedCCI = if (uiState.cci.isNotEmpty()) uiState.cci else if (parsedBankName.uppercase().contains("BCP")) "002-$parsedAccountNumber-45" else "003-$parsedAccountNumber-12"
+    val displayTitular = if (uiState.titularName.isNotEmpty()) uiState.titularName else if (isSeller) "Mateo Rojas (Comprador)" else "Juan Perez (Vendedor)"
 
     val mineUploaded = uiState.myVoucherUploaded
     val peerUploaded = uiState.peerVoucherUploaded

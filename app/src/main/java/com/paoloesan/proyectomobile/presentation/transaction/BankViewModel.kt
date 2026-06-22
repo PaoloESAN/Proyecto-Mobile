@@ -7,6 +7,9 @@ import androidx.lifecycle.viewModelScope
 import com.paoloesan.proyectomobile.data.Supabase
 import com.paoloesan.proyectomobile.data.currentUserAwaitInit
 import com.paoloesan.proyectomobile.data.model.ComprobanteModel
+import com.paoloesan.proyectomobile.data.model.OfferModel
+import com.paoloesan.proyectomobile.data.model.PaymentMethodModel
+import com.paoloesan.proyectomobile.data.model.TransactionModel
 import com.paoloesan.proyectomobile.data.model.UserProfileModel
 import com.paoloesan.proyectomobile.data.model.VerificarVoucherRequest
 import com.paoloesan.proyectomobile.data.model.VerificarVoucherResponse
@@ -31,7 +34,14 @@ data class BankUiState(
     val transactionStatus: String = "",
     val errorMessage: String? = null,
     val uploadingVoucher: Boolean = false,
-    val voucherPublicUrl: String? = null
+    val voucherPublicUrl: String? = null,
+    val bankName: String = "",
+    val accountNumber: String = "",
+    val cci: String = "",
+    val titularName: String = "",
+    val currency: String = "",
+    val transactionAmount: Double = 0.0,
+    val exchangeRate: Double = 0.0
 )
 
 class BankViewModel : ViewModel() {
@@ -55,7 +65,8 @@ class BankViewModel : ViewModel() {
                 transactionStatus = status,
                 myConfirmed = status == "Finalizado" || status == "Finalizada",
                 peerConfirmed = status == "Finalizado" || status == "Finalizada",
-                isLoading = false
+                isLoading = true,
+                errorMessage = null
             )
         }
 
@@ -63,7 +74,7 @@ class BankViewModel : ViewModel() {
             try {
                 val authId = Supabase.client.auth.currentUserAwaitInit()?.id
                 if (authId == null) {
-                    _uiState.update { it.copy(errorMessage = "Usuario no autenticado") }
+                    _uiState.update { it.copy(errorMessage = "Usuario no autenticado", isLoading = false) }
                     return@launch
                 }
 
@@ -73,9 +84,99 @@ class BankViewModel : ViewModel() {
                     }
                     .decodeSingle<UserProfileModel>()
 
-                _uiState.update { it.copy(currentUserId = perfil.usuarioId) }
+                val myUserId = perfil.usuarioId
+                _uiState.update { it.copy(currentUserId = myUserId) }
+
+                loadDataFromDatabase()
             } catch (e: Exception) {
-                _uiState.update { it.copy(errorMessage = "Error al cargar perfil: ${e.localizedMessage}") }
+                _uiState.update {
+                    it.copy(
+                        errorMessage = "Error al cargar perfil: ${e.localizedMessage}",
+                        isLoading = false
+                    )
+                }
+            }
+        }
+    }
+
+    private suspend fun loadDataFromDatabase() {
+        try {
+            val myUserId = _uiState.value.currentUserId
+            if (transaccionId != 0 && myUserId != null) {
+                // 1. Obtener transacción real
+                val tx = Supabase.client.postgrest["transacciones"]
+                    .select { filter { eq("transaccion_id", transaccionId) } }
+                    .decodeSingle<TransactionModel>()
+
+                // 2. Obtener oferta
+                val offer = Supabase.client.postgrest["ofertas"]
+                    .select { filter { eq("oferta_id", tx.offerId) } }
+                    .decodeSingle<OfferModel>()
+
+                // Determinar cuál es el método de pago de la contraparte a la que se le debe pagar
+                val paymentMethodId = if (esComprador) {
+                    offer.metodoPagoId
+                } else {
+                    tx.metodoPagoCompradorId
+                }
+
+                var bName = ""
+                var accNum = ""
+                var ccId = ""
+                var titName = ""
+                var pCurrency = ""
+
+                if (paymentMethodId != null) {
+                    try {
+                        val pm = Supabase.client.postgrest["metodos_pago"]
+                            .select { filter { eq("metodo_pago_id", paymentMethodId) } }
+                            .decodeSingle<PaymentMethodModel>()
+                        
+                        bName = pm.banco
+                        accNum = pm.numeroCuenta
+                        ccId = if (pm.banco.uppercase().contains("BCP")) "002-${pm.numeroCuenta}-45" else "003-${pm.numeroCuenta}-12"
+                        titName = pm.nombreTitular
+                        pCurrency = pm.tipoMoneda
+                    } catch (_: Exception) {}
+                }
+
+                // 3. Obtener comprobantes
+                val comprobantes = Supabase.client.postgrest["comprobantes"]
+                    .select { filter { eq("transaccion_id", transaccionId) } }
+                    .decodeList<ComprobanteModel>()
+
+                val myVoucher = comprobantes.any { it.usuarioId == (if (esComprador) tx.usuarioCompradorId else tx.usuarioVendedorId) }
+                val peerVoucher = comprobantes.any { it.usuarioId == (if (esComprador) tx.usuarioVendedorId else tx.usuarioCompradorId) }
+
+                val myConfirmed = if (esComprador) tx.confirmadoComprador else tx.confirmadoVendedor
+                val peerConfirmed = if (esComprador) tx.confirmadoVendedor else tx.confirmadoComprador
+
+                _uiState.update {
+                    it.copy(
+                        transactionStatus = tx.status,
+                        myConfirmed = myConfirmed,
+                        peerConfirmed = peerConfirmed,
+                        myVoucherUploaded = myVoucher,
+                        peerVoucherUploaded = peerVoucher,
+                        bankName = bName,
+                        accountNumber = accNum,
+                        cci = ccId,
+                        titularName = titName,
+                        currency = pCurrency,
+                        transactionAmount = tx.amount,
+                        exchangeRate = tx.tipoCambioAplicado,
+                        isLoading = false
+                    )
+                }
+            } else {
+                _uiState.update { it.copy(isLoading = false) }
+            }
+        } catch (e: Exception) {
+            _uiState.update {
+                it.copy(
+                    errorMessage = "Error al sincronizar con BD: ${e.localizedMessage}",
+                    isLoading = false
+                )
             }
         }
     }
@@ -153,6 +254,8 @@ class BankViewModel : ViewModel() {
                 _uiState.update {
                     it.copy(errorMessage = result.message ?: "La verificación del comprobante falló")
                 }
+            } else {
+                loadDataFromDatabase()
             }
         } catch (e: Exception) {
             _uiState.update {
