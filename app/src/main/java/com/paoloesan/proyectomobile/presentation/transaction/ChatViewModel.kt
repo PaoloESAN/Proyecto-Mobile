@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
+import kotlin.time.Duration.Companion.milliseconds
 
 data class ChatMessageState(
     val id: String,
@@ -60,6 +61,68 @@ class ChatViewModel : ViewModel() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
+                if (transactionId == 999) {
+                    var myUserId: Int = 17 // Por defecto Juan José
+
+                    try {
+                        kotlinx.coroutines.withTimeoutOrNull(1500.milliseconds) {
+                            val authId = Supabase.client.auth.currentUserAwaitInit()?.id
+                            if (authId != null) {
+                                val perfil = Supabase.client.postgrest["usuarios"]
+                                    .select { filter { eq("auth_id", authId) } }
+                                    .decodeList<UserProfileModel>()
+                                    .firstOrNull()
+                                if (perfil != null) {
+                                    myUserId = perfil.usuarioId ?: 17
+                                }
+                            }
+                        }
+                    } catch (_: Exception) {
+                    }
+
+                    currentUserId = myUserId
+                    cachedCompradorNombre = "Juan José"
+                    cachedVendedorNombre = "Julio Profe"
+                    cachedTransaction = TransactionModel(
+                        transactionId = 999,
+                        offerId = 7,
+                        usuarioCompradorId = 17,
+                        usuarioVendedorId = 16,
+                        amount = 150.0,
+                        tipoCambioAplicado = 3.80,
+                        status = "En Proceso"
+                    )
+
+                    val isJuanJoseOwn = myUserId == 17
+                    val isJulioProfeOwn = myUserId == 16
+                    val contraparte = if (myUserId == 16) "Juan José" else "Julio Profe"
+
+                    val chatStates = listOf(
+                        ChatMessageState(
+                            id = "1",
+                            text = "Hola Julio, ¿cómo estás? Ya inicié la operación.",
+                            isOwn = isJuanJoseOwn,
+                            time = "23:10",
+                            senderName = "Juan José"
+                        ),
+                        ChatMessageState(
+                            id = "2",
+                            text = "Hola Juan, excelente. Quedo a la espera de la transferencia.",
+                            isOwn = isJulioProfeOwn,
+                            time = "23:11",
+                            senderName = "Julio Profe"
+                        )
+                    )
+                    _uiState.update {
+                        it.copy(
+                            messages = chatStates,
+                            contraparteName = contraparte,
+                            isLoading = false
+                        )
+                    }
+                    return@launch
+                }
+
                 // 1. Obtener auth_id del usuario logueado esperando a que inicialice
                 val authId = Supabase.client.auth.currentUserAwaitInit()?.id
                 var myUserId: Int? = null
@@ -154,7 +217,8 @@ class ChatViewModel : ViewModel() {
         compradorNombre: String,
         vendedorNombre: String
     ): ChatMessageState {
-        val isParticipant = myUserId == transaction.usuarioCompradorId || myUserId == transaction.usuarioVendedorId
+        val isParticipant =
+            myUserId == transaction.usuarioCompradorId || myUserId == transaction.usuarioVendedorId
         val isOwn = if (isParticipant) {
             msg.remitenteId == myUserId
         } else {
@@ -162,7 +226,8 @@ class ChatViewModel : ViewModel() {
             msg.remitenteId == transaction.usuarioVendedorId
         }
 
-        val senderName = if (msg.remitenteId == transaction.usuarioCompradorId) compradorNombre else vendedorNombre
+        val senderName =
+            if (msg.remitenteId == transaction.usuarioCompradorId) compradorNombre else vendedorNombre
         val timeStr = formatFechaEnvio(msg.fechaEnvio)
         return ChatMessageState(
             id = (msg.mensajeId ?: 0).toString(),
@@ -178,15 +243,17 @@ class ChatViewModel : ViewModel() {
             try {
                 chatChannel = Supabase.client.channel("chat_transaccion_$transactionId")
 
-                val flow = chatChannel!!.postgresChangeFlow<PostgresAction.Insert>(schema = "public") {
-                    table = "mensajes_chat"
-                }
+                val flow =
+                    chatChannel!!.postgresChangeFlow<PostgresAction.Insert>(schema = "public") {
+                        table = "mensajes_chat"
+                    }
 
                 chatChannel!!.subscribe()
 
                 flow.collect { action ->
-                    action.record?.let { record ->
-                        val nuevoMensaje = json.decodeFromJsonElement(ChatMessageModel.serializer(), record)
+                    action.record.let { record ->
+                        val nuevoMensaje =
+                            json.decodeFromJsonElement(ChatMessageModel.serializer(), record)
                         if (nuevoMensaje.transaccionId == transactionId) {
                             val tx = cachedTransaction ?: return@let
                             val compNombre = cachedCompradorNombre
@@ -204,15 +271,27 @@ class ChatViewModel : ViewModel() {
                         }
                     }
                 }
-            } catch (_: Exception) {
-                // Fallback silencioso
+            } catch (e: Exception) {
+                android.util.Log.e("ChatViewModel", "Error en realtime: ${e.localizedMessage}", e)
             }
         }
     }
 
     fun enviarMensaje(texto: String) {
-        val myUserId = currentUserId ?: return
         if (texto.isBlank()) return
+        if (transactionId == 999) {
+            val senderName = if (currentUserId == 16) "Julio Profe" else "Juan José"
+            val nuevo = ChatMessageState(
+                id = System.currentTimeMillis().toString(),
+                text = texto.trim(),
+                isOwn = true,
+                time = "Ahora",
+                senderName = senderName
+            )
+            _uiState.update { it.copy(messages = it.messages + nuevo) }
+            return
+        }
+        val myUserId = currentUserId ?: return
 
         viewModelScope.launch {
             try {
@@ -222,8 +301,37 @@ class ChatViewModel : ViewModel() {
                     contenido = texto.trim()
                 )
 
-                Supabase.client.postgrest["mensajes_chat"]
-                    .insert(nuevoMsg)
+                val response = Supabase.client.postgrest["mensajes_chat"]
+                    .insert(nuevoMsg) {
+                        select()
+                    }.decodeSingle<ChatMessageModel>()
+
+                val tx = cachedTransaction
+                val compNombre = cachedCompradorNombre
+                val vendNombre = cachedVendedorNombre
+                if (tx != null) {
+                    val mapped = mapToState(response, myUserId, tx, compNombre, vendNombre)
+                    _uiState.update { state ->
+                        val exists = state.messages.any { it.id == mapped.id }
+                        if (!exists) {
+                            state.copy(messages = state.messages + mapped)
+                        } else state
+                    }
+                } else {
+                    val mapped = ChatMessageState(
+                        id = (response.mensajeId ?: System.currentTimeMillis()).toString(),
+                        text = response.contenido,
+                        isOwn = true,
+                        time = formatFechaEnvio(response.fechaEnvio),
+                        senderName = if (myUserId == 16) "Julio Profe" else "Juan José"
+                    )
+                    _uiState.update { state ->
+                        val exists = state.messages.any { it.id == mapped.id }
+                        if (!exists) {
+                            state.copy(messages = state.messages + mapped)
+                        } else state
+                    }
+                }
 
             } catch (e: Exception) {
                 _uiState.update {
@@ -247,7 +355,8 @@ class ChatViewModel : ViewModel() {
         viewModelScope.launch {
             try {
                 chatChannel?.unsubscribe()
-            } catch (_: Exception) {}
+            } catch (_: Exception) {
+            }
         }
     }
 }
