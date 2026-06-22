@@ -9,6 +9,10 @@ import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 object AuthRepository {
 
@@ -30,7 +34,7 @@ object AuthRepository {
         val authId = Supabase.client.auth.currentUserOrNull()!!.id
 
         // 3. Buscar el perfil en public.usuarios usando auth_id
-        val perfil = Supabase.client.postgrest["usuarios"]
+        var perfil = Supabase.client.postgrest["usuarios"]
             .select {
                 filter {
                     eq("auth_id", authId)
@@ -38,7 +42,43 @@ object AuthRepository {
             }
             .decodeSingle<UserProfileModel>()
 
-        // 4. Persistir sesión localmente
+        // 4. Verificar si el usuario está bloqueado
+        if (perfil.estado == "Bloqueado") {
+            val bloqueadoHastaInstant = perfil.bloqueadoHasta?.let {
+                try {
+                    Instant.parse(it)
+                } catch (e: Exception) {
+                    null
+                }
+            }
+
+            if (bloqueadoHastaInstant != null && !bloqueadoHastaInstant.isAfter(Instant.now())) {
+                // El bloqueo ya expiró. Desbloquear automáticamente.
+                Supabase.client.postgrest["usuarios"]
+                    .update({
+                        set("estado", "Activo")
+                        set("bloqueado_hasta", null as String?)
+                    }) {
+                        filter {
+                            eq("usuario_id", perfil.usuarioId!!)
+                        }
+                    }
+                perfil = perfil.copy(estado = "Activo", bloqueadoHasta = null)
+            } else {
+                // Sigue bloqueado (indefinido o en el futuro)
+                Supabase.client.auth.signOut()
+                val mensaje = if (bloqueadoHastaInstant != null) {
+                    val localDateTime = LocalDateTime.ofInstant(bloqueadoHastaInstant, ZoneId.systemDefault())
+                    val formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")
+                    "Su cuenta está bloqueada temporalmente hasta ${localDateTime.format(formatter)}."
+                } else {
+                    "Su cuenta ha sido bloqueada indefinidamente."
+                }
+                throw Exception(mensaje)
+            }
+        }
+
+        // 5. Persistir sesión localmente
         SessionManager.saveRememberMe(context, rememberMe)
         SessionManager.saveToken(context, authId)
         SessionManager.saveProfileInfo(context, perfil.nombres, perfil.apellidos)

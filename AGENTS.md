@@ -57,6 +57,12 @@ Para el desarrollo y mantenimiento de la aplicación móvil, el agente debe domi
   - La validación de los comprobantes de pago subidos por el comprador se procesa automáticamente mediante Inteligencia Artificial (por ejemplo, modelos de visión como Gemini 3.1 Flash Lite ejecutados a través de una Supabase Edge Function: `verificar-voucher-ia`).
   - La Edge Function analiza la imagen en busca de datos clave: banco emisor, cuenta de origen y destino, monto transferido, número de operación y fecha/hora.
   - **Lógica de Validación**: Los datos del voucher deben contrastarse contra el `monto_operacion` de la transacción y la cuenta del método de pago del vendedor. Si el monto y destinatario coinciden, la IA valida y aprueba la operación, registrando el resultado en la tabla `verificaciones_ia` y cambiando automáticamente la transacción al estado `Pagado`. En caso de discrepancias, se marca para revisión manual.
+- **Bloqueo y Suspensión de Usuarios (Panel de Administración)**:
+  - Los administradores pueden suspender de forma temporal (1 hora, 24 horas, 7 días, 1 mes, 3 meses) o permanente/indefinida a un usuario.
+  - Al bloquear un usuario, se actualiza su `estado` a `"Bloqueado"`, se incrementa su contador de `bloqueos_anteriores` y se define una fecha límite en `bloqueado_hasta` (si es temporal).
+  - **Seguridad y Privacidad de Credenciales (Contraseña primero)**: Para evitar revelar si un correo electrónico está bloqueado o existe ante intentos maliciosos, la verificación del bloqueo se realiza **después** de comprobar que la contraseña es correcta en Supabase Auth. Si la contraseña es incorrecta, se mostrará únicamente el error genérico de credenciales.
+  - **Restricción de la API vía RLS**: La seguridad en el servidor se mantiene aplicando políticas RLS restrictivas (`AS RESTRICTIVE`) a nivel de base de datos en todas las tablas transaccionales y operacionales (`ofertas`, `transacciones`, etc.) llamando a la función `es_usuario_activo()`. Esto impide cualquier lectura/escritura a usuarios bloqueados aunque tengan una sesión de Auth iniciada.
+  - Al iniciar sesión en la aplicación móvil, se verifica si el estado del usuario es `"Bloqueado"`. Si el plazo de suspensión ya venció, se ejecuta una auto-recuperación (desbloqueo automático) cambiando su estado a `"Activo"` y `bloqueado_hasta` a `null`, permitiéndole ingresar. Si aún está vigente, se le impide el acceso mostrando un mensaje con la fecha de desbloqueo.
 
 ---
 
@@ -89,7 +95,9 @@ data class UserProfileModel(
     @SerialName("es_verificado") val esVerificado: Boolean = false,
     @SerialName("dni_frontal_url") val dniFrontalUrl: String? = null,
     @SerialName("dni_posterior_url") val dniPosteriorUrl: String? = null,
-    @SerialName("calificacion") val calificacion: Double = 5.00 // Rango 1.00 a 5.00, promedio auto-calculado
+    @SerialName("calificacion") val calificacion: Double = 5.00, // Rango 1.00 a 5.00, promedio auto-calculado
+    @SerialName("bloqueos_anteriores") val bloqueosAnteriores: Int = 0,
+    @SerialName("bloqueado_hasta") val bloqueadoHasta: String? = null // ISO String / timestamptz / null si es indefinido
 )
 ```
 
