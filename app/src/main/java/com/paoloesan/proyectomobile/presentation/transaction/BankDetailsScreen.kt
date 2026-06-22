@@ -109,6 +109,9 @@ fun BankDetailsScreen(
     var showVoucherDialog by remember { mutableStateOf(false) }
     var selectedVoucherTitle by remember { mutableStateOf("") }
     var selectedVoucherAmount by remember { mutableStateOf("") }
+    var selectedVoucherUrl by remember { mutableStateOf<String?>(null) }
+    var showIaDetailsDialog by remember { mutableStateOf(false) }
+    var selectedIaVerification by remember { mutableStateOf<com.paoloesan.proyectomobile.data.model.VerificacionIaModel?>(null) }
 
     val sheetState = rememberModalBottomSheetState()
     var showUploadSheet by remember { mutableStateOf(false) }
@@ -192,32 +195,43 @@ fun BankDetailsScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(160.dp)
+                            .height(280.dp)
                             .background(Color.White, shape = RoundedCornerShape(8.dp))
-                            .border(1.dp, Color.LightGray, shape = RoundedCornerShape(8.dp))
-                            .padding(16.dp),
+                            .border(1.dp, Color.LightGray, shape = RoundedCornerShape(8.dp)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            androidx.compose.material3.Icon(
-                                imageVector = Icons.Default.CheckCircle,
-                                contentDescription = null,
-                                modifier = Modifier.size(36.dp),
-                                tint = Color(0xFF2E7D32)
+                        if (!selectedVoucherUrl.isNullOrEmpty()) {
+                            AsyncImage(
+                                model = selectedVoucherUrl,
+                                contentDescription = "Comprobante de Pago",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Fit
                             )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = selectedVoucherTitle,
-                                color = Color.Black,
-                                variant = TextVariant.P,
-                                style = androidx.compose.ui.text.TextStyle(fontWeight = FontWeight.Bold)
-                            )
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Text(
-                                text = "MONTO: $selectedVoucherAmount",
-                                color = Color(0xFF2E7D32),
-                                variant = TextVariant.Large
-                            )
+                        } else {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.padding(16.dp)
+                            ) {
+                                androidx.compose.material3.Icon(
+                                    imageVector = Icons.Default.CheckCircle,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(36.dp),
+                                    tint = Color(0xFF2E7D32)
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = selectedVoucherTitle,
+                                    color = Color.Black,
+                                    variant = TextVariant.P,
+                                    style = androidx.compose.ui.text.TextStyle(fontWeight = FontWeight.Bold)
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = "MONTO: $selectedVoucherAmount",
+                                    color = Color(0xFF2E7D32),
+                                    variant = TextVariant.Large
+                                )
+                            }
                         }
                     }
                 }
@@ -225,6 +239,133 @@ fun BankDetailsScreen(
             confirmButton = {
                 Button(
                     onClick = { showVoucherDialog = false },
+                    text = "Cerrar"
+                )
+            }
+        )
+    }
+
+    // Dialog: IA Details
+    if (showIaDetailsDialog) {
+        val verif = selectedIaVerification
+        AlertDialog(
+            onDismissRequest = { showIaDetailsDialog = false },
+            containerColor = RikkaTheme.colors.background,
+            title = {
+                Text(
+                    text = "Detalles de Verificación IA",
+                    variant = TextVariant.Large,
+                    color = RikkaTheme.colors.onBackground
+                )
+            },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    if (verif == null) {
+                        Text(
+                            text = "Aún no se ha realizado el análisis o la verificación está en proceso.",
+                            variant = TextVariant.P,
+                            color = RikkaTheme.colors.onBackground.copy(alpha = 0.8f)
+                        )
+                    } else {
+                        // Estado general
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            androidx.compose.material3.Icon(
+                                imageVector = if (verif.esValido) Icons.Default.CheckCircle else Icons.Default.Error,
+                                contentDescription = null,
+                                modifier = Modifier.size(24.dp),
+                                tint = if (verif.esValido) Color(0xFF4CAF50) else Color(0xFFD32F2F)
+                            )
+                            Text(
+                                text = if (verif.esValido) "Validación Exitosa" else "Discrepancia Encontrada",
+                                variant = TextVariant.P,
+                                style = androidx.compose.ui.text.TextStyle(fontWeight = FontWeight.Bold),
+                                color = if (verif.esValido) Color(0xFF4CAF50) else Color(0xFFD32F2F)
+                            )
+                        }
+
+                        // Mensaje de error/discrepancia si hay
+                        if (!verif.esValido && !verif.mensajeError.isNullOrEmpty()) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(RikkaTheme.colors.destructive.copy(alpha = 0.1f), shape = RoundedCornerShape(8.dp))
+                                    .border(1.dp, RikkaTheme.colors.destructive.copy(alpha = 0.2f), shape = RoundedCornerShape(8.dp))
+                                    .padding(12.dp)
+                            ) {
+                                Text(
+                                    text = verif.mensajeError,
+                                    variant = TextVariant.Small,
+                                    color = RikkaTheme.colors.destructive
+                                )
+                            }
+                        }
+
+                        // Campos extraídos
+                        Text(
+                            text = "Datos Extraídos del Comprobante:",
+                            variant = TextVariant.P,
+                            style = androidx.compose.ui.text.TextStyle(fontWeight = FontWeight.Bold),
+                            color = RikkaTheme.colors.onBackground
+                        )
+
+                        val extractedFields = remember(verif) {
+                            val jsonStr = verif.datosExtraidos
+                            val fields = mutableMapOf<String, String>()
+                            if (jsonStr.isNotEmpty()) {
+                                val regex = Regex("\"([^\"]+)\"\\s*:\\s*(?:\"([^\"]*)\"|([0-9.]+))")
+                                regex.findAll(jsonStr).forEach { match ->
+                                    val key = match.groupValues[1]
+                                    val value = match.groupValues[2].ifEmpty { match.groupValues[3] }
+                                    fields[key] = value
+                                }
+                            }
+                            fields
+                        }
+
+                        if (extractedFields.isEmpty()) {
+                            Text(
+                                text = "No se pudieron extraer campos legibles o el formato es incorrecto.",
+                                variant = TextVariant.Small,
+                                color = RikkaTheme.colors.onBackground.copy(alpha = 0.6f)
+                            )
+                        } else {
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                extractedFields.forEach { (key, value) ->
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(
+                                            text = key.uppercase().replace("_", " "),
+                                            variant = TextVariant.Small,
+                                            color = RikkaTheme.colors.onBackground.copy(alpha = 0.6f),
+                                            style = androidx.compose.ui.text.TextStyle(fontWeight = FontWeight.Medium)
+                                        )
+                                        Text(
+                                            text = value,
+                                            variant = TextVariant.Small,
+                                            color = RikkaTheme.colors.onBackground,
+                                            style = androidx.compose.ui.text.TextStyle(fontWeight = FontWeight.Bold)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = { showIaDetailsDialog = false },
                     text = "Cerrar"
                 )
             }
@@ -492,12 +633,39 @@ fun BankDetailsScreen(
                                             variant = TextVariant.Small,
                                             color = if (mineUploaded) Color(0xFF4CAF50) else Color(0xFFD32F2F)
                                         )
+                                        if (mineUploaded) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                                modifier = Modifier
+                                                    .padding(top = 4.dp)
+                                                    .clickable {
+                                                        selectedIaVerification = uiState.myIaVerification
+                                                        showIaDetailsDialog = true
+                                                    }
+                                            ) {
+                                                val verif = uiState.myIaVerification
+                                                val (statusText, statusColor) = when {
+                                                    verif == null -> "IA: Procesando..." to Color(0xFFFF9800)
+                                                    verif.esValido -> "IA: Correcto ✓" to Color(0xFF4CAF50)
+                                                    else -> "IA: Discrepancia ⚠️" to Color(0xFFD32F2F)
+                                                }
+                                                Text(text = statusText, variant = TextVariant.Small, color = statusColor)
+                                                Text(
+                                                    text = "(detalles)",
+                                                    variant = TextVariant.Small,
+                                                    color = RikkaTheme.colors.primary,
+                                                    style = androidx.compose.ui.text.TextStyle(textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline)
+                                                )
+                                            }
+                                        }
                                     }
                                     if (mineUploaded) {
                                         Button(
                                             onClick = {
                                                 selectedVoucherTitle = if (isSeller) "Tu Comprobante (USD)" else "Tu Comprobante (PEN)"
                                                 selectedVoucherAmount = if (isSeller) "$formattedUsd USD" else "$formattedPen PEN"
+                                                selectedVoucherUrl = uiState.myVoucherUrl
                                                 showVoucherDialog = true
                                             },
                                             variant = ButtonVariant.Outline,
@@ -537,12 +705,39 @@ fun BankDetailsScreen(
                                             variant = TextVariant.Small,
                                             color = if (peerUploaded) Color(0xFF4CAF50) else Color(0xFFD32F2F)
                                         )
+                                        if (peerUploaded) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                                modifier = Modifier
+                                                    .padding(top = 4.dp)
+                                                    .clickable {
+                                                        selectedIaVerification = uiState.peerIaVerification
+                                                        showIaDetailsDialog = true
+                                                    }
+                                            ) {
+                                                val verif = uiState.peerIaVerification
+                                                val (statusText, statusColor) = when {
+                                                    verif == null -> "IA: Procesando..." to Color(0xFFFF9800)
+                                                    verif.esValido -> "IA: Correcto ✓" to Color(0xFF4CAF50)
+                                                    else -> "IA: Discrepancia ⚠️" to Color(0xFFD32F2F)
+                                                }
+                                                Text(text = statusText, variant = TextVariant.Small, color = statusColor)
+                                                Text(
+                                                    text = "(detalles)",
+                                                    variant = TextVariant.Small,
+                                                    color = RikkaTheme.colors.primary,
+                                                    style = androidx.compose.ui.text.TextStyle(textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline)
+                                                )
+                                            }
+                                        }
                                     }
                                     if (peerUploaded) {
                                         Button(
                                             onClick = {
                                                 selectedVoucherTitle = if (isSeller) "Comprobante del Comprador (PEN)" else "Comprobante del Vendedor (USD)"
                                                 selectedVoucherAmount = if (isSeller) "$formattedPen PEN" else "$formattedUsd USD"
+                                                selectedVoucherUrl = uiState.peerVoucherUrl
                                                 showVoucherDialog = true
                                             },
                                             variant = ButtonVariant.Outline,

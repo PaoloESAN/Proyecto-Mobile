@@ -1,6 +1,5 @@
 package com.paoloesan.proyectomobile.presentation.auth
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -13,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -47,10 +45,8 @@ import androidx.navigation.NavController
 import com.paoloesan.proyectomobile.presentation.navigation.Destination
 import kotlinx.coroutines.launch
 import zed.rainxch.rikkaui.components.ui.button.Button
-import zed.rainxch.rikkaui.components.ui.button.ButtonSize
 import zed.rainxch.rikkaui.components.ui.button.ButtonVariant
 import zed.rainxch.rikkaui.components.ui.checkbox.Checkbox
-import zed.rainxch.rikkaui.components.ui.icon.RikkaIcons
 import zed.rainxch.rikkaui.components.ui.input.Input
 import zed.rainxch.rikkaui.components.ui.label.Label
 import zed.rainxch.rikkaui.components.ui.text.Text
@@ -89,210 +85,164 @@ fun LoginScreen(
     LaunchedEffect(uiState.isSuccess) {
         if (uiState.isSuccess) {
             viewModel.consumeSuccess()
-            navController.navigate(Destination.Marketplace.route) {
+            navController.navigate(Destination.Debug.route) {
                 popUpTo(Destination.Login.route) { inclusive = true }
             }
         }
     }
-
-    // Gradient background
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(RikkaTheme.colors.background)
-
-    ) {
-        Scaffold(
-            containerColor = RikkaTheme.colors.background,
-            snackbarHost = {
-                ToastHost(
-                    hostState = toastState,
-                )
-            },
-            topBar = {
-                // Transparent Top Bar with White Icons
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .statusBarsPadding()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+    Scaffold(
+        containerColor = RikkaTheme.colors.background,
+        snackbarHost = {
+            ToastHost(
+                hostState = toastState,
+            )
+        }
+    ) { innerPadding ->
+        val focusManager = LocalFocusManager.current
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .verticalScroll(rememberScrollState())
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
                 ) {
-                    Button(
-                        onClick = { navController.popBackStack() },
-                        variant = ButtonVariant.Ghost,
-                        size = ButtonSize.Icon,
-                    ) {
-                        androidx.compose.material3.Icon(
-                            imageVector = RikkaIcons.ArrowLeft,
-                            contentDescription = "Volver",
-                            tint = RikkaTheme.colors.onBackground
-                        )
-                    }
-
-                    Text(
-                        text = "Iniciar Sesión",
-                        color = RikkaTheme.colors.onBackground,
-                        variant = TextVariant.Large,
-                    )
-
-                    Button(
-                        onClick = {},
-                        variant = ButtonVariant.Ghost,
-                        size = ButtonSize.Icon,
-                    ) {
-                        androidx.compose.material3.Icon(
-                            imageVector = RikkaIcons.Settings,
-                            contentDescription = "Configuración",
-                            tint = RikkaTheme.colors.onBackground
-                        )
-                    }
+                    focusManager.clearFocus()
                 }
-            }
-        ) { innerPadding ->
-            val focusManager = LocalFocusManager.current
+                .padding(horizontal = 24.dp, vertical = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(
+                24.dp,
+                alignment = Alignment.CenterVertically
+            )
+        ) {
+
+            // Welcome Header
             Column(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-                    .verticalScroll(rememberScrollState())
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null
-                    ) {
-                        focusManager.clearFocus()
-                    }
-                    .padding(horizontal = 24.dp, vertical = 8.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(24.dp)
+                    .fillMaxWidth()
+                    .padding(top = 16.dp),
+                horizontalAlignment = Alignment.Start
             ) {
+                Text(
+                    text = "¡Hola, Bienvenido!",
+                    variant = TextVariant.H1,
+                    color = RikkaTheme.colors.onBackground
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "¿Listo para intercambiar?",
+                    variant = TextVariant.Large,
+                    color = Color.Gray
+                )
+            }
 
-                // Welcome Header
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 16.dp),
-                    horizontalAlignment = Alignment.Start
-                ) {
-                    Text(
-                        text = "¡Hola, Bienvenido!",
-                        variant = TextVariant.H1,
-                        color = RikkaTheme.colors.onBackground
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Column {
+                    Label(
+                        text = "Correo electrónico",
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "¿Listo para intercambiar?",
-                        variant = TextVariant.Large,
-                        color = Color.Gray
+                    Spacer(Modifier.height(4.dp))
+                    Input(
+                        value = uiState.correo,
+                        onValueChange = viewModel::onCorreoChange,
+                        placeholder = "usuario@email.com",
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                        leadingIcon = Icons.Default.Email,
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        enabled = !uiState.isLoading
                     )
                 }
 
+                Spacer(modifier = Modifier.height(2.dp))
+                Column {
+                    // Password Label
+                    Label(
+                        text = "Contraseña",
+                    )
 
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 24.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    Column {
-                        Label(
-                            text = "Correo electrónico",
-                        )
-                        Spacer(Modifier.height(4.dp))
+                    // Password Input with eye icon toggle overlay
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.CenterEnd
+                    ) {
                         Input(
-                            value = uiState.correo,
-                            onValueChange = viewModel::onCorreoChange,
-                            placeholder = "usuario@email.com",
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                            leadingIcon = Icons.Default.Email,
+                            value = uiState.password,
+                            onValueChange = viewModel::onPasswordChange,
+                            placeholder = "Por favor escribe tu contraseña",
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                            visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                            leadingIcon = Icons.Default.Lock,
+                            trailingIcon = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
                             enabled = !uiState.isLoading
                         )
-                    }
 
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Column {
-                        // Password Label
-                        Label(
-                            text = "Contraseña",
-                        )
-
-                        // Password Input with eye icon toggle overlay
                         Box(
-                            modifier = Modifier.fillMaxWidth(),
-                            contentAlignment = Alignment.CenterEnd
-                        ) {
-                            Input(
-                                value = uiState.password,
-                                onValueChange = viewModel::onPasswordChange,
-                                placeholder = "Por favor escribe tu contraseña",
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                                leadingIcon = Icons.Default.Lock,
-                                trailingIcon = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                                modifier = Modifier.fillMaxWidth(),
-                                singleLine = true,
-                                enabled = !uiState.isLoading
-                            )
-
-                            Box(
-                                modifier = Modifier
-                                    .size(48.dp)
-                                    .clickable(
-                                        enabled = !uiState.isLoading,
-                                        onClick = { passwordVisible = !passwordVisible }
-                                    )
-                            )
-                        }
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clickable(
+                                    enabled = !uiState.isLoading,
+                                    onClick = { passwordVisible = !passwordVisible }
+                                )
+                        )
                     }
+                }
 
-                    // Remember Me & Forgot Password Row
-                    Row(
+                // Remember Me & Forgot Password Row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Checkbox(
+                        checked = rememberMe,
+                        onCheckedChange = { rememberMe = it },
+                        enabled = !uiState.isLoading,
+                        label = "Recordarme"
+                    )
+
+                    Text(
+                        text = "Olvide mi contraseña",
+                        variant = TextVariant.Small,
+                        color = RikkaTheme.colors.primary,
+                        modifier = Modifier.clickable(enabled = !uiState.isLoading) {
+                            navController.navigate(Destination.RecoverPassword.route)
+                        }
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                // Login Button
+                if (uiState.isLoading) {
+                    Box(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                        contentAlignment = Alignment.Center
                     ) {
-                        Checkbox(
-                            checked = rememberMe,
-                            onCheckedChange = { rememberMe = it },
-                            enabled = !uiState.isLoading,
-                            label = "Recordarme"
-                        )
-
-                        Text(
-                            text = "Olvide mi contraseña",
-                            variant = TextVariant.Small,
-                            color = RikkaTheme.colors.primary,
-                            modifier = Modifier.clickable(enabled = !uiState.isLoading) {
-                                navController.navigate(Destination.RecoverPassword.route)
-                            }
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(40.dp),
+                            color = RikkaTheme.colors.primary
                         )
                     }
+                } else {
+                    Button(
+                        onClick = { viewModel.login(context, rememberMe) },
+                        modifier = Modifier.fillMaxWidth(),
+                        text = "Iniciar Sesion"
+                    )
+                }
 
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    // Login Button
-                    if (uiState.isLoading) {
-                        Box(
-                            modifier = Modifier.fillMaxWidth(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(40.dp),
-                                color = RikkaTheme.colors.primary
-                            )
-                        }
-                    } else {
-                        Button(
-                            onClick = { viewModel.login(context, rememberMe) },
-                            modifier = Modifier.fillMaxWidth(),
-                            text = "Iniciar Sesion"
-                        )
-                    }
-
-                    // Or With Divider
+                // Or With Divider
 //                    Row(
 //                        modifier = Modifier
 //                            .fillMaxWidth()
@@ -318,7 +268,7 @@ fun LoginScreen(
 //                        )
 //                    }
 
-                    // Social Buttons
+                // Social Buttons
 //                    Row(
 //                        modifier = Modifier.fillMaxWidth(),
 //                        horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -370,64 +320,64 @@ fun LoginScreen(
 //                        }
 //                    }
 
-                    // Botones de acceso rápido
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Button(
-                            onClick = {
-                                viewModel.onCorreoChange("julioprofe@email.com")
-                                viewModel.onPasswordChange("123456")
-                            },
-                            variant = ButtonVariant.Outline,
-                            modifier = Modifier.weight(1f),
-                            text = "Usuario 1"
-                        )
-                        Button(
-                            onClick = {
-                                viewModel.onCorreoChange("juanjose@email.com")
-                                viewModel.onPasswordChange("123456")
-                            },
-                            variant = ButtonVariant.Outline,
-                            modifier = Modifier.weight(1f),
-                            text = "Usuario 2"
-                        )
-                        Button(
-                            onClick = {
-                                viewModel.onCorreoChange("admin@exchange.com")
-                                viewModel.onPasswordChange("admin123")
-                            },
-                            variant = ButtonVariant.Outline,
-                            modifier = Modifier.weight(1f),
-                            text = "Admin"
-                        )
-                    }
-                }
-
-
-                // Sign Up Footer
+                // Botones de acceso rápido
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 16.dp),
-                    horizontalArrangement = Arrangement.Center
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text(
-                        text = "¿No tienes una cuenta? ",
-                        variant = TextVariant.P,
-                        color = RikkaTheme.colors.onBackground,
+                    Button(
+                        onClick = {
+                            viewModel.onCorreoChange("julioprofe@email.com")
+                            viewModel.onPasswordChange("123456")
+                        },
+                        variant = ButtonVariant.Outline,
+                        modifier = Modifier.weight(1f),
+                        text = "Usuario 1"
                     )
-                    Text(
-                        text = "Regístrate",
-                        variant = TextVariant.Large,
-                        color = RikkaTheme.colors.primary,
-                        modifier = Modifier.clickable {
-                            navController.navigate(Destination.Registro.route)
-                        }
+                    Button(
+                        onClick = {
+                            viewModel.onCorreoChange("juanjose@email.com")
+                            viewModel.onPasswordChange("123456")
+                        },
+                        variant = ButtonVariant.Outline,
+                        modifier = Modifier.weight(1f),
+                        text = "Usuario 2"
+                    )
+                    Button(
+                        onClick = {
+                            viewModel.onCorreoChange("admin@exchange.com")
+                            viewModel.onPasswordChange("admin123")
+                        },
+                        variant = ButtonVariant.Outline,
+                        modifier = Modifier.weight(1f),
+                        text = "Admin"
                     )
                 }
             }
+
+
+            // Sign Up Footer
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp),
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = "¿No tienes una cuenta? ",
+                    variant = TextVariant.P,
+                    color = RikkaTheme.colors.onBackground,
+                )
+                Text(
+                    text = "Regístrate",
+                    variant = TextVariant.Large,
+                    color = RikkaTheme.colors.primary,
+                    modifier = Modifier.clickable {
+                        navController.navigate(Destination.Registro.route)
+                    }
+                )
+            }
         }
+
     }
 }
