@@ -198,22 +198,49 @@ fun ChatScreen(
                 }
             }
         ) { innerPadding ->
-            LazyColumn(
-                state = listState,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null
-                    ) {
-                        focusManager.clearFocus()
-                    }
-                    .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(vertical = 12.dp)
-            ) {
-                items(uiState.messages, key = { it.id }) { message ->
+            if (uiState.isLoading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Cargando mensajes...",
+                        color = Color.Gray,
+                        variant = TextVariant.P
+                    )
+                }
+            } else if (uiState.error != null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = uiState.error ?: "",
+                        color = RikkaTheme.colors.destructive,
+                        variant = TextVariant.P
+                    )
+                }
+            } else {
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) {
+                            focusManager.clearFocus()
+                        }
+                        .padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(vertical = 12.dp)
+                ) {
+                    items(uiState.messages, key = { it.id }) { message ->
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = if (message.isOwn) Arrangement.End else Arrangement.Start
@@ -258,4 +285,5 @@ fun ChatScreen(
             }
         }
     }
-}
+}
+}
