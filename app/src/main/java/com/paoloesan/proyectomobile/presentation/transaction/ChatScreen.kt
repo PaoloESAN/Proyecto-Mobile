@@ -29,7 +29,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -40,6 +39,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import kotlinx.coroutines.launch
 import zed.rainxch.rikkaui.components.ui.button.Button
@@ -50,44 +51,30 @@ import zed.rainxch.rikkaui.components.ui.input.Input
 import zed.rainxch.rikkaui.components.ui.text.Text
 import zed.rainxch.rikkaui.components.ui.text.TextVariant
 import zed.rainxch.rikkaui.foundation.RikkaTheme
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
-import java.util.UUID
-
-data class ChatMessage(
-    val id: String,
-    val text: String,
-    val isOwn: Boolean,
-    val time: String
-)
-
-fun getCurrentTime(): String {
-    val sdf = SimpleDateFormat("HH:mm", Locale.getDefault())
-    return sdf.format(Date())
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ChatScreen(navController: NavController, readOnly: Boolean = false) {
+fun ChatScreen(
+    navController: NavController,
+    transactionId: Int,
+    readOnly: Boolean = false,
+    viewModel: ChatViewModel = viewModel()
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var messageInput by remember { mutableStateOf("") }
-    val messages = remember {
-        mutableStateListOf(
-            ChatMessage("1", "Hola, ¿ya realizaste la transferencia?", false, "10:00"),
-            ChatMessage("2", "Si, acabo de transferir el monto.", true, "10:02"),
-            ChatMessage("3", "Perfecto, dejame verificarlo.", false, "10:03"),
-            ChatMessage("4", "Te envie el comprobante por aqui.", true, "10:05"),
-        )
-    }
 
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
     val focusManager = LocalFocusManager.current
 
+    LaunchedEffect(transactionId) {
+        viewModel.initChat(transactionId)
+    }
+
     // Auto scroll al ultimo mensaje
-    LaunchedEffect(messages.size) {
-        if (messages.isNotEmpty()) {
-            listState.animateScrollToItem(messages.size - 1)
+    LaunchedEffect(uiState.messages.size) {
+        if (uiState.messages.isNotEmpty()) {
+            listState.animateScrollToItem(uiState.messages.size - 1)
         }
     }
 
@@ -129,7 +116,7 @@ fun ChatScreen(navController: NavController, readOnly: Boolean = false) {
                             variant = TextVariant.Large,
                         )
                         Text(
-                            text = if (readOnly) "Modo Solo Lectura (Arbitraje)" else "Carlos Rodriguez",
+                            text = if (readOnly) "Modo Solo Lectura (Arbitraje)" else uiState.contraparteName,
                             color = Color.Gray,
                             variant = TextVariant.Small
                         )
@@ -193,20 +180,8 @@ fun ChatScreen(navController: NavController, readOnly: Boolean = false) {
                             Button(
                                 onClick = {
                                     if (messageInput.isNotBlank()) {
-                                        messages.add(
-                                            ChatMessage(
-                                                id = UUID.randomUUID().toString(),
-                                                text = messageInput.trim(),
-                                                isOwn = true,
-                                                time = getCurrentTime()
-                                            )
-                                        )
+                                        viewModel.enviarMensaje(messageInput)
                                         messageInput = ""
-                                        scope.launch {
-                                            if (messages.isNotEmpty()) {
-                                                listState.animateScrollToItem(messages.size - 1)
-                                            }
-                                        }
                                     }
                                 },
                                 variant = ButtonVariant.Default,
@@ -238,7 +213,7 @@ fun ChatScreen(navController: NavController, readOnly: Boolean = false) {
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 contentPadding = PaddingValues(vertical = 12.dp)
             ) {
-                items(messages, key = { it.id }) { message ->
+                items(uiState.messages, key = { it.id }) { message ->
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = if (message.isOwn) Arrangement.End else Arrangement.Start
@@ -273,7 +248,7 @@ fun ChatScreen(navController: NavController, readOnly: Boolean = false) {
                             }
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
-                                text = message.time,
+                                text = "${message.senderName} • ${message.time}",
                                 variant = TextVariant.Small,
                                 color = Color.Gray
                             )
@@ -283,4 +258,4 @@ fun ChatScreen(navController: NavController, readOnly: Boolean = false) {
             }
         }
     }
-}
+}
