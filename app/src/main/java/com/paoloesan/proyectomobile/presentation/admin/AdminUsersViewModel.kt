@@ -107,10 +107,22 @@ class AdminUsersViewModel : ViewModel() {
                 val user = _uiState.value.usuarios.firstOrNull { it.id == userId }
                 val bloqueosAnteriores = user?.bloqueosAnteriores ?: 0
 
+                val now = java.time.Instant.now()
+                val bloqueadoHastaInstant = when (duracion) {
+                    "1 hora" -> now.plus(1, java.time.temporal.ChronoUnit.HOURS)
+                    "24 horas" -> now.plus(24, java.time.temporal.ChronoUnit.HOURS)
+                    "7 días" -> now.plus(7, java.time.temporal.ChronoUnit.DAYS)
+                    "1 mes" -> now.plus(30, java.time.temporal.ChronoUnit.DAYS)
+                    "3 meses" -> now.plus(90, java.time.temporal.ChronoUnit.DAYS)
+                    else -> null
+                }
+                val bloqueadoHastaString = bloqueadoHastaInstant?.toString()
+
                 Supabase.client.postgrest["usuarios"]
                     .update({
                         set("estado", "Bloqueado")
                         set("bloqueos_anteriores", bloqueosAnteriores + 1)
+                        set("bloqueado_hasta", bloqueadoHastaString)
                     }) {
                         filter {
                             eq("usuario_id", userId.toInt())

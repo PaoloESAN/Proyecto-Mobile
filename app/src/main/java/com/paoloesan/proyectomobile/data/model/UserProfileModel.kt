@@ -18,5 +18,6 @@ data class UserProfileModel(
     @SerialName("dni_frontal_url") val dniFrontalUrl: String? = null,
     @SerialName("dni_posterior_url") val dniPosteriorUrl: String? = null,
     @SerialName("calificacion") val calificacion: Double = 0.00,
-    @SerialName("bloqueos_anteriores") val bloqueosAnteriores: Int = 0
+    @SerialName("bloqueos_anteriores") val bloqueosAnteriores: Int = 0,
+    @SerialName("bloqueado_hasta") val bloqueadoHasta: String? = null
 )

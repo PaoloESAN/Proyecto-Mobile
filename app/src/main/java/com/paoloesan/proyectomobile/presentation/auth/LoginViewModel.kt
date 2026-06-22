@@ -49,10 +49,36 @@ class LoginViewModel : ViewModel() {
                 AuthRepository.login(context, current.correo, current.password, rememberMe)
                 _uiState.update { it.copy(isLoading = false, isSuccess = true) }
             } catch (e: Exception) {
+                val message = e.message ?: ""
+                val errorMsg = when {
+                    message.contains("Invalid login credentials", ignoreCase = true) || 
+                    message.contains("User not found", ignoreCase = true) -> {
+                        "Correo o contraseña incorrectos"
+                    }
+                    message.contains("Email not confirmed", ignoreCase = true) -> {
+                        "Por favor, confirme su correo electrónico antes de iniciar sesión."
+                    }
+                    message.isNotBlank() -> {
+                        if (message.contains("URL:", ignoreCase = true)) {
+                            // Limpiar excepción HTTP detallada de Supabase
+                            val firstLine = message.lineSequence().firstOrNull()?.trim() ?: ""
+                            if (firstLine.isNotBlank() && firstLine.length < 80) {
+                                firstLine
+                            } else {
+                                "Error de conexión con el servidor. Intente de nuevo."
+                            }
+                        } else {
+                            message
+                        }
+                    }
+                    else -> {
+                        "Error de conexión con el servidor"
+                    }
+                }
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        errorMessage = "Correo o contraseña incorrectos"
+                        errorMessage = errorMsg
                     )
                 }
             }
