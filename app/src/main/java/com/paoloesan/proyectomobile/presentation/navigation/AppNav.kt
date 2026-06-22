@@ -315,6 +315,19 @@ fun AppNav() {
 
     val showBottomBar = bottomBarDestinations.any { it.route == currentRoute }
 
+    // Escuchar eventos globales de autenticación (ej. Deep Link de recuperación)
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        com.paoloesan.proyectomobile.data.AuthEventChannel.events.collect { event ->
+            when (event) {
+                is com.paoloesan.proyectomobile.data.AuthEvent.NavigateToResetPassword -> {
+                    navController.navigate(Destination.ResetPassword.route) {
+                        launchSingleTop = true
+                    }
+                }
+            }
+        }
+    }
+
     Column(modifier = Modifier.fillMaxSize()) {
         NavHost(
             navController = navController,

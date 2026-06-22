@@ -1,4 +1,4 @@
-package com.paoloesan.proyectomobile.presentation.transaction
+﻿package com.paoloesan.proyectomobile.presentation.transaction
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -46,7 +46,7 @@ class ChatViewModel : ViewModel() {
     private var chatChannel: RealtimeChannel? = null
     private val json = Json { ignoreUnknownKeys = true }
 
-    // Guardar información temporal de la transacción y perfiles para mapear mensajes entrantes en tiempo real
+    // Guardar informaci├│n temporal de la transacci├│n y perfiles para mapear mensajes entrantes en tiempo real
     private var cachedTransaction: TransactionModel? = null
     private var cachedCompradorNombre: String = ""
     private var cachedVendedorNombre: String = ""
@@ -62,7 +62,7 @@ class ChatViewModel : ViewModel() {
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
                 if (transactionId == 999) {
-                    var myUserId: Int = 17 // Por defecto Juan José
+                    var myUserId: Int = 17 // Por defecto Juan Jos├®
 
                     try {
                         kotlinx.coroutines.withTimeoutOrNull(1500.milliseconds) {
@@ -81,7 +81,7 @@ class ChatViewModel : ViewModel() {
                     }
 
                     currentUserId = myUserId
-                    cachedCompradorNombre = "Juan José"
+                    cachedCompradorNombre = "Juan Jos├®"
                     cachedVendedorNombre = "Julio Profe"
                     cachedTransaction = TransactionModel(
                         transactionId = 999,
@@ -95,15 +95,15 @@ class ChatViewModel : ViewModel() {
 
                     val isJuanJoseOwn = myUserId == 17
                     val isJulioProfeOwn = myUserId == 16
-                    val contraparte = if (myUserId == 16) "Juan José" else "Julio Profe"
+                    val contraparte = if (myUserId == 16) "Juan Jos├®" else "Julio Profe"
 
                     val chatStates = listOf(
                         ChatMessageState(
                             id = "1",
-                            text = "Hola Julio, ¿cómo estás? Ya inicié la operación.",
+                            text = "Hola Julio, ┬┐c├│mo est├ís? Ya inici├® la operaci├│n.",
                             isOwn = isJuanJoseOwn,
                             time = "23:10",
-                            senderName = "Juan José"
+                            senderName = "Juan Jos├®"
                         ),
                         ChatMessageState(
                             id = "2",
@@ -139,7 +139,7 @@ class ChatViewModel : ViewModel() {
                     currentUserId = myUserId
                 }
 
-                // 2. Obtener transacción
+                // 2. Obtener transacci├│n
                 val transaction = Supabase.client.postgrest["transacciones"]
                     .select {
                         filter {
@@ -280,7 +280,7 @@ class ChatViewModel : ViewModel() {
     fun enviarMensaje(texto: String) {
         if (texto.isBlank()) return
         if (transactionId == 999) {
-            val senderName = if (currentUserId == 16) "Julio Profe" else "Juan José"
+            val senderName = if (currentUserId == 16) "Julio Profe" else "Juan Jos├®"
             val nuevo = ChatMessageState(
                 id = System.currentTimeMillis().toString(),
                 text = texto.trim(),
@@ -323,7 +323,7 @@ class ChatViewModel : ViewModel() {
                         text = response.contenido,
                         isOwn = true,
                         time = formatFechaEnvio(response.fechaEnvio),
-                        senderName = if (myUserId == 16) "Julio Profe" else "Juan José"
+                        senderName = if (myUserId == 16) "Julio Profe" else "Juan Jos├®"
                     )
                     _uiState.update { state ->
                         val exists = state.messages.any { it.id == mapped.id }

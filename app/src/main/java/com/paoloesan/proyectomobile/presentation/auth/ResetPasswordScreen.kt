@@ -39,7 +39,8 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import kotlinx.coroutines.delay
+import com.paoloesan.proyectomobile.data.Supabase
+import io.github.jan.supabase.auth.auth
 import kotlinx.coroutines.launch
 import zed.rainxch.rikkaui.components.ui.button.Button
 import zed.rainxch.rikkaui.components.ui.button.ButtonSize
@@ -265,13 +266,29 @@ fun ResetPasswordScreen(navController: NavController) {
                                 } else {
                                     scope.launch {
                                         isResetting = true
-                                        toastState.show(
-                                            message = "¡Contraseña restablecida con éxito!",
-                                            variant = ToastVariant.Success
-                                        )
-                                        delay(1500)
-                                        isResetting = false
-                                        navController.popBackStack()
+                                        try {
+                                             Supabase.client.auth.updateUser {
+                                                 password = password.trim()
+                                             }
+                                             try {
+                                                 Supabase.client.auth.signOut()
+                                             } catch (_: Exception) {}
+                                             toastState.show(
+                                                 message = "¡Contraseña restablecida con éxito!",
+                                                 variant = ToastVariant.Success
+                                             )
+                                             kotlinx.coroutines.delay(1500)
+                                             isResetting = false
+                                             navController.navigate("login") {
+                                                 popUpTo(0) { inclusive = true }
+                                             }
+                                        } catch (e: Exception) {
+                                            isResetting = false
+                                            toastState.show(
+                                                message = "Error: ${e.localizedMessage ?: "No se pudo restablecer la contraseña"}",
+                                                variant = ToastVariant.Destructive
+                                            )
+                                        }
                                     }
                                 }
                             },

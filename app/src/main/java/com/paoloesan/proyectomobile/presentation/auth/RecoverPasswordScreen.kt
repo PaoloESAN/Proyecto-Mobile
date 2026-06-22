@@ -37,7 +37,8 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import kotlinx.coroutines.delay
+import com.paoloesan.proyectomobile.data.Supabase
+import io.github.jan.supabase.auth.auth
 import kotlinx.coroutines.launch
 import zed.rainxch.rikkaui.components.ui.button.Button
 import zed.rainxch.rikkaui.components.ui.button.ButtonSize
@@ -60,8 +61,6 @@ fun RecoverPasswordScreen(navController: NavController) {
     val toastState = rememberToastHostState()
     val scope = rememberCoroutineScope()
     val focusManager = LocalFocusManager.current
-
-    val registeredEmails = listOf("admin@test.com", "user@test.com", "paolo@test.com")
 
     Box(
         modifier = Modifier
@@ -181,33 +180,37 @@ fun RecoverPasswordScreen(navController: NavController) {
                     } else {
                         Button(
                             onClick = {
-                                val isValidFormat =
-                                    android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()
-                                if (email.isBlank() || !isValidFormat) {
-                                    scope.launch {
-                                        toastState.show(
-                                            message = "Por favor ingresa un correo electrónico válido",
-                                            variant = ToastVariant.Destructive
-                                        )
+                                    val isValidFormat =
+                                        android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()
+                                    if (email.isBlank() || !isValidFormat) {
+                                        scope.launch {
+                                            toastState.show(
+                                                message = "Por favor ingresa un correo electrónico válido",
+                                                variant = ToastVariant.Destructive
+                                            )
+                                        }
+                                    } else {
+                                        scope.launch {
+                                            isSending = true
+                                            try {
+                                                Supabase.client.auth.resetPasswordForEmail(
+                                                    email = email.trim(),
+                                                    redirectUrl = "proyectomobile://recovery"
+                                                )
+                                                toastState.show(
+                                                    message = "Se envió un enlace de recuperación a tu correo",
+                                                    variant = ToastVariant.Success
+                                                )
+                                            } catch (e: Exception) {
+                                                toastState.show(
+                                                    message = "Error: ${e.localizedMessage ?: "No se pudo enviar el enlace"}",
+                                                    variant = ToastVariant.Destructive
+                                                )
+                                            } finally {
+                                                isSending = false
+                                            }
+                                        }
                                     }
-                                } else if (email !in registeredEmails) {
-                                    scope.launch {
-                                        toastState.show(
-                                            message = "El correo ingresado no se encuentra registrado",
-                                            variant = ToastVariant.Destructive
-                                        )
-                                    }
-                                } else {
-                                    scope.launch {
-                                        isSending = true
-                                        delay(2000)
-                                        isSending = false
-                                        toastState.show(
-                                            message = "Se envió un enlace de recuperación",
-                                            variant = ToastVariant.Success
-                                        )
-                                    }
-                                }
                             },
                             enabled = email.isNotBlank(),
                             modifier = Modifier.fillMaxWidth(),
