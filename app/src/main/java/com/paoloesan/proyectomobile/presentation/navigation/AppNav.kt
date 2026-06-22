@@ -160,54 +160,35 @@ sealed class Destination(
         route = "offerDetail/{offerId}",
         title = "Detalle de Oferta",
         content = { navController ->
+            val arguments = navController.currentBackStackEntry?.arguments
+            val offerId = arguments?.getString("offerId")?.toIntOrNull() ?: 0
             OfferDetailScreen(
-                onStartTransaction = { amount, rate, bank, type ->
-                    navController.navigate("transactionStatus/TX001?isSeller=false&amount=$amount&rate=$rate&bank=$bank&type=$type")
+                offerId = offerId,
+                onStartTransaction = { transactionId ->
+                    navController.navigate("transactionStatus/$transactionId") {
+                        popUpTo("offerDetail/$offerId") { inclusive = true }
+                    }
                 },
-                onBack = {
-                    navController.popBackStack()
-                }
+                onBack = { navController.popBackStack() }
             )
         }
     )
 
     object TransactionStatus : Destination(
-        route = "transactionStatus/{transactionId}?isSeller={isSeller}&amount={amount}&rate={rate}&bank={bank}&type={type}&status={status}&uploaded={uploaded}&currency={currency}&isRated={isRated}",
+        route = "transactionStatus/{transactionId}",
         title = "Estado de Transacción",
         content = { navController ->
             val arguments = navController.currentBackStackEntry?.arguments
-            val transactionId = arguments?.getString("transactionId") ?: "TX001"
-            val isSeller = arguments?.getString("isSeller")?.toBoolean() ?: false
-            val amount = arguments?.getString("amount") ?: "100.00"
-            val rate = arguments?.getString("rate") ?: "3.85"
-            val bank = arguments?.getString("bank") ?: "BCP - 191-99882211-0-45"
-            val type = arguments?.getString("type") ?: "Compra"
-            val status = arguments?.getString("status") ?: "Pendiente"
-            val uploaded = arguments?.getString("uploaded")?.toBoolean() ?: false
-            val currency = arguments?.getString("currency") ?: "USD"
-            val isRated = arguments?.getString("isRated")?.toBoolean() ?: false
+            val transactionId = arguments?.getString("transactionId")?.toIntOrNull() ?: 0
             TransactionStatusScreen(
-                isSeller = isSeller,
                 transactionId = transactionId,
-                amount = amount,
-                rate = rate,
-                bank = bank,
-                type = type,
-                status = status,
-                uploaded = uploaded,
-                currency = currency,
-                isRated = isRated,
-                onBack = {
-                    navController.popBackStack()
+                onBack = { navController.popBackStack() },
+                onViewBankDetails = { txId, isSeller ->
+                    navController.navigate("bankDetails/$txId?isSeller=$isSeller")
                 },
-                onViewBankDetails = {
-                    navController.navigate("bankDetails/$transactionId?isSeller=$isSeller&amount=$amount&rate=$rate&bank=$bank&type=$type&status=$status&uploaded=$uploaded&currency=$currency")
-                },
-                onChat = {
-                    navController.navigate("chat/$transactionId")
-                },
-                onConfirmPayment = {},
-                onUploadVoucher = {}
+                onChat = { txId ->
+                    navController.navigate("chat/$txId")
+                }
             )
         }
     )
@@ -217,11 +198,11 @@ sealed class Destination(
         title = "Detalles de Pago",
         content = { navController ->
             val arguments = navController.currentBackStackEntry?.arguments
-            val transactionId = arguments?.getString("transactionId") ?: "TX001"
+            val transactionId = arguments?.getString("transactionId") ?: "0"
             val isSeller = arguments?.getString("isSeller")?.toBoolean() ?: false
             val amount = arguments?.getString("amount") ?: "100.00"
             val rate = arguments?.getString("rate") ?: "3.85"
-            val bank = arguments?.getString("bank") ?: "BCP - 191-99882211-0-45"
+            val bank = arguments?.getString("bank") ?: ""
             val type = arguments?.getString("type") ?: "Compra"
             val status = arguments?.getString("status") ?: "Pendiente"
             val uploaded = arguments?.getString("uploaded")?.toBoolean() ?: false
@@ -237,12 +218,8 @@ sealed class Destination(
                 uploaded = uploaded,
                 currency = currency,
                 navController = navController,
-                onBack = {
-                    navController.popBackStack()
-                },
-                onChat = {
-                    navController.navigate("chat/$transactionId")
-                }
+                onBack = { navController.popBackStack() },
+                onChat = { navController.navigate("chat/$transactionId") }
             )
         }
     )
@@ -331,7 +308,7 @@ fun AppNav() {
     Column(modifier = Modifier.fillMaxSize()) {
         NavHost(
             navController = navController,
-            startDestination = Destination.Debug.route,
+            startDestination = Destination.Login.route,
             modifier = Modifier.weight(1f)
         ) {
             appDestinations.forEach { destination ->

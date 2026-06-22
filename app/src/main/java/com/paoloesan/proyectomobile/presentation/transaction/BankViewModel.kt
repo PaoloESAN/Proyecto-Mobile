@@ -13,6 +13,7 @@ import com.paoloesan.proyectomobile.data.model.TransactionModel
 import com.paoloesan.proyectomobile.data.model.UserProfileModel
 import com.paoloesan.proyectomobile.data.model.VerificarVoucherRequest
 import com.paoloesan.proyectomobile.data.model.VerificarVoucherResponse
+import com.paoloesan.proyectomobile.data.model.VerificacionIaModel
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.functions.functions
 import io.github.jan.supabase.postgrest.postgrest
@@ -35,6 +36,10 @@ data class BankUiState(
     val errorMessage: String? = null,
     val uploadingVoucher: Boolean = false,
     val voucherPublicUrl: String? = null,
+    val myVoucherUrl: String? = null,
+    val peerVoucherUrl: String? = null,
+    val myIaVerification: VerificacionIaModel? = null,
+    val peerIaVerification: VerificacionIaModel? = null,
     val bankName: String = "",
     val accountNumber: String = "",
     val cci: String = "",
@@ -145,8 +150,31 @@ class BankViewModel : ViewModel() {
                     .select { filter { eq("transaccion_id", transaccionId) } }
                     .decodeList<ComprobanteModel>()
 
-                val myVoucher = comprobantes.any { it.usuarioId == (if (esComprador) tx.usuarioCompradorId else tx.usuarioVendedorId) }
-                val peerVoucher = comprobantes.any { it.usuarioId == (if (esComprador) tx.usuarioVendedorId else tx.usuarioCompradorId) }
+                val myVoucherObj = comprobantes.find { it.usuarioId == (if (esComprador) tx.usuarioCompradorId else tx.usuarioVendedorId) }
+                val peerVoucherObj = comprobantes.find { it.usuarioId == (if (esComprador) tx.usuarioVendedorId else tx.usuarioCompradorId) }
+
+                val myVoucher = myVoucherObj != null
+                val peerVoucher = peerVoucherObj != null
+                val myVoucherUrl = myVoucherObj?.imagenUrl
+                val peerVoucherUrl = peerVoucherObj?.imagenUrl
+
+                var myIaVerification: VerificacionIaModel? = null
+                var peerIaVerification: VerificacionIaModel? = null
+                try {
+                    val verifs = Supabase.client.postgrest["verificaciones_ia"]
+                        .select { filter { eq("transaccion_id", transaccionId) } }
+                        .decodeList<VerificacionIaModel>()
+                    if (myVoucherObj != null) {
+                        myIaVerification = verifs.filter { it.comprobanteId == myVoucherObj.comprobanteId }
+                            .maxByOrNull { it.verificacionId ?: 0 }
+                    }
+                    if (peerVoucherObj != null) {
+                        peerIaVerification = verifs.filter { it.comprobanteId == peerVoucherObj.comprobanteId }
+                            .maxByOrNull { it.verificacionId ?: 0 }
+                    }
+                } catch (e: Exception) {
+                    println("Error loading IA verifications: ${e.message}")
+                }
 
                 val myConfirmed = if (esComprador) tx.confirmadoComprador else tx.confirmadoVendedor
                 val peerConfirmed = if (esComprador) tx.confirmadoVendedor else tx.confirmadoComprador
@@ -158,6 +186,10 @@ class BankViewModel : ViewModel() {
                         peerConfirmed = peerConfirmed,
                         myVoucherUploaded = myVoucher,
                         peerVoucherUploaded = peerVoucher,
+                        myVoucherUrl = myVoucherUrl,
+                        peerVoucherUrl = peerVoucherUrl,
+                        myIaVerification = myIaVerification,
+                        peerIaVerification = peerIaVerification,
                         bankName = bName,
                         accountNumber = accNum,
                         cci = ccId,
@@ -198,7 +230,7 @@ class BankViewModel : ViewModel() {
                 inputStream.close()
 
                 val fileName = getFileName(context, uri)
-                val storagePath = "$transaccionId/$userId/$fileName"
+                val storagePath = "private/$transaccionId/$userId/$fileName"
 
                 Supabase.client.storage.from("vouchers").upload(
                     path = storagePath,
@@ -221,7 +253,8 @@ class BankViewModel : ViewModel() {
                     it.copy(
                         myVoucherUploaded = true,
                         uploadingVoucher = false,
-                        voucherPublicUrl = publicUrl
+                        voucherPublicUrl = publicUrl,
+                        myVoucherUrl = publicUrl
                     )
                 }
 
@@ -250,12 +283,11 @@ class BankViewModel : ViewModel() {
                 )
             )
             val result = response.body<VerificarVoucherResponse>()
+            loadDataFromDatabase()
             if (!result.success) {
                 _uiState.update {
                     it.copy(errorMessage = result.message ?: "La verificación del comprobante falló")
                 }
-            } else {
-                loadDataFromDatabase()
             }
         } catch (e: Exception) {
             _uiState.update {
@@ -271,16 +303,44 @@ class BankViewModel : ViewModel() {
         viewModelScope.launch {
             try {
                 val campo = if (esComprador) "confirmado_comprador" else "confirmado_vendedor"
+                val otherConfirmed = _uiState.value.peerConfirmed
+
+                // 1. Actualizar confirmación de esta parte (Map<String, Boolean>)
                 Supabase.client.postgrest["transacciones"].update(
                     mapOf(campo to true)
                 ) {
                     filter { eq("transaccion_id", transaccionId) }
                 }
 
-                if (esComprador) {
-                    _uiState.update { it.copy(myConfirmed = true, transactionStatus = "Finalizado") }
-                } else {
-                    _uiState.update { it.copy(myConfirmed = true, transactionStatus = "Finalizado") }
+                // 2. Si la otra parte ya confirmó, cambiar estado a Finalizado (Map<String, String>)
+                if (otherConfirmed) {
+                    Supabase.client.postgrest["transacciones"].update(
+                        mapOf("estado" to "Finalizado")
+                    ) {
+                        filter { eq("transaccion_id", transaccionId) }
+                    }
+                }
+
+                if (otherConfirmed) {
+                    try {
+                        val tx = Supabase.client.postgrest["transacciones"]
+                            .select { filter { eq("transaccion_id", transaccionId) } }
+                            .decodeSingle<TransactionModel>()
+                        Supabase.client.postgrest["ofertas"].update(
+                            mapOf("estado" to "Finalizada")
+                        ) {
+                            filter { eq("oferta_id", tx.offerId) }
+                        }
+                    } catch (e: Exception) {
+                        println("Error finalizando oferta: ${e.message}")
+                    }
+                }
+
+                _uiState.update { 
+                    it.copy(
+                        myConfirmed = true, 
+                        transactionStatus = if (otherConfirmed) "Finalizado" else it.transactionStatus
+                    ) 
                 }
 
                 onSuccess()
