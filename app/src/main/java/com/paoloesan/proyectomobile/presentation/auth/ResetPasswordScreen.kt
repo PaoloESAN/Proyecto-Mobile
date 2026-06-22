@@ -267,16 +267,21 @@ fun ResetPasswordScreen(navController: NavController) {
                                     scope.launch {
                                         isResetting = true
                                         try {
-                                            Supabase.client.auth.updateUser {
-                                                password = password.trim()
-                                            }
-                                            toastState.show(
-                                                message = "¡Contraseña restablecida con éxito!",
-                                                variant = ToastVariant.Success
-                                            )
-                                            kotlinx.coroutines.delay(1500)
-                                            isResetting = false
-                                            navController.popBackStack()
+                                             Supabase.client.auth.updateUser {
+                                                 password = password.trim()
+                                             }
+                                             try {
+                                                 Supabase.client.auth.signOut()
+                                             } catch (_: Exception) {}
+                                             toastState.show(
+                                                 message = "¡Contraseña restablecida con éxito!",
+                                                 variant = ToastVariant.Success
+                                             )
+                                             kotlinx.coroutines.delay(1500)
+                                             isResetting = false
+                                             navController.navigate("login") {
+                                                 popUpTo(0) { inclusive = true }
+                                             }
                                         } catch (e: Exception) {
                                             isResetting = false
                                             toastState.show(
