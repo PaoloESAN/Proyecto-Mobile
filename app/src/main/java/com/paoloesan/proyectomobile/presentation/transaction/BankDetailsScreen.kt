@@ -1,5 +1,9 @@
 package com.paoloesan.proyectomobile.presentation.transaction
 
+import android.content.Context
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -19,34 +23,49 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.CurrencyExchange
+import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.UploadFile
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import coil3.compose.AsyncImage
 import kotlinx.coroutines.launch
 import zed.rainxch.rikkaui.components.ui.button.Button
 import zed.rainxch.rikkaui.components.ui.button.ButtonSize
@@ -60,20 +79,6 @@ import zed.rainxch.rikkaui.components.ui.toast.ToastHost
 import zed.rainxch.rikkaui.components.ui.toast.ToastVariant
 import zed.rainxch.rikkaui.components.ui.toast.rememberToastHostState
 import zed.rainxch.rikkaui.foundation.RikkaTheme
-import android.net.Uri
-import android.content.Context
-import coil3.compose.AsyncImage
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.rememberModalBottomSheetState
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.filled.UploadFile
-import androidx.compose.material.icons.filled.Image
-import androidx.compose.material.icons.filled.Error
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.draw.clip
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -89,19 +94,15 @@ fun BankDetailsScreen(
     currency: String = "USD",
     navController: NavController,
     onBack: () -> Unit,
-    onChat: () -> Unit = {}
+    onChat: () -> Unit = {},
+    viewModel: BankViewModel = viewModel()
 ) {
+    val uiState by viewModel.uiState.collectAsState()
     val focusManager = LocalFocusManager.current
     val clipboardManager = LocalClipboardManager.current
     val toastState = rememberToastHostState()
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
-
-    var buyerVoucherUploaded by remember { mutableStateOf(!isSeller && uploaded || status == "Finalizado" || status == "Finalizada") }
-    var sellerVoucherUploaded by remember { mutableStateOf(isSeller && uploaded || status == "Finalizado" || status == "Finalizada") }
-    var buyerConfirmedReceipt by remember { mutableStateOf(status == "Finalizado" || status == "Finalizada") }
-    var sellerConfirmedReceipt by remember { mutableStateOf(status == "Finalizado" || status == "Finalizada") }
-    var currentTransactionStatus by remember { mutableStateOf(status) }
 
     var showDisputeDialog by remember { mutableStateOf(false) }
     var disputeReason by remember { mutableStateOf("") }
@@ -113,7 +114,11 @@ fun BankDetailsScreen(
     var showUploadSheet by remember { mutableStateOf(false) }
     var voucherUri by remember { mutableStateOf<Uri?>(null) }
     var selectedFileName by remember { mutableStateOf("") }
-    var errorMessage by remember { mutableStateOf("") }
+    var localError by remember { mutableStateOf("") }
+
+    LaunchedEffect(transactionId) {
+        viewModel.initialize(transactionId, isSeller, status)
+    }
 
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -122,32 +127,20 @@ fun BankDetailsScreen(
             val validationResult = validateVoucher(context, it)
             if (validationResult.isValid) {
                 voucherUri = it
-                errorMessage = ""
+                localError = ""
                 selectedFileName = getFileNameFromUri(context, it)
             } else {
                 voucherUri = null
-                errorMessage = validationResult.errorMessage
+                localError = validationResult.errorMessage
                 selectedFileName = ""
             }
         }
     }
 
-    // Simulation LaunchedEffect
-    androidx.compose.runtime.LaunchedEffect(buyerVoucherUploaded, sellerVoucherUploaded) {
-        if (buyerVoucherUploaded && !sellerVoucherUploaded && !isSeller) {
-            kotlinx.coroutines.delay(2000)
-            sellerVoucherUploaded = true
-            toastState.show("El vendedor ha subido su comprobante", ToastVariant.Success)
-        } else if (sellerVoucherUploaded && !buyerVoucherUploaded && isSeller) {
-            kotlinx.coroutines.delay(2000)
-            buyerVoucherUploaded = true
-            toastState.show("El comprador ha subido su comprobante", ToastVariant.Success)
-        }
-    }
-
-    val currencyClean = currency.uppercase()
-    val amountDouble = amount.toDoubleOrNull() ?: 100.0
-    val rateDouble = rate.toDoubleOrNull() ?: 3.85
+    val esComprador = !isSeller
+    val currencyClean = (if (uiState.currency.isNotEmpty()) uiState.currency else currency).uppercase()
+    val amountDouble = if (uiState.transactionAmount > 0.0) uiState.transactionAmount else amount.toDoubleOrNull() ?: 100.0
+    val rateDouble = if (uiState.exchangeRate > 0.0) uiState.exchangeRate else rate.toDoubleOrNull() ?: 3.85
 
     val (usdAmount, penAmount) = if (currencyClean == "PEN") {
         (amountDouble / rateDouble) to amountDouble
@@ -158,17 +151,21 @@ fun BankDetailsScreen(
     val formattedPen = String.format(java.util.Locale.US, "%,.2f", penAmount)
     val formattedUsd = String.format(java.util.Locale.US, "%,.2f", usdAmount)
 
-    // Details of what needs to be transferred:
     val isTransferringPen = !isSeller
     val displayAmount = if (isTransferringPen) "$formattedPen PEN" else "$formattedUsd USD"
     val displayCurrency = if (isTransferringPen) "PEN" else "USD"
-    val displayTitular = if (isSeller) "Mateo Rojas (Comprador)" else "Juan Perez (Vendedor)"
 
-    // Parse bank details
     val bankParts = bank.split(" - ")
-    val parsedBankName = bankParts.getOrNull(0) ?: "BCP"
-    val parsedAccountNumber = bankParts.getOrNull(1)?.replace(Regex("\\(.*\\)"), "")?.trim() ?: "191-99882211-0-45"
-    val parsedCCI = if (parsedBankName.contains("BCP")) "002-$parsedAccountNumber-45" else "003-$parsedAccountNumber-12"
+    val parsedBankName = if (uiState.bankName.isNotEmpty()) uiState.bankName else bankParts.getOrNull(0) ?: "BCP"
+    val parsedAccountNumber = if (uiState.accountNumber.isNotEmpty()) uiState.accountNumber else bankParts.getOrNull(1)?.replace(Regex("\\(.*\\)"), "")?.trim() ?: "191-99882211-0-45"
+    val parsedCCI = if (uiState.cci.isNotEmpty()) uiState.cci else if (parsedBankName.uppercase().contains("BCP")) "002-$parsedAccountNumber-45" else "003-$parsedAccountNumber-12"
+    val displayTitular = if (uiState.titularName.isNotEmpty()) uiState.titularName else if (isSeller) "Mateo Rojas (Comprador)" else "Juan Perez (Vendedor)"
+
+    val mineUploaded = uiState.myVoucherUploaded
+    val peerUploaded = uiState.peerVoucherUploaded
+    val myConfirmed = uiState.myConfirmed
+    val isReadyToConfirm = mineUploaded && peerUploaded && uiState.transactionStatus != "Finalizado"
+    val currentTransactionStatus = uiState.transactionStatus
 
     // Dialog: Voucher details
     if (showVoucherDialog) {
@@ -213,7 +210,7 @@ fun BankDetailsScreen(
                                 text = selectedVoucherTitle,
                                 color = Color.Black,
                                 variant = TextVariant.P,
-                                style = androidx.compose.ui.text.TextStyle(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                                style = androidx.compose.ui.text.TextStyle(fontWeight = FontWeight.Bold)
                             )
                             Spacer(modifier = Modifier.height(6.dp))
                             Text(
@@ -276,7 +273,6 @@ fun BankDetailsScreen(
                 Button(
                     onClick = {
                         showDisputeDialog = false
-                        currentTransactionStatus = "En disputa"
                         disputeReason = ""
                         scope.launch {
                             toastState.show(
@@ -284,7 +280,7 @@ fun BankDetailsScreen(
                                 variant = ToastVariant.Success
                             )
                             kotlinx.coroutines.delay(1000)
-                            navController.navigate("transactionStatus/$transactionId?isSeller=$isSeller&amount=$amount&rate=$rate&bank=$bank&type=$type&status=En disputa&uploaded=${buyerVoucherUploaded || sellerVoucherUploaded}&currency=$currency&isRated=false") {
+                            navController.navigate("transactionStatus/$transactionId?isSeller=$isSeller&amount=$amount&rate=$rate&bank=$bank&type=$type&status=En disputa&uploaded=$mineUploaded&currency=$currency&isRated=false") {
                                 popUpTo("transactionStatus/$transactionId?isSeller=$isSeller&amount=$amount&rate=$rate&bank=$bank&type=$type&status=$status") {
                                     inclusive = true
                                 }
@@ -361,7 +357,6 @@ fun BankDetailsScreen(
                         focusManager.clearFocus()
                     }
             ) {
-                // Scrollable main content
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -370,11 +365,8 @@ fun BankDetailsScreen(
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     contentPadding = PaddingValues(vertical = 12.dp)
                 ) {
-                    // Huge outstanding transfer amount Card
                     item {
-                        Card(
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
+                        Card(modifier = Modifier.fillMaxWidth()) {
                             Column(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -385,7 +377,6 @@ fun BankDetailsScreen(
                                     variant = TextVariant.Small,
                                     color = Color.Gray
                                 )
-
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.Center,
@@ -396,9 +387,7 @@ fun BankDetailsScreen(
                                         variant = TextVariant.H2,
                                         color = RikkaTheme.colors.primary
                                     )
-
                                     Spacer(modifier = Modifier.width(8.dp))
-
                                     Button(
                                         onClick = {
                                             clipboardManager.setText(AnnotatedString(displayAmount.replace(" PEN", "").replace(" USD", "").trim()))
@@ -424,11 +413,8 @@ fun BankDetailsScreen(
                         }
                     }
 
-                    // Copyable details bank container Card
                     item {
-                        Card(
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
+                        Card(modifier = Modifier.fillMaxWidth()) {
                             Column(
                                 modifier = Modifier.fillMaxWidth(),
                                 verticalArrangement = Arrangement.spacedBy(0.dp)
@@ -442,7 +428,6 @@ fun BankDetailsScreen(
                                     scope = scope,
                                     showDivider = true
                                 )
-
                                 CopyableDetailRow(
                                     icon = Icons.Default.ContentCopy,
                                     label = "NUMERO DE CUENTA",
@@ -452,7 +437,6 @@ fun BankDetailsScreen(
                                     scope = scope,
                                     showDivider = true
                                 )
-
                                 CopyableDetailRow(
                                     icon = Icons.Default.ContentCopy,
                                     label = "CCI",
@@ -462,7 +446,6 @@ fun BankDetailsScreen(
                                     scope = scope,
                                     showDivider = true
                                 )
-
                                 CopyableDetailRow(
                                     icon = Icons.Default.Person,
                                     label = "TITULAR DE LA CUENTA",
@@ -472,7 +455,6 @@ fun BankDetailsScreen(
                                     scope = scope,
                                     showDivider = true
                                 )
-
                                 CopyableDetailRow(
                                     icon = Icons.Default.AttachMoney,
                                     label = "MONEDA",
@@ -486,11 +468,8 @@ fun BankDetailsScreen(
                         }
                     }
 
-                    // Vouchers Card (New/Requested)
                     item {
-                        Card(
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
+                        Card(modifier = Modifier.fillMaxWidth()) {
                             Column(
                                 modifier = Modifier.fillMaxWidth(),
                                 verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -501,10 +480,6 @@ fun BankDetailsScreen(
                                     color = RikkaTheme.colors.onBackground
                                 )
 
-                                val mineUploaded = if (isSeller) sellerVoucherUploaded else buyerVoucherUploaded
-                                val peerUploaded = if (isSeller) buyerVoucherUploaded else sellerVoucherUploaded
-
-                                // Mine Voucher
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -518,7 +493,6 @@ fun BankDetailsScreen(
                                             color = if (mineUploaded) Color(0xFF4CAF50) else Color(0xFFD32F2F)
                                         )
                                     }
-
                                     if (mineUploaded) {
                                         Button(
                                             onClick = {
@@ -535,7 +509,7 @@ fun BankDetailsScreen(
                                             onClick = {
                                                 voucherUri = null
                                                 selectedFileName = ""
-                                                errorMessage = ""
+                                                localError = ""
                                                 showUploadSheet = true
                                             },
                                             size = ButtonSize.Sm,
@@ -551,7 +525,6 @@ fun BankDetailsScreen(
                                         .background(RikkaTheme.colors.muted.copy(alpha = 0.15f))
                                 )
 
-                                // Peer Voucher
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -565,7 +538,6 @@ fun BankDetailsScreen(
                                             color = if (peerUploaded) Color(0xFF4CAF50) else Color(0xFFD32F2F)
                                         )
                                     }
-
                                     if (peerUploaded) {
                                         Button(
                                             onClick = {
@@ -590,14 +562,7 @@ fun BankDetailsScreen(
                             }
                         }
                     }
-
-
                 }
-
-                // Anchored bottom action area
-                val mineUploaded = if (isSeller) sellerVoucherUploaded else buyerVoucherUploaded
-                val peerUploaded = if (isSeller) buyerVoucherUploaded else sellerVoucherUploaded
-                val isReadyToConfirm = mineUploaded && peerUploaded && currentTransactionStatus != "Finalizado"
 
                 Column(
                     modifier = Modifier
@@ -606,29 +571,32 @@ fun BankDetailsScreen(
                         .padding(start = 24.dp, end = 24.dp, top = 16.dp, bottom = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
+                    if (uiState.errorMessage != null) {
+                        Text(
+                            text = uiState.errorMessage ?: "",
+                            color = RikkaTheme.colors.destructive,
+                            variant = TextVariant.P
+                        )
+                    }
+
                     if (isReadyToConfirm) {
-                        val confirmed = if (isSeller) sellerConfirmedReceipt else buyerConfirmedReceipt
                         Button(
                             onClick = {
-                                scope.launch {
-                                    if (isSeller) {
-                                        sellerConfirmedReceipt = true
-                                    } else {
-                                        buyerConfirmedReceipt = true
-                                    }
-                                    toastState.show("Recepción confirmada con éxito", ToastVariant.Success)
-                                    kotlinx.coroutines.delay(1000)
-                                    currentTransactionStatus = "Finalizado"
-                                    navController.navigate("transactionStatus/$transactionId?isSeller=$isSeller&amount=$amount&rate=$rate&bank=$bank&type=$type&status=Finalizado&uploaded=true&isRated=false") {
-                                        popUpTo("transactionStatus/$transactionId?isSeller=$isSeller&amount=$amount&rate=$rate&bank=$bank&type=$type&status=$status") {
-                                            inclusive = true
+                                viewModel.confirmarRecepcion {
+                                    scope.launch {
+                                        toastState.show("Recepción confirmada con éxito", ToastVariant.Success)
+                                        kotlinx.coroutines.delay(1000)
+                                        navController.navigate("transactionStatus/$transactionId?isSeller=$isSeller&amount=$amount&rate=$rate&bank=$bank&type=$type&status=Finalizado&uploaded=true&isRated=false") {
+                                            popUpTo("transactionStatus/$transactionId?isSeller=$isSeller&amount=$amount&rate=$rate&bank=$bank&type=$type&status=$status") {
+                                                inclusive = true
+                                            }
                                         }
                                     }
                                 }
                             },
-                            enabled = !confirmed,
+                            enabled = !myConfirmed,
                             modifier = Modifier.fillMaxWidth(),
-                            text = if (confirmed) "Recepción Confirmada" else "Confirmar Recepción"
+                            text = if (myConfirmed) "Recepción Confirmada" else "Confirmar Recepción"
                         )
                     } else if (currentTransactionStatus == "Finalizado") {
                         Button(
@@ -642,13 +610,17 @@ fun BankDetailsScreen(
                                 if (!mineUploaded) {
                                     voucherUri = null
                                     selectedFileName = ""
-                                    errorMessage = ""
+                                    localError = ""
                                     showUploadSheet = true
                                 }
                             },
-                            enabled = !mineUploaded,
+                            enabled = !mineUploaded && !uiState.uploadingVoucher,
                             modifier = Modifier.fillMaxWidth(),
-                            text = if (mineUploaded) "Esperando comprobante de contraparte..." else "Subir mi comprobante de pago"
+                            text = when {
+                                uiState.uploadingVoucher -> "Subiendo comprobante..."
+                                mineUploaded -> "Esperando comprobante de contraparte..."
+                                else -> "Subir mi comprobante de pago"
+                            }
                         )
                     }
 
@@ -662,7 +634,6 @@ fun BankDetailsScreen(
                             modifier = Modifier.weight(1f),
                             text = "Chat"
                         )
-
                         Button(
                             onClick = { showDisputeDialog = true },
                             variant = ButtonVariant.Destructive,
@@ -698,11 +669,11 @@ fun BankDetailsScreen(
 
                 if (voucherUri == null) {
                     Text(
-                        text = "Debe adjuntar un comprobante de pago",
+                        text = if (localError.isNotEmpty()) localError else "Debe adjuntar un comprobante de pago",
                         variant = TextVariant.P,
                         color = RikkaTheme.colors.destructive,
                         modifier = Modifier.fillMaxWidth(),
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        textAlign = TextAlign.Center
                     )
                 } else {
                     Spacer(modifier = Modifier.height(8.dp))
@@ -715,7 +686,6 @@ fun BankDetailsScreen(
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                // Premium Card preview (clickable to pick image)
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -729,7 +699,7 @@ fun BankDetailsScreen(
                             .border(
                                 width = 2.dp,
                                 color = when {
-                                    errorMessage.isNotEmpty() -> RikkaTheme.colors.destructive
+                                    localError.isNotEmpty() -> RikkaTheme.colors.destructive
                                     voucherUri != null -> RikkaTheme.colors.primary
                                     else -> RikkaTheme.colors.muted.copy(alpha = 0.2f)
                                 },
@@ -738,7 +708,7 @@ fun BankDetailsScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         when {
-                            errorMessage.isNotEmpty() -> {
+                            localError.isNotEmpty() -> {
                                 Column(
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     verticalArrangement = Arrangement.Center,
@@ -754,10 +724,10 @@ fun BankDetailsScreen(
                                     )
                                     Spacer(modifier = Modifier.height(12.dp))
                                     Text(
-                                        text = errorMessage,
+                                        text = localError,
                                         variant = TextVariant.P,
                                         color = RikkaTheme.colors.destructive,
-                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                        textAlign = TextAlign.Center
                                     )
                                 }
                             }
@@ -780,7 +750,7 @@ fun BankDetailsScreen(
                                         text = "Suba un comprobante de pago",
                                         variant = TextVariant.P,
                                         color = Color.Gray,
-                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                        textAlign = TextAlign.Center
                                     )
                                 }
                             }
@@ -793,7 +763,7 @@ fun BankDetailsScreen(
                                         model = voucherUri,
                                         contentDescription = "Comprobante Seleccionado",
                                         modifier = Modifier.fillMaxSize(),
-                                        contentScale = androidx.compose.ui.layout.ContentScale.Fit
+                                        contentScale = ContentScale.Fit
                                     )
                                     Box(
                                         modifier = Modifier
@@ -827,22 +797,17 @@ fun BankDetailsScreen(
                 Button(
                     onClick = {
                         if (voucherUri != null) {
-                            if (isSeller) {
-                                sellerVoucherUploaded = true
-                            } else {
-                                buyerVoucherUploaded = true
-                            }
+                            viewModel.uploadVoucher(context, voucherUri!!)
                             showUploadSheet = false
                             scope.launch {
                                 toastState.show("Comprobante enviado con éxito", ToastVariant.Success)
                             }
                         }
                     },
-                    enabled = voucherUri != null && errorMessage.isEmpty(),
+                    enabled = voucherUri != null && localError.isEmpty() && !uiState.uploadingVoucher,
                     modifier = Modifier.fillMaxWidth(),
-                    text = "Confirmar Envío"
+                    text = if (uiState.uploadingVoucher) "Subiendo..." else "Confirmar Envío"
                 )
-
 
                 Spacer(modifier = Modifier.height(24.dp))
             }
