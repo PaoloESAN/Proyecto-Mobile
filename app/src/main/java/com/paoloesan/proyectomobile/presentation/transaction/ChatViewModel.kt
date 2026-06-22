@@ -5,10 +5,10 @@ import androidx.lifecycle.viewModelScope
 import com.paoloesan.proyectomobile.data.Supabase
 import com.paoloesan.proyectomobile.data.currentUserAwaitInit
 import com.paoloesan.proyectomobile.data.model.ChatMessageModel
+import com.paoloesan.proyectomobile.data.model.TransactionModel
 import com.paoloesan.proyectomobile.data.model.UserProfileModel
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.postgrest
-import io.github.jan.supabase.postgrest.query.Order
 import io.github.jan.supabase.realtime.PostgresAction
 import io.github.jan.supabase.realtime.RealtimeChannel
 import io.github.jan.supabase.realtime.channel
@@ -20,11 +20,19 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 
+data class ChatMessageState(
+    val id: String,
+    val text: String,
+    val isOwn: Boolean,
+    val time: String,
+    val senderName: String
+)
+
 data class ChatUiState(
-    val messages: List<ChatMessageModel> = emptyList(),
-    val currentUserId: Int? = null,
-    val isLoading: Boolean = true,
-    val errorMessage: String? = null
+    val messages: List<ChatMessageState> = emptyList(),
+    val contraparteName: String = "Cargando...",
+    val isLoading: Boolean = false,
+    val error: String? = null
 )
 
 class ChatViewModel : ViewModel() {
@@ -32,54 +40,143 @@ class ChatViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(ChatUiState())
     val uiState: StateFlow<ChatUiState> = _uiState.asStateFlow()
 
-    private var transaccionId: Int = 0
+    private var currentUserId: Int? = null
+    private var transactionId: Int = 0
     private var chatChannel: RealtimeChannel? = null
     private val json = Json { ignoreUnknownKeys = true }
 
-    fun initialize(transactionId: Int) {
-        transaccionId = transactionId
+    // Guardar información temporal de la transacción y perfiles para mapear mensajes entrantes en tiempo real
+    private var cachedTransaction: TransactionModel? = null
+    private var cachedCompradorNombre: String = ""
+    private var cachedVendedorNombre: String = ""
+
+    fun initChat(transactionId: Int) {
+        this.transactionId = transactionId
+        loadMessages()
+        subscribeToNewMessages()
+    }
+
+    fun loadMessages() {
         viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, error = null) }
             try {
+                // 1. Obtener auth_id del usuario logueado esperando a que inicialice
                 val authId = Supabase.client.auth.currentUserAwaitInit()?.id
-                if (authId == null) {
-                    _uiState.update { it.copy(isLoading = false, errorMessage = "Usuario no autenticado") }
-                    return@launch
+                var myUserId: Int? = null
+                if (authId != null) {
+                    val perfil = Supabase.client.postgrest["usuarios"]
+                        .select {
+                            filter {
+                                eq("auth_id", authId)
+                            }
+                        }
+                        .decodeList<UserProfileModel>()
+                        .firstOrNull()
+                    myUserId = perfil?.usuarioId
+                    currentUserId = myUserId
                 }
 
-                val perfil = Supabase.client.postgrest["usuarios"]
+                // 2. Obtener transacción
+                val transaction = Supabase.client.postgrest["transacciones"]
                     .select {
-                        filter { eq("auth_id", authId) }
+                        filter {
+                            eq("transaccion_id", transactionId)
+                        }
+                    }
+                    .decodeSingle<TransactionModel>()
+                cachedTransaction = transaction
+
+                // 3. Obtener perfiles de comprador y vendedor
+                val comprador = Supabase.client.postgrest["usuarios"]
+                    .select {
+                        filter {
+                            eq("usuario_id", transaction.usuarioCompradorId)
+                        }
                     }
                     .decodeSingle<UserProfileModel>()
 
-                _uiState.update { it.copy(currentUserId = perfil.usuarioId) }
-                loadHistory()
-                subscribeToNewMessages()
+                val vendedor = Supabase.client.postgrest["usuarios"]
+                    .select {
+                        filter {
+                            eq("usuario_id", transaction.usuarioVendedorId)
+                        }
+                    }
+                    .decodeSingle<UserProfileModel>()
+
+                val compradorNombre = "${comprador.nombres} ${comprador.apellidos}"
+                val vendedorNombre = "${vendedor.nombres} ${vendedor.apellidos}"
+                cachedCompradorNombre = compradorNombre
+                cachedVendedorNombre = vendedorNombre
+
+                // Definir el nombre de la contraparte para la UI
+                val contraparte = if (myUserId == transaction.usuarioCompradorId) {
+                    vendedorNombre
+                } else {
+                    compradorNombre
+                }
+
+                // 4. Obtener mensajes de chat
+                val dbMessages = Supabase.client.postgrest["mensajes_chat"]
+                    .select {
+                        filter {
+                            eq("transaccion_id", transactionId)
+                        }
+                    }
+                    .decodeList<ChatMessageModel>()
+                    .sortedBy { it.fechaEnvio ?: "" }
+
+                val chatStates = dbMessages.map { msg ->
+                    mapToState(msg, myUserId, transaction, compradorNombre, vendedorNombre)
+                }
+
+                _uiState.update {
+                    it.copy(
+                        messages = chatStates,
+                        contraparteName = contraparte,
+                        isLoading = false
+                    )
+                }
             } catch (e: Exception) {
-                _uiState.update { it.copy(isLoading = false, errorMessage = "Error al iniciar chat: ${e.localizedMessage}") }
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        error = "Error al cargar chat: ${e.localizedMessage}"
+                    )
+                }
             }
         }
     }
 
-    private suspend fun loadHistory() {
-        try {
-            val historial = Supabase.client.postgrest["mensajes_chat"]
-                .select {
-                    filter { eq("transaccion_id", transaccionId) }
-                    order(column = "fecha_envio", order = Order.ASCENDING)
-                }
-                .decodeList<ChatMessageModel>()
-
-            _uiState.update { it.copy(messages = historial, isLoading = false) }
-        } catch (e: Exception) {
-            _uiState.update { it.copy(isLoading = false, errorMessage = "Error al cargar mensajes: ${e.localizedMessage}") }
+    private fun mapToState(
+        msg: ChatMessageModel,
+        myUserId: Int?,
+        transaction: TransactionModel,
+        compradorNombre: String,
+        vendedorNombre: String
+    ): ChatMessageState {
+        val isParticipant = myUserId == transaction.usuarioCompradorId || myUserId == transaction.usuarioVendedorId
+        val isOwn = if (isParticipant) {
+            msg.remitenteId == myUserId
+        } else {
+            // Si es el administrador (no participante), mandamos los mensajes del vendedor a la derecha (isOwn = true) y del comprador a la izquierda
+            msg.remitenteId == transaction.usuarioVendedorId
         }
+
+        val senderName = if (msg.remitenteId == transaction.usuarioCompradorId) compradorNombre else vendedorNombre
+        val timeStr = formatFechaEnvio(msg.fechaEnvio)
+        return ChatMessageState(
+            id = (msg.mensajeId ?: 0).toString(),
+            text = msg.contenido,
+            isOwn = isOwn,
+            time = timeStr,
+            senderName = senderName
+        )
     }
 
     private fun subscribeToNewMessages() {
         viewModelScope.launch {
             try {
-                chatChannel = Supabase.client.channel("chat_transaccion_$transaccionId")
+                chatChannel = Supabase.client.channel("chat_transaccion_$transactionId")
 
                 val flow = chatChannel!!.postgresChangeFlow<PostgresAction.Insert>(schema = "public") {
                     table = "mensajes_chat"
@@ -90,44 +187,59 @@ class ChatViewModel : ViewModel() {
                 flow.collect { action ->
                     action.record?.let { record ->
                         val nuevoMensaje = json.decodeFromJsonElement(ChatMessageModel.serializer(), record)
-                        if (nuevoMensaje.transaccionId == transaccionId) {
-                            _uiState.update {
-                                val exists = it.messages.any { msg ->
-                                    msg.mensajeId != null && msg.mensajeId == nuevoMensaje.mensajeId
-                                }
+                        if (nuevoMensaje.transaccionId == transactionId) {
+                            val tx = cachedTransaction ?: return@let
+                            val compNombre = cachedCompradorNombre
+                            val vendNombre = cachedVendedorNombre
+                            val myId = currentUserId
+
+                            val mapped = mapToState(nuevoMensaje, myId, tx, compNombre, vendNombre)
+
+                            _uiState.update { state ->
+                                val exists = state.messages.any { it.id == mapped.id }
                                 if (!exists) {
-                                    it.copy(messages = it.messages + nuevoMensaje)
-                                } else it
+                                    state.copy(messages = state.messages + mapped)
+                                } else state
                             }
                         }
                     }
                 }
             } catch (_: Exception) {
-                // Fallback silencioso: los mensajes se cargan al hacer pull
+                // Fallback silencioso
             }
         }
     }
 
-    fun sendMessage(text: String) {
-        val currentUserId = _uiState.value.currentUserId ?: return
-        if (text.isBlank()) return
+    fun enviarMensaje(texto: String) {
+        val myUserId = currentUserId ?: return
+        if (texto.isBlank()) return
 
         viewModelScope.launch {
             try {
-                val mensaje = ChatMessageModel(
-                    transaccionId = transaccionId,
-                    remitenteId = currentUserId,
-                    contenido = text.trim()
+                val nuevoMsg = ChatMessageModel(
+                    transaccionId = transactionId,
+                    remitenteId = myUserId,
+                    contenido = texto.trim()
                 )
-                Supabase.client.postgrest["mensajes_chat"].insert(mensaje)
+
+                Supabase.client.postgrest["mensajes_chat"]
+                    .insert(nuevoMsg)
+
             } catch (e: Exception) {
-                _uiState.update { it.copy(errorMessage = "Error al enviar mensaje: ${e.localizedMessage}") }
+                _uiState.update {
+                    it.copy(error = "Error al enviar mensaje: ${e.localizedMessage}")
+                }
             }
         }
     }
 
-    fun clearError() {
-        _uiState.update { it.copy(errorMessage = null) }
+    private fun formatFechaEnvio(fechaEnvio: String?): String {
+        if (fechaEnvio == null) return ""
+        val tIndex = fechaEnvio.indexOf('T')
+        if (tIndex != -1 && fechaEnvio.length > tIndex + 6) {
+            return fechaEnvio.substring(tIndex + 1, tIndex + 6)
+        }
+        return fechaEnvio.take(16)
     }
 
     override fun onCleared() {

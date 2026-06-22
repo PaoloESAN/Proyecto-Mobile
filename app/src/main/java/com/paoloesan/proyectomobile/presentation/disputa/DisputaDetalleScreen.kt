@@ -1,6 +1,5 @@
 package com.paoloesan.proyectomobile.presentation.disputa
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -23,25 +22,27 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.ZoomIn
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.paoloesan.proyectomobile.R
+import coil3.compose.AsyncImage
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import zed.rainxch.rikkaui.components.ui.button.Button
@@ -57,36 +58,85 @@ import zed.rainxch.rikkaui.components.ui.toast.ToastVariant
 import zed.rainxch.rikkaui.components.ui.toast.rememberToastHostState
 import zed.rainxch.rikkaui.foundation.RikkaTheme
 
+private fun formatFechaEnvio(fechaEnvio: String?): String {
+    if (fechaEnvio == null) return ""
+    val tIndex = fechaEnvio.indexOf('T')
+    if (tIndex != -1 && fechaEnvio.length > tIndex + 6) {
+        return fechaEnvio.substring(tIndex + 1, tIndex + 6) // Retorna HH:MM
+    }
+    return fechaEnvio.take(16) // Fallback
+}
+
 @Composable
 fun DisputaDetalleScreen(
     navController: NavController,
     viewModel: DisputaViewModel,
     disputaId: Int
 ) {
-    val disputa = viewModel.getDisputaById(disputaId)
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val detalleState by viewModel.detalleState.collectAsStateWithLifecycle()
     val toastState = rememberToastHostState()
     val scope = rememberCoroutineScope()
 
+    LaunchedEffect(disputaId) {
+        viewModel.loadDisputaDetalle(disputaId)
+    }
+
+    DisposableEffect(disputaId) {
+        onDispose {
+            viewModel.clearDetalleState()
+        }
+    }
+
+    LaunchedEffect(uiState.transientMessage) {
+        uiState.transientMessage?.let { message ->
+            toastState.show(
+                message = message,
+                variant = ToastVariant.Success
+            )
+            viewModel.consumeMessage()
+        }
+    }
+
     var showZoomDialog by remember { mutableStateOf(false) }
     var zoomTitle by remember { mutableStateOf("") }
-    var zoomImageRes by remember { mutableStateOf(R.drawable.voucher_demo) }
+    var zoomImageUrl by remember { mutableStateOf<String?>(null) }
     var pendingResolveForBuyer by remember { mutableStateOf<Boolean?>(null) }
 
-    if (disputa == null) {
+    if (detalleState == null) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(RikkaTheme.colors.background),
             contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = "Disputa no encontrada",
-                variant = TextVariant.Large,
-                color = RikkaTheme.colors.onBackground
+            CircularProgressIndicator(
+                color = RikkaTheme.colors.primary
             )
         }
         return
     }
+
+    val detalle = detalleState!!
+    val compradorNombre = "${detalle.comprador.nombres} ${detalle.comprador.apellidos}"
+    val vendedorNombre = "${detalle.vendedor.nombres} ${detalle.vendedor.apellidos}"
+    
+    val currencyClean = detalle.offer.currency.uppercase()
+    val amountDouble = detalle.transaction.amount
+    val rateDouble = detalle.transaction.tipoCambioAplicado
+
+    val (usdAmount, penAmount) = if (currencyClean == "PEN") {
+        (amountDouble / rateDouble) to amountDouble
+    } else {
+        amountDouble to (amountDouble * rateDouble)
+    }
+
+    val formattedPen = "S/ ${String.format(java.util.Locale.US, "%,.2f", penAmount)}"
+    val formattedUsd = "$ ${String.format(java.util.Locale.US, "%,.2f", usdAmount)}"
+
+    val tipoOperacionText = "${detalle.offer.tipoOperacion} de ${detalle.offer.currency}"
+    val comprobanteComprador = detalle.comprobantes.find { it.usuarioId == detalle.transaction.usuarioCompradorId }
+    val comprobanteVendedor = detalle.comprobantes.find { it.usuarioId == detalle.transaction.usuarioVendedorId }
 
     Box(
         modifier = Modifier
@@ -160,13 +210,13 @@ fun DisputaDetalleScreen(
                                         modifier = Modifier.size(20.dp)
                                     )
                                     Text(
-                                        text = disputa.transaccion,
+                                        text = "TX-${detalle.transaction.transactionId}",
                                         variant = TextVariant.Large,
                                         color = RikkaTheme.colors.onBackground
                                     )
                                 }
 
-                                val (badgeBgColor, badgeTextColor) = if (disputa.estado == "Activa") {
+                                val (badgeBgColor, badgeTextColor) = if (detalle.dispute.estado == "Abierta") {
                                     Color(0xFFE3F2FD) to Color(0xFF1565C0)
                                 } else {
                                     Color(0xFFE8F5E9) to Color(0xFF2E7D32)
@@ -178,7 +228,7 @@ fun DisputaDetalleScreen(
                                         .padding(horizontal = 8.dp, vertical = 4.dp)
                                 ) {
                                     Text(
-                                        text = disputa.estado,
+                                        text = detalle.dispute.estado,
                                         color = badgeTextColor,
                                         variant = TextVariant.Small,
                                         modifier = Modifier.padding(bottom = 1.dp)
@@ -195,12 +245,12 @@ fun DisputaDetalleScreen(
                             ) {
                                 Column {
                                     Text(
-                                        text = "Monto",
+                                        text = "Monto de Operación",
                                         variant = TextVariant.Small,
                                         color = RikkaTheme.colors.onBackground.copy(alpha = 0.6f)
                                     )
                                     Text(
-                                        text = "S/ 500.00",
+                                        text = formattedUsd,
                                         variant = TextVariant.H1,
                                         color = RikkaTheme.colors.primary
                                     )
@@ -208,12 +258,12 @@ fun DisputaDetalleScreen(
 
                                 Column(horizontalAlignment = Alignment.End) {
                                     Text(
-                                        text = "Tipo de Operación",
+                                        text = "Tipo de Cambio",
                                         variant = TextVariant.Small,
                                         color = RikkaTheme.colors.onBackground.copy(alpha = 0.6f)
                                     )
                                     Text(
-                                        text = "Compra de USD",
+                                        text = "S/ ${String.format(java.util.Locale.US, "%.3f", rateDouble)}",
                                         variant = TextVariant.P,
                                         color = RikkaTheme.colors.onBackground,
                                     )
@@ -233,7 +283,7 @@ fun DisputaDetalleScreen(
                                         color = RikkaTheme.colors.onBackground.copy(alpha = 0.6f)
                                     )
                                     Text(
-                                        text = disputa.comprador,
+                                        text = compradorNombre,
                                         variant = TextVariant.P,
                                         color = RikkaTheme.colors.onBackground,
                                     )
@@ -245,7 +295,7 @@ fun DisputaDetalleScreen(
                                         color = RikkaTheme.colors.onBackground.copy(alpha = 0.6f)
                                     )
                                     Text(
-                                        text = disputa.vendedor,
+                                        text = vendedorNombre,
                                         variant = TextVariant.P,
                                         color = RikkaTheme.colors.onBackground,
                                     )
@@ -301,10 +351,86 @@ fun DisputaDetalleScreen(
                                 
                                 HorizontalDivider(color = RikkaTheme.colors.muted.copy(alpha = 0.1f))
 
-                                DetailRow(label = "Titular", value = disputa.comprador)
-                                DetailRow(label = "Banco Destino", value = "Interbank")
-                                DetailRow(label = "Cuenta de Ahorros", value = "200-98765432-1-09")
-                                DetailRow(label = "CCI", value = "003-20098765432109-12")
+                                val mpComprador = detalle.metodoPagoComprador
+                                if (mpComprador != null) {
+                                    DetailRow(label = "Titular", value = mpComprador.nombreTitular)
+                                    DetailRow(label = "Banco Destino", value = mpComprador.banco)
+                                    DetailRow(label = "Cuenta de Ahorros", value = mpComprador.numeroCuenta)
+                                    DetailRow(label = "Moneda", value = mpComprador.tipoMoneda)
+                                } else {
+                                    Text(
+                                        text = "Método de pago no seleccionado por el comprador",
+                                        variant = TextVariant.Small,
+                                        color = RikkaTheme.colors.onBackground.copy(alpha = 0.4f)
+                                    )
+                                }
+                                HorizontalDivider(color = RikkaTheme.colors.muted.copy(alpha = 0.05f))
+                                DetailRow(label = "Debe Enviar (PEN)", value = formattedPen)
+                                DetailRow(label = "Debe Recibir (USD)", value = formattedUsd)
+
+                                HorizontalDivider(color = RikkaTheme.colors.muted.copy(alpha = 0.05f))
+                                Text(
+                                    text = "Comprobante de Pago",
+                                    variant = TextVariant.Small,
+                                    color = RikkaTheme.colors.onBackground.copy(alpha = 0.6f)
+                                )
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(130.dp)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(Color.Black.copy(alpha = 0.05f))
+                                        .clickable(enabled = comprobanteComprador != null) { 
+                                            zoomTitle = "Comprobante de Comprador"
+                                            zoomImageUrl = comprobanteComprador?.imagenUrl
+                                            showZoomDialog = true 
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    if (comprobanteComprador != null) {
+                                        AsyncImage(
+                                            model = comprobanteComprador.imagenUrl,
+                                            contentDescription = "Voucher Comprador",
+                                            contentScale = ContentScale.Fit,
+                                            modifier = Modifier.fillMaxSize()
+                                        )
+                                    } else {
+                                        Column(
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            verticalArrangement = Arrangement.Center
+                                        ) {
+                                            androidx.compose.material3.Icon(
+                                                imageVector = Icons.Default.Info,
+                                                contentDescription = null,
+                                                tint = RikkaTheme.colors.onBackground.copy(alpha = 0.4f),
+                                                modifier = Modifier.size(24.dp)
+                                            )
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Text(
+                                                text = "Sin comprobante",
+                                                variant = TextVariant.Small,
+                                                color = RikkaTheme.colors.onBackground.copy(alpha = 0.4f)
+                                            )
+                                        }
+                                    }
+                                }
+                                if (comprobanteComprador != null) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.Center
+                                    ) {
+                                        Text(
+                                            text = "Ampliar",
+                                            variant = TextVariant.Small,
+                                            color = RikkaTheme.colors.primary,
+                                            modifier = Modifier.clickable {
+                                                zoomTitle = "Comprobante de Comprador"
+                                                zoomImageUrl = comprobanteComprador.imagenUrl
+                                                showZoomDialog = true
+                                            }
+                                        )
+                                    }
+                                }
                             }
                         }
 
@@ -342,81 +468,26 @@ fun DisputaDetalleScreen(
                                 
                                 HorizontalDivider(color = RikkaTheme.colors.muted.copy(alpha = 0.1f))
 
-                                DetailRow(label = "Titular", value = disputa.vendedor)
-                                DetailRow(label = "Banco Origen/Destino", value = "BCP")
-                                DetailRow(label = "Cuenta de Ahorros", value = "191-45678901-2-34")
-                                DetailRow(label = "CCI", value = "002-19145678901234-45")
-                            }
-                        }
-                    }
-                }
-
-                // Section: Vouchers Sent
-                item {
-                    Text(
-                        text = "Comprobantes Adjuntos",
-                        variant = TextVariant.Large,
-                        color = RikkaTheme.colors.onBackground,
-                        modifier = Modifier.padding(vertical = 4.dp)
-                    )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        // Buyer Voucher Card
-                        Card(
-                            modifier = Modifier.weight(1f),
-                            animation = CardAnimation.Press
-                        ) {
-                            Column(
-                                verticalArrangement = Arrangement.spacedBy(8.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Text(
-                                    text = "Comprador (${disputa.comprador})",
-                                    variant = TextVariant.Small,
-                                    color = RikkaTheme.colors.onBackground.copy(alpha = 0.6f)
-                                )
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(130.dp)
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .background(Color.Black.copy(alpha = 0.05f))
-                                        .clickable { 
-                                            zoomTitle = "Comprobante de Comprador"
-                                            zoomImageRes = R.drawable.voucher_demo
-                                            showZoomDialog = true 
-                                        },
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Image(
-                                        painter = painterResource(id = R.drawable.voucher_demo),
-                                        contentDescription = "Voucher Comprador",
-                                        contentScale = ContentScale.Fit,
-                                        modifier = Modifier.fillMaxSize()
+                                val mpVendedor = detalle.metodoPagoVendedor
+                                if (mpVendedor != null) {
+                                    DetailRow(label = "Titular", value = mpVendedor.nombreTitular)
+                                    DetailRow(label = "Banco Origen/Destino", value = mpVendedor.banco)
+                                    DetailRow(label = "Cuenta de Ahorros", value = mpVendedor.numeroCuenta)
+                                    DetailRow(label = "Moneda", value = mpVendedor.tipoMoneda)
+                                } else {
+                                    Text(
+                                        text = "Método de pago no registrado por el vendedor",
+                                        variant = TextVariant.Small,
+                                        color = RikkaTheme.colors.onBackground.copy(alpha = 0.4f)
                                     )
                                 }
-                                Text(
-                                    text = "Ampliar",
-                                    variant = TextVariant.Small,
-                                    color = RikkaTheme.colors.primary,
-                                )
-                            }
-                        }
+                                HorizontalDivider(color = RikkaTheme.colors.muted.copy(alpha = 0.05f))
+                                DetailRow(label = "Debe Enviar (USD)", value = formattedUsd)
+                                DetailRow(label = "Debe Recibir (PEN)", value = formattedPen)
 
-                        // Seller Voucher Card
-                        Card(
-                            modifier = Modifier.weight(1f),
-                            animation = CardAnimation.Press
-                        ) {
-                            Column(
-                                verticalArrangement = Arrangement.spacedBy(8.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
+                                HorizontalDivider(color = RikkaTheme.colors.muted.copy(alpha = 0.05f))
                                 Text(
-                                    text = "Vendedor (${disputa.vendedor})",
+                                    text = "Comprobante de Pago",
                                     variant = TextVariant.Small,
                                     color = RikkaTheme.colors.onBackground.copy(alpha = 0.6f)
                                 )
@@ -426,25 +497,57 @@ fun DisputaDetalleScreen(
                                         .height(130.dp)
                                         .clip(RoundedCornerShape(8.dp))
                                         .background(Color.Black.copy(alpha = 0.05f))
-                                        .clickable { 
+                                        .clickable(enabled = comprobanteVendedor != null) { 
                                             zoomTitle = "Comprobante de Vendedor"
-                                            zoomImageRes = R.drawable.voucher_demo
+                                            zoomImageUrl = comprobanteVendedor?.imagenUrl
                                             showZoomDialog = true 
                                         },
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Image(
-                                        painter = painterResource(id = R.drawable.voucher_demo),
-                                        contentDescription = "Voucher Vendedor",
-                                        contentScale = ContentScale.Fit,
-                                        modifier = Modifier.fillMaxSize()
-                                    )
+                                    if (comprobanteVendedor != null) {
+                                        AsyncImage(
+                                            model = comprobanteVendedor.imagenUrl,
+                                            contentDescription = "Voucher Vendedor",
+                                            contentScale = ContentScale.Fit,
+                                            modifier = Modifier.fillMaxSize()
+                                        )
+                                    } else {
+                                        Column(
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            verticalArrangement = Arrangement.Center
+                                        ) {
+                                            androidx.compose.material3.Icon(
+                                                imageVector = Icons.Default.Info,
+                                                contentDescription = null,
+                                                tint = RikkaTheme.colors.onBackground.copy(alpha = 0.4f),
+                                                modifier = Modifier.size(24.dp)
+                                            )
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Text(
+                                                text = "Sin comprobante",
+                                                variant = TextVariant.Small,
+                                                color = RikkaTheme.colors.onBackground.copy(alpha = 0.4f)
+                                            )
+                                        }
+                                    }
                                 }
-                                Text(
-                                    text = "Ampliar",
-                                    variant = TextVariant.Small,
-                                    color = RikkaTheme.colors.primary,
-                                )
+                                if (comprobanteVendedor != null) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.Center
+                                    ) {
+                                        Text(
+                                            text = "Ampliar",
+                                            variant = TextVariant.Small,
+                                            color = RikkaTheme.colors.primary,
+                                            modifier = Modifier.clickable {
+                                                zoomTitle = "Comprobante de Vendedor"
+                                                zoomImageUrl = comprobanteVendedor.imagenUrl
+                                                showZoomDialog = true
+                                            }
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -466,40 +569,39 @@ fun DisputaDetalleScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
-                                    navController.navigate("chat/${disputa.transaccion}?readOnly=true")
+                                    navController.navigate("chat/${detalle.transaction.transactionId}?readOnly=true")
                                 },
                             animation = CardAnimation.Press
                         ) {
                             Column(
                                 verticalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                ChatBubble(
-                                    sender = disputa.comprador,
-                                    message = "Hola, ¿ya realizaste la transferencia?",
-                                    time = "10:00",
-                                    isBuyer = true
-                                )
-
-                                ChatBubble(
-                                    sender = disputa.vendedor,
-                                    message = "Si, acabo de transferir el monto.",
-                                    time = "10:02",
-                                    isBuyer = false
-                                )
-
-                                ChatBubble(
-                                    sender = disputa.comprador,
-                                    message = "Perfecto, dejame verificarlo.",
-                                    time = "10:03",
-                                    isBuyer = true
-                                )
-
-                                ChatBubble(
-                                    sender = disputa.vendedor,
-                                    message = "Te envie el comprobante por aqui.",
-                                    time = "10:05",
-                                    isBuyer = false
-                                )
+                                if (detalle.mensajesChat.isEmpty()) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 16.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = "No hay mensajes en este chat",
+                                            variant = TextVariant.Small,
+                                            color = RikkaTheme.colors.onBackground.copy(alpha = 0.5f)
+                                        )
+                                    }
+                                } else {
+                                    detalle.mensajesChat.forEach { mensaje ->
+                                        val isBuyer = mensaje.remitenteId == detalle.transaction.usuarioCompradorId
+                                        val senderName = if (isBuyer) compradorNombre else vendedorNombre
+                                        val timeStr = formatFechaEnvio(mensaje.fechaEnvio)
+                                        ChatBubble(
+                                            sender = senderName,
+                                            message = mensaje.contenido,
+                                            time = timeStr,
+                                            isBuyer = isBuyer
+                                        )
+                                    }
+                                }
 
                                 Box(
                                     modifier = Modifier
@@ -560,6 +662,71 @@ fun DisputaDetalleScreen(
                         }
                     }
 
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Consequences Info Card
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        animation = CardAnimation.None
+                    ) {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = "Consecuencias del Arbitraje:",
+                                variant = TextVariant.Small,
+                                color = RikkaTheme.colors.onBackground,
+                                modifier = Modifier.padding(bottom = 2.dp)
+                            )
+                            
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.Top
+                            ) {
+                                Text(
+                                    text = "•",
+                                    variant = TextVariant.Small,
+                                    color = RikkaTheme.colors.primary
+                                )
+                                Column {
+                                    Text(
+                                        text = "Dar la razón al Comprador:",
+                                        variant = TextVariant.Small,
+                                        color = RikkaTheme.colors.primary
+                                    )
+                                    Text(
+                                        text = "Cancela la transacción y reactiva la oferta original para que vuelva a estar disponible en el mercado.",
+                                        variant = TextVariant.Small,
+                                        color = RikkaTheme.colors.onBackground.copy(alpha = 0.7f)
+                                    )
+                                }
+                            }
+
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.Top
+                            ) {
+                                Text(
+                                    text = "•",
+                                    variant = TextVariant.Small,
+                                    color = RikkaTheme.colors.onBackground.copy(alpha = 0.6f)
+                                )
+                                Column {
+                                    Text(
+                                        text = "Dar la razón al Vendedor:",
+                                        variant = TextVariant.Small,
+                                        color = RikkaTheme.colors.onBackground.copy(alpha = 0.7f)
+                                    )
+                                    Text(
+                                        text = "Finaliza la transacción de forma exitosa y definitiva en el sistema.",
+                                        variant = TextVariant.Small,
+                                        color = RikkaTheme.colors.onBackground.copy(alpha = 0.7f)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Button(
@@ -586,7 +753,7 @@ fun DisputaDetalleScreen(
     }
 
     // Zoom Dialog for Voucher
-    if (showZoomDialog) {
+    if (showZoomDialog && zoomImageUrl != null) {
         AlertDialog(
             onDismissRequest = { showZoomDialog = false },
             containerColor = RikkaTheme.colors.background,
@@ -624,8 +791,8 @@ fun DisputaDetalleScreen(
                         .background(Color.Black.copy(alpha = 0.05f)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Image(
-                        painter = painterResource(id = zoomImageRes),
+                    AsyncImage(
+                        model = zoomImageUrl,
                         contentDescription = "Comprobante ampliado",
                         contentScale = ContentScale.Fit,
                         modifier = Modifier.fillMaxSize()
@@ -638,7 +805,7 @@ fun DisputaDetalleScreen(
 
     // Confirmation Dialog for Arbitration
     pendingResolveForBuyer?.let { resolveForBuyer ->
-        val targetName = if (resolveForBuyer) disputa.comprador else disputa.vendedor
+        val targetName = if (resolveForBuyer) compradorNombre else vendedorNombre
         val roleName = if (resolveForBuyer) "comprador" else "vendedor"
         AlertDialog(
             onDismissRequest = { pendingResolveForBuyer = null },
@@ -660,12 +827,8 @@ fun DisputaDetalleScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        viewModel.resolverDisputa(disputaId)
+                        viewModel.resolverDisputa(disputaId, resolveForBuyer)
                         scope.launch {
-                            toastState.show(
-                                message = "Fondos liberados a favor de $targetName",
-                                variant = ToastVariant.Success
-                            )
                             delay(1500)
                             navController.popBackStack()
                         }
