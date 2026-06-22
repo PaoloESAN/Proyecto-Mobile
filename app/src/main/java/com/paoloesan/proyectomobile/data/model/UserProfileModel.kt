@@ -13,8 +13,11 @@ data class UserProfileModel(
     @SerialName("contrasena_hash") val contrasenaHash: String = "",
     @SerialName("rol") val rol: String = "Usuario",
     @SerialName("estado") val estado: String = "Activo",
+    @SerialName("fecha_registro") val fechaRegistro: String? = null,
     @SerialName("es_verificado") val esVerificado: Boolean = false,
     @SerialName("dni_frontal_url") val dniFrontalUrl: String? = null,
     @SerialName("dni_posterior_url") val dniPosteriorUrl: String? = null,
-    @SerialName("calificacion") val calificacion: Double = 0.00
+    @SerialName("calificacion") val calificacion: Double = 0.00,
+    @SerialName("bloqueos_anteriores") val bloqueosAnteriores: Int = 0,
+    @SerialName("bloqueado_hasta") val bloqueadoHasta: String? = null
 )

@@ -112,7 +112,7 @@ sealed class Destination(
         title = "Chat de Transacción",
         content = { navController ->
             val arguments = navController.currentBackStackEntry?.arguments
-            val transactionId = arguments?.getString("transactionId") ?: "0"
+            val transactionId = arguments?.getString("transactionId")?.toIntOrNull() ?: 0
             val readOnly = arguments?.getString("readOnly")?.toBoolean() ?: false
             ChatScreen(navController = navController, transactionId = transactionId, readOnly = readOnly)
         }

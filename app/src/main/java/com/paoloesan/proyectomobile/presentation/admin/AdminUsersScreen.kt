@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
@@ -187,7 +188,16 @@ fun AdminUsersScreen(
                     modifier = Modifier.padding(horizontal = 4.dp)
                 )
 
-                if (filteredUsers.isEmpty()) {
+                if (uiState.isLoading) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(color = RikkaTheme.colors.primary)
+                    }
+                } else if (filteredUsers.isEmpty()) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()

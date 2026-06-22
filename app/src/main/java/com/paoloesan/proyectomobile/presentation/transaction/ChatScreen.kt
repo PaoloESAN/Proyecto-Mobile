@@ -28,7 +28,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -40,6 +39,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import kotlinx.coroutines.launch
@@ -51,30 +51,16 @@ import zed.rainxch.rikkaui.components.ui.input.Input
 import zed.rainxch.rikkaui.components.ui.text.Text
 import zed.rainxch.rikkaui.components.ui.text.TextVariant
 import zed.rainxch.rikkaui.foundation.RikkaTheme
-import java.text.SimpleDateFormat
-import java.util.Locale
-
-fun formatChatTime(isoDate: String?): String {
-    if (isoDate == null) return ""
-    return try {
-        val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
-        val outputFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
-        val date = inputFormat.parse(isoDate.take(19))
-        date?.let { outputFormat.format(it) } ?: ""
-    } catch (_: Exception) {
-        isoDate.takeLast(5)
-    }
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatScreen(
     navController: NavController,
-    transactionId: String,
+    transactionId: Int,
     readOnly: Boolean = false,
     viewModel: ChatViewModel = viewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var messageInput by remember { mutableStateOf("") }
 
     val listState = rememberLazyListState()
@@ -82,9 +68,10 @@ fun ChatScreen(
     val focusManager = LocalFocusManager.current
 
     LaunchedEffect(transactionId) {
-        viewModel.initialize(transactionId.toIntOrNull() ?: 0)
+        viewModel.initChat(transactionId)
     }
 
+    // Auto scroll al ultimo mensaje
     LaunchedEffect(uiState.messages.size) {
         if (uiState.messages.isNotEmpty()) {
             listState.animateScrollToItem(uiState.messages.size - 1)
@@ -129,7 +116,7 @@ fun ChatScreen(
                             variant = TextVariant.Large,
                         )
                         Text(
-                            text = if (readOnly) "Modo Solo Lectura (Arbitraje)" else "Transaccion #$transactionId",
+                            text = if (readOnly) "Modo Solo Lectura (Arbitraje)" else uiState.contraparteName,
                             color = Color.Gray,
                             variant = TextVariant.Small
                         )
@@ -193,13 +180,8 @@ fun ChatScreen(
                             Button(
                                 onClick = {
                                     if (messageInput.isNotBlank()) {
-                                        viewModel.sendMessage(messageInput.trim())
+                                        viewModel.enviarMensaje(messageInput)
                                         messageInput = ""
-                                        scope.launch {
-                                            if (uiState.messages.isNotEmpty()) {
-                                                listState.animateScrollToItem(uiState.messages.size)
-                                            }
-                                        }
                                     }
                                 },
                                 variant = ButtonVariant.Default,
@@ -229,7 +211,7 @@ fun ChatScreen(
                         variant = TextVariant.P
                     )
                 }
-            } else if (uiState.errorMessage != null) {
+            } else if (uiState.error != null) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -237,7 +219,7 @@ fun ChatScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = uiState.errorMessage ?: "",
+                        text = uiState.error ?: "",
                         color = RikkaTheme.colors.destructive,
                         variant = TextVariant.P
                     )
@@ -258,49 +240,50 @@ fun ChatScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                     contentPadding = PaddingValues(vertical = 12.dp)
                 ) {
-                    items(uiState.messages, key = { it.mensajeId ?: it.hashCode() }) { message ->
-                        val isOwn = message.remitenteId == uiState.currentUserId
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = if (isOwn) Arrangement.End else Arrangement.Start
+                    items(uiState.messages, key = { it.id }) { message ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = if (message.isOwn) Arrangement.End else Arrangement.Start
+                    ) {
+                        Column(
+                            horizontalAlignment = if (message.isOwn) Alignment.End else Alignment.Start
                         ) {
-                            Column(
-                                horizontalAlignment = if (isOwn) Alignment.End else Alignment.Start
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .widthIn(max = 280.dp)
-                                        .clip(
-                                            RoundedCornerShape(
-                                                topStart = 16.dp,
-                                                topEnd = 16.dp,
-                                                bottomStart = if (isOwn) 16.dp else 4.dp,
-                                                bottomEnd = if (isOwn) 4.dp else 16.dp
-                                            )
+                            Box(
+                                modifier = Modifier
+                                    .widthIn(max = 280.dp)
+                                    .clip(
+                                        RoundedCornerShape(
+                                            topStart = 16.dp,
+                                            topEnd = 16.dp,
+                                            bottomStart = if (message.isOwn) 16.dp else 4.dp,
+                                            bottomEnd = if (message.isOwn) 4.dp else 16.dp
                                         )
-                                        .background(
-                                            if (isOwn) RikkaTheme.colors.primary
-                                            else RikkaTheme.colors.muted
-                                        )
-                                        .padding(horizontal = 12.dp, vertical = 8.dp)
-                                ) {
-                                    Text(
-                                        text = message.contenido,
-                                        variant = TextVariant.P,
-                                        color = if (isOwn) Color.White else RikkaTheme.colors.onBackground
                                     )
-                                }
-                                Spacer(modifier = Modifier.height(2.dp))
+                                    .background(
+                                        if (message.isOwn)
+                                            RikkaTheme.colors.primary
+                                        else
+                                            RikkaTheme.colors.muted
+                                    )
+                                    .padding(horizontal = 12.dp, vertical = 8.dp)
+                            ) {
                                 Text(
-                                    text = formatChatTime(message.fechaEnvio),
-                                    variant = TextVariant.Small,
-                                    color = Color.Gray
+                                    text = message.text,
+                                    variant = TextVariant.P,
+                                    color = if (message.isOwn) Color.White else RikkaTheme.colors.onBackground
                                 )
                             }
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "${message.senderName} • ${message.time}",
+                                variant = TextVariant.Small,
+                                color = Color.Gray
+                            )
                         }
                     }
                 }
             }
         }
     }
+}
 }

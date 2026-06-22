@@ -5,10 +5,10 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class ComprobanteModel(
-    @SerialName("comprobante_id") val comprobanteId: Int? = null,
-    @SerialName("transaccion_id") val transaccionId: Int,
-    @SerialName("usuario_id") val usuarioId: Int,
-    @SerialName("imagen_url") val imagenUrl: String,
+    @SerialName("comprobante_id") val comprobanteId: Int? = null, // PK Autogenerada
+    @SerialName("transaccion_id") val transaccionId: Int, // FK a transacciones
+    @SerialName("usuario_id") val usuarioId: Int, // FK a usuarios (quien sube el voucher)
+    @SerialName("imagen_url") val imagenUrl: String, // URL pública del voucher en Storage
     @SerialName("ia_verificado") val iaVerificado: Boolean? = null,
     @SerialName("fecha_subida") val fechaSubida: String? = null
 )

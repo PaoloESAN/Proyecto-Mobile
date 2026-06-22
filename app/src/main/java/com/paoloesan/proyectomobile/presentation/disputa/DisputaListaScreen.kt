@@ -24,14 +24,16 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Gavel
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Receipt
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -48,40 +50,22 @@ import zed.rainxch.rikkaui.components.ui.text.Text
 import zed.rainxch.rikkaui.components.ui.text.TextVariant
 import zed.rainxch.rikkaui.foundation.RikkaTheme
 
-// Mock data for resolved disputes to make the tab filter functional
-private val disputasResueltasMock = listOf(
-    Disputa(
-        id = 99,
-        estado = "Resuelta",
-        comprador = "Sofía Castro",
-        vendedor = "Diego Martínez",
-        transaccion = "TX-099",
-        monto = "S/ 100.00",
-        mensaje = "La transferencia no se vio reflejada en la cuenta destino de inmediato."
-    ),
-    Disputa(
-        id = 100,
-        estado = "Resuelta",
-        comprador = "Lucía Blanco",
-        vendedor = "Martín Silva",
-        transaccion = "TX-100",
-        monto = "S/ 400.00",
-        mensaje = "Comisión interbancaria no acordada fue descontada por el banco."
-    )
-)
-
 @Composable
 fun DisputaListaScreen(
     navController: NavController,
     viewModel: DisputaViewModel
 ) {
-    val disputasActivas by viewModel.disputas.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var selectedTab by remember { mutableStateOf(0) }
 
+    LaunchedEffect(Unit) {
+        viewModel.loadDisputas()
+    }
+
     val disputasAMostrar = if (selectedTab == 0) {
-        disputasActivas
+        uiState.disputasActivas
     } else {
-        disputasResueltasMock
+        uiState.disputasResueltas
     }
 
     Box(
@@ -138,19 +122,27 @@ fun DisputaListaScreen(
                         onClick = { selectedTab = 0 },
                         variant = if (selectedTab == 0) ButtonVariant.Default else ButtonVariant.Outline,
                         modifier = Modifier.weight(1f),
-                        text = "Activas (${disputasActivas.size})"
+                        text = "Activas (${uiState.disputasActivas.size})"
                     )
 
                     Button(
                         onClick = { selectedTab = 1 },
                         variant = if (selectedTab == 1) ButtonVariant.Default else ButtonVariant.Outline,
                         modifier = Modifier.weight(1f),
-                        text = "Resueltas (${disputasResueltasMock.size})"
+                        text = "Resueltas (${uiState.disputasResueltas.size})"
                     )
                 }
 
-                if (disputasAMostrar.isEmpty()) {
-                    // Empty State
+                if (uiState.isLoading) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(color = RikkaTheme.colors.primary)
+                    }
+                } else if (disputasAMostrar.isEmpty()) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
