@@ -27,9 +27,6 @@ import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FilterList
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Payment
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.SwapHoriz
@@ -86,7 +83,7 @@ fun MarketplaceScreen(
     }
     var tempPaymentMethod by remember(showFilterBottomSheet) { mutableStateOf(activeFilters.paymentMethod) }
 
-    val currencies = listOf("TODOS", "USD", "PEN")
+    val currencies = listOf("TODOS", "USD", "PEN", "MXN", "EUR", "GBP", "JPY")
     val types = listOf("TODOS", "Compra", "Venta")
     val paymentMethods = listOf("TODOS", "BCP", "Yape", "Interbank")
 
@@ -252,10 +249,6 @@ fun MarketplaceScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    item {
-                        PartialOffersInfoCard()
-                    }
-
                     item {
                         // Matching Automático Card
                         Card(
@@ -529,6 +522,7 @@ fun OfferCard(
         animation = CardAnimation.Press
     ) {
         Column {
+            // Header: Creator name and type (Compra/Venta)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -538,9 +532,10 @@ fun OfferCard(
                     androidx.compose.material3.Icon(
                         imageVector = Icons.Default.Person,
                         contentDescription = null,
-                        tint = RikkaTheme.colors.primary
+                        tint = RikkaTheme.colors.primary,
+                        modifier = Modifier.size(18.dp)
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = offer.username,
                         variant = TextVariant.P,
@@ -553,62 +548,101 @@ fun OfferCard(
                         imageVector = Icons.Default.SwapHoriz,
                         contentDescription = null,
                         tint = if (isCompra) RikkaTheme.colors.primary else RikkaTheme.colors.destructive,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = offer.type,
-                        variant = TextVariant.P,
+                        text = if (isCompra) "Compra" else "Venta",
+                        variant = TextVariant.Small,
                         color = if (isCompra) RikkaTheme.colors.primary else RikkaTheme.colors.destructive
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
+            // Conversion Flow: Entregas -> Recibes
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "${offer.currency} ${offer.amount}",
-                    variant = TextVariant.H3,
-                    color = RikkaTheme.colors.onBackground
-                )
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    androidx.compose.material3.Icon(
-                        imageVector = Icons.Default.AttachMoney,
-                        contentDescription = null,
-                        tint = RikkaTheme.colors.onBackground,
-                        modifier = Modifier.width(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
+                Column {
                     Text(
-                        text = "T.C.: ${offer.rate}",
-                        variant = TextVariant.P,
+                        text = "Entrega",
+                        variant = TextVariant.Small,
+                        color = Color.Gray
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = "${
+                            String.format(
+                                java.util.Locale.US,
+                                "%,.2f",
+                                offer.montoTengo
+                            )
+                        } ${offer.monedaTengo}",
+                        variant = TextVariant.H3,
                         color = RikkaTheme.colors.onBackground
+                    )
+                }
+
+                androidx.compose.material3.Icon(
+                    imageVector = Icons.Default.ChevronRight,
+                    contentDescription = null,
+                    tint = Color.Gray,
+                    modifier = Modifier.size(24.dp)
+                )
+
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        text = "Recibe",
+                        variant = TextVariant.Small,
+                        color = Color.Gray
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = "${
+                            String.format(
+                                java.util.Locale.US,
+                                "%,.2f",
+                                offer.montoRecibo
+                            )
+                        } ${offer.monedaRecibo}",
+                        variant = TextVariant.H3,
+                        color = RikkaTheme.colors.primary
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
+            // Footer: Rate / Tipo de cambio and Payment bank method name
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "Limites: Min ${offer.minLimit} / Max ${offer.maxLimit}",
-                    variant = TextVariant.Small,
-                    color = Color.Gray
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    androidx.compose.material3.Icon(
+                        imageVector = Icons.Default.AttachMoney,
+                        contentDescription = null,
+                        tint = Color.Gray,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "T.C.: ${String.format(java.util.Locale.US, "%.4f", offer.rate)}",
+                        variant = TextVariant.Small,
+                        color = Color.Gray
+                    )
+                }
+
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     androidx.compose.material3.Icon(
                         imageVector = Icons.Default.Payment,
                         contentDescription = null,
-                        modifier = Modifier.width(16.dp),
+                        modifier = Modifier.size(14.dp),
                         tint = Color.Gray
                     )
                     Spacer(modifier = Modifier.width(4.dp))
@@ -617,111 +651,6 @@ fun OfferCard(
                         variant = TextVariant.Small,
                         color = Color.Gray
                     )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun PartialOffersInfoCard() {
-    var isExpanded by remember { mutableStateOf(false) }
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        onClick = { isExpanded = !isExpanded }
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    androidx.compose.material3.Icon(
-                        imageVector = Icons.Default.Info,
-                        contentDescription = "Información",
-                        tint = RikkaTheme.colors.primary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Text(
-                        text = "¿Cómo funcionan las ofertas?",
-                        variant = TextVariant.P,
-                        color = RikkaTheme.colors.onBackground,
-                    )
-                }
-                androidx.compose.material3.Icon(
-                    imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                    contentDescription = if (isExpanded) "Colapsar" else "Expandir",
-                    tint = Color.Gray,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-
-            if (isExpanded) {
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "Al publicar una oferta, permites compras o ventas parciales según tus límites por transacción. El sistema descuenta el saldo automáticamente y ajusta inteligentemente el límite máximo si supera el monto restante disponible.",
-                    variant = TextVariant.Small,
-                    color = Color.Gray
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-
-                // Example Box
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(
-                            color = RikkaTheme.colors.muted.copy(alpha = 0.15f),
-                            shape = RoundedCornerShape(8.dp)
-                        )
-                        .padding(12.dp)
-                ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text(
-                            text = "Ejemplo práctico (Oferta de 1000 USD | Min: 100 / Max: 400):",
-                            variant = TextVariant.Small,
-                            color = RikkaTheme.colors.primary,
-                        )
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text(text = "•", variant = TextVariant.Small, color = Color.Gray)
-                            Text(
-                                text = "Usuario A toma 400 USD -> Quedan 600 USD de saldo (límite máximo sigue en 400 USD).",
-                                variant = TextVariant.Small,
-                                color = Color.Gray
-                            )
-                        }
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text(text = "•", variant = TextVariant.Small, color = Color.Gray)
-                            Text(
-                                text = "Usuario B toma 350 USD -> Quedan 250 USD de saldo.",
-                                variant = TextVariant.Small,
-                                color = Color.Gray
-                            )
-                        }
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text(text = "•", variant = TextVariant.Small, color = Color.Gray)
-                            Text(
-                                text = "Ajuste Inteligente -> El límite máximo se reduce automáticamente a 250 USD.",
-                                variant = TextVariant.Small,
-                                color = RikkaTheme.colors.success
-                            )
-                        }
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text(text = "•", variant = TextVariant.Small, color = Color.Gray)
-                            Text(
-                                text = "Usuario C toma los 250 USD restantes -> Monto total llega a 0 y la oferta se completa.",
-                                variant = TextVariant.Small,
-                                color = Color.Gray
-                            )
-                        }
-                    }
                 }
             }
         }
