@@ -28,12 +28,14 @@ import androidx.compose.material.icons.filled.RemoveCircleOutline
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -43,6 +45,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import kotlinx.coroutines.launch
 import zed.rainxch.rikkaui.components.ui.button.Button
@@ -59,44 +62,34 @@ import zed.rainxch.rikkaui.components.ui.toast.ToastVariant
 import zed.rainxch.rikkaui.components.ui.toast.rememberToastHostState
 import zed.rainxch.rikkaui.foundation.RikkaTheme
 
-data class HistoryItem(
-    val id: Int,
-    val fecha: String,
-    val tipoOperacion: String,
-    val monto: Double,
-    val tipoCambio: Double,
-    val estado: String,
-    val moneda: String = "USD"
-)
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HistoryScreen(navController: NavController) {
-
-    val operaciones = remember {
-        listOf(
-            HistoryItem(1, "05/06/2026", "Compra", 150.0, 3.75, "Finalizado", "PEN"),
-            HistoryItem(2, "04/06/2026", "Venta", 300.0, 3.72, "Pendiente", "USD"),
-            HistoryItem(3, "03/06/2026", "Compra", 500.0, 3.70, "Finalizado", "PEN"),
-            HistoryItem(4, "02/06/2026", "Venta", 250.0, 3.73, "Finalizado", "USD"),
-            HistoryItem(5, "01/06/2026", "Compra", 1000.0, 3.71, "Pendiente", "PEN"),
-            HistoryItem(6, "31/05/2026", "Venta", 420.0, 3.74, "Finalizado", "USD"),
-            HistoryItem(7, "30/05/2026", "Compra", 800.0, 3.69, "Finalizado", "PEN"),
-            HistoryItem(8, "29/05/2026", "Venta", 1500.0, 3.76, "Pendiente", "USD"),
-            HistoryItem(9, "28/05/2026", "Compra", 350.0, 3.72, "Finalizado", "PEN"),
-            HistoryItem(10, "27/05/2026", "Venta", 620.0, 3.75, "Finalizado", "USD")
-        )
-    }
+    val viewModel: HistoryViewModel = viewModel()
+    val uiState by viewModel.uiState.collectAsState()
 
     var mostrarDialogo by remember { mutableStateOf(false) }
     var rating by remember { mutableStateOf(0) }
     var comentario by remember { mutableStateOf("") }
-    var operacionSeleccionada by remember { mutableStateOf<Int?>(null) }
-    val operacionesCalificadas = remember { mutableStateListOf<Int>() }
+    var operacionSeleccionada by remember { mutableStateOf<HistoryUiItem?>(null) }
 
     val toastState = rememberToastHostState()
     val scope = rememberCoroutineScope()
     val focusManager = LocalFocusManager.current
+
+    LaunchedEffect(uiState.successMessage) {
+        uiState.successMessage?.let {
+            toastState.show(message = it, variant = ToastVariant.Success)
+            viewModel.consumeSuccess()
+        }
+    }
+
+    LaunchedEffect(uiState.errorMessage) {
+        uiState.errorMessage?.let {
+            toastState.show(message = it, variant = ToastVariant.Destructive)
+            viewModel.consumeError()
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -106,12 +99,9 @@ fun HistoryScreen(navController: NavController) {
         Scaffold(
             containerColor = RikkaTheme.colors.background,
             snackbarHost = {
-                ToastHost(
-                    hostState = toastState,
-                )
+                ToastHost(hostState = toastState)
             },
             topBar = {
-                // Transparent Top Bar with White Icons
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -142,43 +132,66 @@ fun HistoryScreen(navController: NavController) {
                 }
             }
         ) { innerPadding ->
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null
-                    ) {
-                        focusManager.clearFocus()
-                    }
-                    .padding(horizontal = 16.dp),
-                contentPadding = PaddingValues(vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(operaciones.filter { it.estado == "Finalizado" }, key = { it.id }) { item ->
-                    HistoryItemCard(
-                        item = item,
-                        isRated = item.id in operacionesCalificadas,
-                        onCalificarClick = {
-                            operacionSeleccionada = item.id
-                            mostrarDialogo = true
-                        },
-                        onCardClick = {
-                            val bankDetail = if (item.tipoOperacion == "Compra") "BCP - 191-99882211-0-45 (PEN)" else "Interbank - 200-3004455-1 (USD)"
-                            navController.navigate(
-                                "transactionStatus/TX${
-                                    item.id.toString().padStart(3, '0')
-                                }?isSeller=${item.tipoOperacion == "Venta"}&amount=${item.monto}&rate=${item.tipoCambio}&bank=$bankDetail&type=${item.tipoOperacion}&status=${item.estado}&currency=${item.moneda}"
-                            )
-                        }
+            if (uiState.isLoading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = RikkaTheme.colors.primary)
+                }
+            } else if (uiState.historyItems.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) { focusManager.clearFocus() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "No tienes transacciones finalizadas",
+                        variant = TextVariant.Large,
+                        color = Color.Gray
                     )
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) { focusManager.clearFocus() }
+                        .padding(horizontal = 16.dp),
+                    contentPadding = PaddingValues(vertical = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(uiState.historyItems, key = { it.transactionId }) { item ->
+                        HistoryItemCard(
+                            item = item,
+                            isRated = item.transactionId in uiState.ratedTransactionIds,
+                            onCalificarClick = {
+                                operacionSeleccionada = item
+                                rating = 0
+                                comentario = ""
+                                mostrarDialogo = true
+                            },
+                            onCardClick = {
+                                navController.navigate("transactionStatus/${item.transactionId}")
+                            }
+                        )
+                    }
                 }
             }
         }
     }
 
-    if (mostrarDialogo) {
+    if (mostrarDialogo && operacionSeleccionada != null) {
         AlertDialog(
             onDismissRequest = {
                 mostrarDialogo = false
@@ -188,7 +201,7 @@ fun HistoryScreen(navController: NavController) {
             containerColor = RikkaTheme.colors.background,
             title = {
                 Text(
-                    text = "Calificar operacion",
+                    text = "Calificar operaci\u00f3n",
                     variant = TextVariant.Large,
                     color = RikkaTheme.colors.onBackground
                 )
@@ -199,7 +212,7 @@ fun HistoryScreen(navController: NavController) {
                     modifier = Modifier.verticalScroll(rememberScrollState())
                 ) {
                     Text(
-                        text = "Como calificaria su experiencia?",
+                        text = "\u00bfC\u00f3mo calificar\u00eda su experiencia?",
                         variant = TextVariant.P,
                         color = RikkaTheme.colors.onBackground
                     )
@@ -232,25 +245,28 @@ fun HistoryScreen(navController: NavController) {
                 Button(
                     enabled = rating > 0,
                     onClick = {
-                        if (operacionSeleccionada != null && rating > 0) {
-                            operacionesCalificadas.add(operacionSeleccionada!!)
-                            scope.launch {
-                                toastState.show(
-                                    message = "Gracias por su calificacion!",
-                                    variant = ToastVariant.Success
-                                )
-                            }
-                            mostrarDialogo = false
-                            rating = 0
-                            comentario = ""
+                        operacionSeleccionada?.let { item ->
+                            viewModel.submitRating(
+                                transactionId = item.transactionId,
+                                contraparteId = item.contraparteId,
+                                puntaje = rating,
+                                comentario = comentario
+                            )
                         }
+                        mostrarDialogo = false
+                        rating = 0
+                        comentario = ""
                     },
                     text = "Enviar"
                 )
             },
             dismissButton = {
                 Button(
-                    onClick = { mostrarDialogo = false },
+                    onClick = {
+                        mostrarDialogo = false
+                        rating = 0
+                        comentario = ""
+                    },
                     variant = ButtonVariant.Outline,
                     text = "Cancelar"
                 )
@@ -261,7 +277,7 @@ fun HistoryScreen(navController: NavController) {
 
 @Composable
 fun HistoryItemCard(
-    item: HistoryItem,
+    item: HistoryUiItem,
     isRated: Boolean,
     onCalificarClick: () -> Unit,
     onCardClick: () -> Unit = {}
@@ -322,65 +338,36 @@ fun HistoryItemCard(
                         color = Color.Gray
                     )
                     Text(
-                        text = "${item.moneda} ${item.monto}",
+                        text = "${item.moneda} ${String.format("%.2f", item.monto)}",
                         variant = TextVariant.H2,
                         color = RikkaTheme.colors.onBackground
                     )
                 }
 
-                if (item.estado == "Finalizado") {
-                    if (isRated) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            androidx.compose.material3.Icon(
-                                imageVector = Icons.Default.Check,
-                                contentDescription = null,
-                                tint = RikkaTheme.colors.primary,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = "Calificado",
-                                variant = TextVariant.Small,
-                                color = RikkaTheme.colors.primary
-                            )
-                        }
-                    } else {
-                        Button(
-                            onClick = onCalificarClick,
-                            variant = ButtonVariant.Outline,
-                            size = ButtonSize.Sm,
-                            text = "Calificar"
+                if (isRated) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        androidx.compose.material3.Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = null,
+                            tint = RikkaTheme.colors.primary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "Calificado",
+                            variant = TextVariant.Small,
+                            color = RikkaTheme.colors.primary
                         )
                     }
+                } else {
+                    Button(
+                        onClick = onCalificarClick,
+                        variant = ButtonVariant.Outline,
+                        size = ButtonSize.Sm,
+                        text = "Calificar"
+                    )
                 }
             }
         }
-    }
-}
-
-@Composable
-fun StatusBadge(estado: String) {
-    val isFinalizado = estado == "Finalizado"
-    val containerColor = if (isFinalizado) {
-        RikkaTheme.colors.primary.copy(alpha = 0.15f)
-    } else {
-        RikkaTheme.colors.muted.copy(alpha = 0.15f)
-    }
-    val contentColor = if (isFinalizado) {
-        RikkaTheme.colors.primary
-    } else {
-        RikkaTheme.colors.onBackground
-    }
-
-    Box(
-        modifier = Modifier
-            .background(color = containerColor, shape = RoundedCornerShape(4.dp))
-            .padding(horizontal = 8.dp, vertical = 4.dp)
-    ) {
-        Text(
-            text = estado,
-            variant = TextVariant.Small,
-            color = contentColor
-        )
     }
 }
