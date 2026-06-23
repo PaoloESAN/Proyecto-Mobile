@@ -195,7 +195,7 @@ fun RecoverPasswordScreen(navController: NavController) {
                                             try {
                                                 Supabase.client.auth.resetPasswordForEmail(
                                                     email = email.trim(),
-                                                    redirectUrl = "proyectomobile://recovery"
+                                                    redirectUrl = "interya://recovery"
                                                 )
                                                 toastState.show(
                                                     message = "Se envió un enlace de recuperación a tu correo",
