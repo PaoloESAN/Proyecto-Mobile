@@ -121,20 +121,24 @@ fun DisputaDetalleScreen(
     val compradorNombre = "${detalle.comprador.nombres} ${detalle.comprador.apellidos}"
     val vendedorNombre = "${detalle.vendedor.nombres} ${detalle.vendedor.apellidos}"
     
-    val currencyClean = detalle.offer.currency.uppercase()
-    val amountDouble = detalle.transaction.amount
+    val offer = detalle.offer
     val rateDouble = detalle.transaction.tipoCambioAplicado
 
-    val (usdAmount, penAmount) = if (currencyClean == "PEN") {
-        (amountDouble / rateDouble) to amountDouble
-    } else {
-        amountDouble to (amountDouble * rateDouble)
+    val monedaVendedor = detalle.metodoPagoVendedor?.tipoMoneda ?: offer.monedaTengo
+    val monedaComprador = detalle.metodoPagoComprador?.tipoMoneda ?: offer.monedaRecibo
+
+    var montoVendedor = offer.montoTengo
+    var montoComprador = offer.montoRecibo
+
+    if (monedaVendedor.equals(offer.monedaRecibo, ignoreCase = true)) {
+        montoVendedor = offer.montoRecibo
+        montoComprador = offer.montoTengo
     }
 
-    val formattedPen = "S/ ${String.format(java.util.Locale.US, "%,.2f", penAmount)}"
-    val formattedUsd = "$ ${String.format(java.util.Locale.US, "%,.2f", usdAmount)}"
+    val formattedMontoVendedor = "${String.format(java.util.Locale.US, "%,.2f", montoVendedor)} $monedaVendedor"
+    val formattedMontoComprador = "${String.format(java.util.Locale.US, "%,.2f", montoComprador)} $monedaComprador"
 
-    val tipoOperacionText = "${detalle.offer.tipoOperacion} de ${detalle.offer.currency}"
+    val tipoOperacionText = "${detalle.offer.tipoOperacion} de ${detalle.offer.monedaTengo}/${detalle.offer.monedaRecibo}"
     val comprobanteComprador = detalle.comprobantes.find { it.usuarioId == detalle.transaction.usuarioCompradorId }
     val comprobanteVendedor = detalle.comprobantes.find { it.usuarioId == detalle.transaction.usuarioVendedorId }
 
@@ -250,7 +254,7 @@ fun DisputaDetalleScreen(
                                         color = RikkaTheme.colors.onBackground.copy(alpha = 0.6f)
                                     )
                                     Text(
-                                        text = formattedUsd,
+                                        text = formattedMontoComprador,
                                         variant = TextVariant.H1,
                                         color = RikkaTheme.colors.primary
                                     )
@@ -263,7 +267,7 @@ fun DisputaDetalleScreen(
                                         color = RikkaTheme.colors.onBackground.copy(alpha = 0.6f)
                                     )
                                     Text(
-                                        text = "S/ ${String.format(java.util.Locale.US, "%.3f", rateDouble)}",
+                                        text = "${String.format(java.util.Locale.US, "%.4f", rateDouble)} ${offer.monedaRecibo}/${offer.monedaTengo}",
                                         variant = TextVariant.P,
                                         color = RikkaTheme.colors.onBackground,
                                     )
@@ -343,7 +347,7 @@ fun DisputaDetalleScreen(
                                         )
                                     }
                                     Text(
-                                        text = "Comprador (Recibe USD / Envía PEN)",
+                                        text = "Comprador (Recibe ${offer.monedaTengo} / Envía ${offer.monedaRecibo})",
                                         variant = TextVariant.Small,
                                         color = RikkaTheme.colors.primary
                                     )
@@ -365,8 +369,8 @@ fun DisputaDetalleScreen(
                                     )
                                 }
                                 HorizontalDivider(color = RikkaTheme.colors.muted.copy(alpha = 0.05f))
-                                DetailRow(label = "Debe Enviar (PEN)", value = formattedPen)
-                                DetailRow(label = "Debe Recibir (USD)", value = formattedUsd)
+                                DetailRow(label = "Debe Enviar (${offer.monedaRecibo})", value = formattedMontoVendedor)
+                                DetailRow(label = "Debe Recibir (${offer.monedaTengo})", value = formattedMontoComprador)
 
                                 HorizontalDivider(color = RikkaTheme.colors.muted.copy(alpha = 0.05f))
                                 Text(
@@ -460,7 +464,7 @@ fun DisputaDetalleScreen(
                                         )
                                     }
                                     Text(
-                                        text = "Vendedor (Envía USD / Recibe PEN)",
+                                        text = "Vendedor (Envía ${offer.monedaTengo} / Recibe ${offer.monedaRecibo})",
                                         variant = TextVariant.Small,
                                         color = RikkaTheme.colors.onBackground.copy(alpha = 0.6f)
                                     )
@@ -482,8 +486,8 @@ fun DisputaDetalleScreen(
                                     )
                                 }
                                 HorizontalDivider(color = RikkaTheme.colors.muted.copy(alpha = 0.05f))
-                                DetailRow(label = "Debe Enviar (USD)", value = formattedUsd)
-                                DetailRow(label = "Debe Recibir (PEN)", value = formattedPen)
+                                DetailRow(label = "Debe Enviar (${offer.monedaTengo})", value = formattedMontoComprador)
+                                DetailRow(label = "Debe Recibir (${offer.monedaRecibo})", value = formattedMontoVendedor)
 
                                 HorizontalDivider(color = RikkaTheme.colors.muted.copy(alpha = 0.05f))
                                 Text(

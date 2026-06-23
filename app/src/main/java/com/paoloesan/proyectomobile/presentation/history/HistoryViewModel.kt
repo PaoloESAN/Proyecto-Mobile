@@ -136,7 +136,7 @@ class HistoryViewModel : ViewModel() {
                         monto = tx.amount,
                         tipoCambio = tx.tipoCambioAplicado,
                         estado = tx.status,
-                        moneda = offer?.currency ?: "",
+                        moneda = offer?.monedaTengo ?: "",
                         contraparteNombre = contraparte?.let { "${it.nombres} ${it.apellidos}" } ?: "Usuario",
                         contraparteId = contraparteId,
                         offerId = tx.offerId

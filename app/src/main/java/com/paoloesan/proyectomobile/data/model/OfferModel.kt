@@ -9,10 +9,10 @@ data class OfferModel(
     @SerialName("usuario_creador_id") val usuarioCreadorId: Int, // FK a usuarios
     @SerialName("metodo_pago_id") val metodoPagoId: Int, // FK a metodos_pago
     @SerialName("tipo_operacion") val tipoOperacion: String, // "Compra" | "Venta"
-    @SerialName("moneda") val currency: String, // "USD" | "PEN"
-    @SerialName("monto_total") val montoTotal: Double,
-    @SerialName("monto_minimo") val montoMinimo: Double,
-    @SerialName("monto_maximo") val montoMaximo: Double,
+    @SerialName("moneda_tengo") val monedaTengo: String, // Ej: "PEN"
+    @SerialName("moneda_recibo") val monedaRecibo: String, // Ej: "USD"
+    @SerialName("monto_tengo") val montoTengo: Double,
+    @SerialName("monto_recibo") val montoRecibo: Double,
     @SerialName("tipo_cambio") val price: Double, // Tipo de cambio aplicado
     @SerialName("estado") val estado: String = "Activa", // "Activa" | "En Proceso" | "Inactiva" | "Cancelada" | "Finalizada"
     @SerialName("fecha_publicacion") val fechaPublicacion: String? = null

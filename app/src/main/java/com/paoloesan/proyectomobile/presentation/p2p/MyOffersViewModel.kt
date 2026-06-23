@@ -19,11 +19,11 @@ import kotlinx.coroutines.launch
 data class MyOfferUiItem(
     val offerId: Int,
     val type: String,
-    val currency: String,
-    val amount: Double,
+    val monedaTengo: String,
+    val monedaRecibo: String,
+    val montoTengo: Double,
+    val montoRecibo: Double,
     val rate: Double,
-    val minLimit: Double,
-    val maxLimit: Double,
     val paymentMethod: String,
     val status: String,
     val activeTransactionId: Int? = null
@@ -158,11 +158,11 @@ class MyOffersViewModel : ViewModel() {
                     MyOfferUiItem(
                         offerId = offer.offerId ?: -1,
                         type = offer.tipoOperacion,
-                        currency = offer.currency,
-                        amount = offer.montoTotal,
+                        monedaTengo = offer.monedaTengo,
+                        monedaRecibo = offer.monedaRecibo,
+                        montoTengo = offer.montoTengo,
+                        montoRecibo = offer.montoRecibo,
                         rate = offer.price,
-                        minLimit = offer.montoMinimo,
-                        maxLimit = offer.montoMaximo,
                         paymentMethod = metodo?.banco ?: "",
                         status = offer.estado,
                         activeTransactionId = activeTx?.transactionId
@@ -176,7 +176,7 @@ class MyOffersViewModel : ViewModel() {
                         offerId = tx.offerId,
                         buyerName = userNames[tx.usuarioCompradorId] ?: "Usuario ${tx.usuarioCompradorId}",
                         type = offer?.tipoOperacion ?: "",
-                        currency = offer?.currency ?: "",
+                        currency = offer?.monedaTengo ?: "",
                         amount = tx.amount,
                         rate = tx.tipoCambioAplicado,
                         status = tx.status
@@ -191,7 +191,7 @@ class MyOffersViewModel : ViewModel() {
                             userNames[offer.usuarioCreadorId] ?: "Usuario ${offer.usuarioCreadorId}"
                         } else "Desconocido",
                         type = offer?.tipoOperacion ?: "",
-                        currency = offer?.currency ?: "",
+                        currency = offer?.monedaTengo ?: "",
                         amount = tx.amount,
                         rate = tx.tipoCambioAplicado,
                         status = tx.status
@@ -214,13 +214,28 @@ class MyOffersViewModel : ViewModel() {
         }
     }
 
-    fun editOffer(offerId: Int, montoTotal: Double, montoMinimo: Double, montoMaximo: Double) {
+    fun editOffer(offerId: Int, cantidad: Double, monedaTengo: String, monedaRecibo: String) {
+        fun obtenerTasaBase(moneda: String): Double {
+            return when (moneda.uppercase()) {
+                "USD" -> 1.0
+                "PEN" -> 3.80
+                "MXN" -> 18.00
+                "EUR" -> 0.92
+                "GBP" -> 0.78
+                "JPY" -> 155.00
+                else -> 1.0
+            }
+        }
+        val rate = obtenerTasaBase(monedaRecibo) / obtenerTasaBase(monedaTengo)
+        val montoTengo = cantidad
+        val montoRecibo = cantidad * rate
+
         viewModelScope.launch {
             try {
                 Supabase.client.postgrest["ofertas"].update({
-                    set("monto_total", montoTotal)
-                    set("monto_minimo", montoMinimo)
-                    set("monto_maximo", montoMaximo)
+                    set("monto_tengo", montoTengo)
+                    set("monto_recibo", montoRecibo)
+                    set("tipo_cambio", rate)
                 }) {
                     filter { eq("oferta_id", offerId) }
                 }

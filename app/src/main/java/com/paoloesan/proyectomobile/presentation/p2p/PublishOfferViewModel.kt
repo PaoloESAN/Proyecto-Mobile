@@ -85,10 +85,10 @@ class PublishOfferViewModel : ViewModel() {
     fun publishOffer(
         metodoPagoId: Int,
         tipoOperacion: String,
-        moneda: String,
-        montoTotal: Double,
-        montoMinimo: Double,
-        montoMaximo: Double,
+        monedaTengo: String,
+        monedaRecibo: String,
+        montoTengo: Double,
+        montoRecibo: Double,
         tipoCambio: Double
     ) {
         val userId = currentUserId
@@ -104,10 +104,10 @@ class PublishOfferViewModel : ViewModel() {
                     usuarioCreadorId = userId,
                     metodoPagoId = metodoPagoId,
                     tipoOperacion = tipoOperacion,
-                    currency = moneda,
-                    montoTotal = montoTotal,
-                    montoMinimo = montoMinimo,
-                    montoMaximo = montoMaximo,
+                    monedaTengo = monedaTengo,
+                    monedaRecibo = monedaRecibo,
+                    montoTengo = montoTengo,
+                    montoRecibo = montoRecibo,
                     price = tipoCambio,
                     estado = "Activa"
                 )

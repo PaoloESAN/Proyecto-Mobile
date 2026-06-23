@@ -6,10 +6,11 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class MatchParams(
     @SerialName("p_usuario_id") val usuarioId: Int,
-    @SerialName("p_moneda") val moneda: String,
-    @SerialName("p_tipo_operacion") val tipoOperacion: String,
-    @SerialName("p_monto") val monto: Double,
-    @SerialName("p_tipo_cambio") val tipoCambio: Double
+    @SerialName("p_moneda_tengo") val monedaTengo: String,
+    @SerialName("p_moneda_recibo") val monedaRecibo: String,
+    @SerialName("p_monto_tengo") val montoTengo: Double,
+    @SerialName("p_monto_recibo") val montoRecibo: Double,
+    @SerialName("p_tipo_operacion") val tipoOperacion: String
 )
 
 @Serializable
@@ -17,10 +18,10 @@ data class OfertaMatch(
     @SerialName("oferta_id") val ofertaId: Int,
     @SerialName("usuario_creador_id") val usuarioCreadorId: Int,
     @SerialName("tipo_operacion") val tipoOperacion: String,
-    val moneda: String,
-    @SerialName("monto_total") val montoTotal: Double,
-    @SerialName("monto_minimo") val montoMinimo: Double,
-    @SerialName("monto_maximo") val montoMaximo: Double,
+    @SerialName("moneda_tengo") val monedaTengo: String,
+    @SerialName("moneda_recibo") val monedaRecibo: String,
+    @SerialName("monto_tengo") val montoTengo: Double,
+    @SerialName("monto_recibo") val montoRecibo: Double,
     @SerialName("tipo_cambio") val tipoCambio: Double,
     val estado: String,
     @SerialName("fecha_publicacion") val fechaPublicacion: String,

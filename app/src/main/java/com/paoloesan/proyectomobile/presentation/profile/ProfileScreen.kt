@@ -535,17 +535,16 @@ private fun AddBankAccountSheet(
     onCancel: () -> Unit,
     onConfirm: (BankAccount) -> Unit
 ) {
-    val bancos = listOf(
-        SelectOption("BCP", "BCP"),
-        SelectOption("Interbank", "Interbank"),
-        SelectOption("Yape", "Yape")
-    )
     val monedas = listOf(
+        SelectOption("USD", "USD"),
+        SelectOption("EUR", "EUR"),
+        SelectOption("GBP", "GBP"),
+        SelectOption("MXN", "MXN"),
         SelectOption("PEN", "PEN"),
-        SelectOption("USD", "USD")
+        SelectOption("JPY", "JPY")
     )
 
-    var bancoSeleccionado by remember { mutableStateOf(bancos.first().value) }
+    var banco by remember { mutableStateOf("") }
     var monedaSeleccionada by remember { mutableStateOf(monedas.first().value) }
 
     var numeroCuenta by remember { mutableStateOf("") }
@@ -572,17 +571,16 @@ private fun AddBankAccountSheet(
             color = RikkaTheme.colors.onBackground
         )
 
-        // Banco Dropdown
+        // Banco Input
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Label(text = "Banco")
-            Select(
-                selectedValue = bancoSeleccionado,
-                onValueChange = { bancoSeleccionado = it },
-                options = bancos,
-                placeholder = "Seleccione un banco...",
-                animation = PopupAnimation.Fade,
-                maxHeight = 300.dp,
-                modifier = Modifier.fillMaxWidth()
+            Input(
+                value = banco,
+                onValueChange = { banco = it },
+                placeholder = "Ej: BCP, Interbank, Yape...",
+                leadingIcon = Icons.Default.AccountBalance,
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
             )
         }
 
@@ -656,7 +654,7 @@ private fun AddBankAccountSheet(
             Button(
                 onClick = {
                     when {
-                        bancoSeleccionado.isBlank() -> errorMessage = "Seleccione un banco"
+                        banco.isBlank() -> errorMessage = "Ingrese el nombre del banco"
                         numeroCuenta.isBlank() -> errorMessage = "Ingrese el numero de cuenta"
                         numeroCuenta.length < 10 -> errorMessage =
                             "El numero de cuenta debe tener al menos 10 digitos"
@@ -667,7 +665,7 @@ private fun AddBankAccountSheet(
                             errorMessage = null
                             onConfirm(
                                 BankAccount(
-                                    banco = bancoSeleccionado,
+                                    banco = banco,
                                     numeroCuenta = numeroCuenta,
                                     titular = titular,
                                     moneda = monedaSeleccionada

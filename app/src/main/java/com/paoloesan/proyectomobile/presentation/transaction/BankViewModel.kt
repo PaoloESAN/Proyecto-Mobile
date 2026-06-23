@@ -46,7 +46,11 @@ data class BankUiState(
     val titularName: String = "",
     val currency: String = "",
     val transactionAmount: Double = 0.0,
-    val exchangeRate: Double = 0.0
+    val exchangeRate: Double = 0.0,
+    val monedaTengo: String = "USD",
+    val monedaRecibo: String = "PEN",
+    val montoTengo: Double = 0.0,
+    val montoRecibo: Double = 0.0
 )
 
 class BankViewModel : ViewModel() {
@@ -197,6 +201,10 @@ class BankViewModel : ViewModel() {
                         currency = pCurrency,
                         transactionAmount = tx.amount,
                         exchangeRate = tx.tipoCambioAplicado,
+                        monedaTengo = offer.monedaTengo,
+                        monedaRecibo = offer.monedaRecibo,
+                        montoTengo = offer.montoTengo,
+                        montoRecibo = offer.montoRecibo,
                         isLoading = false
                     )
                 }

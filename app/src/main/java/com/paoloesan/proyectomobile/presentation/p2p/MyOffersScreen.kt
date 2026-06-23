@@ -29,6 +29,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -76,9 +77,13 @@ fun MyOffersScreen(navController: NavController) {
     var selectedOffer by remember { mutableStateOf<MyOfferUiItem?>(null) }
 
     var editAmount by remember { mutableStateOf("") }
-    var editRate by remember { mutableStateOf("") }
-    var editMinLimit by remember { mutableStateOf("") }
-    var editMaxLimit by remember { mutableStateOf("") }
+    val editMontoReciboCalculado by remember(editAmount, selectedOffer) {
+        derivedStateOf {
+            val rate = selectedOffer?.rate ?: 1.0
+            val amt = editAmount.toDoubleOrNull() ?: 0.0
+            amt * rate
+        }
+    }
 
     val toastState = rememberToastHostState()
     val scope = rememberCoroutineScope()
@@ -136,6 +141,7 @@ fun MyOffersScreen(navController: NavController) {
     }
 
     if (showEditDialog && selectedOffer != null) {
+        val currentOffer = selectedOffer!!
         AlertDialog(
             onDismissRequest = { showEditDialog = false },
             containerColor = RikkaTheme.colors.background,
@@ -152,7 +158,7 @@ fun MyOffersScreen(navController: NavController) {
                     modifier = Modifier.verticalScroll(rememberScrollState())
                 ) {
                     Text(
-                        text = "Monto Total",
+                        text = "Cantidad a Cambiar (${currentOffer.monedaTengo})",
                         variant = TextVariant.Small,
                         color = RikkaTheme.colors.onBackground
                     )
@@ -161,7 +167,7 @@ fun MyOffersScreen(navController: NavController) {
                         onValueChange = {
                             if (it.all { c -> c.isDigit() || c == '.' }) editAmount = it
                         },
-                        placeholder = "Monto total",
+                        placeholder = "Cantidad",
                         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
@@ -173,44 +179,24 @@ fun MyOffersScreen(navController: NavController) {
                         color = RikkaTheme.colors.onBackground
                     )
                     Input(
-                        value = editRate,
-                        onValueChange = {
-                            if (it.all { c -> c.isDigit() || c == '.' }) editRate = it
-                        },
+                        value = String.format(java.util.Locale.US, "%.4f", currentOffer.rate),
+                        onValueChange = {},
+                        enabled = false,
                         placeholder = "Tipo de cambio",
-                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
                     )
 
                     Text(
-                        text = "L\u00edmite M\u00ednimo",
+                        text = "Recibes (Estimado en ${currentOffer.monedaRecibo})",
                         variant = TextVariant.Small,
                         color = RikkaTheme.colors.onBackground
                     )
                     Input(
-                        value = editMinLimit,
-                        onValueChange = {
-                            if (it.all { c -> c.isDigit() || c == '.' }) editMinLimit = it
-                        },
-                        placeholder = "L\u00edmite m\u00ednimo",
-                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
-                    )
-
-                    Text(
-                        text = "L\u00edmite M\u00e1ximo",
-                        variant = TextVariant.Small,
-                        color = RikkaTheme.colors.onBackground
-                    )
-                    Input(
-                        value = editMaxLimit,
-                        onValueChange = {
-                            if (it.all { c -> c.isDigit() || c == '.' }) editMaxLimit = it
-                        },
-                        placeholder = "L\u00edmite m\u00e1ximo",
-                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = KeyboardType.Number),
+                        value = String.format(java.util.Locale.US, "%,.2f", editMontoReciboCalculado),
+                        onValueChange = {},
+                        enabled = false,
+                        placeholder = "Recibes",
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
                     )
@@ -230,24 +216,21 @@ fun MyOffersScreen(navController: NavController) {
             confirmButton = {
                 Button(
                     onClick = {
-                        val minVal = editMinLimit.toDoubleOrNull()
-                        val maxVal = editMaxLimit.toDoubleOrNull()
-                        if (minVal != null && maxVal != null && minVal > maxVal) {
+                        val cantVal = editAmount.toDoubleOrNull() ?: 0.0
+                        if (cantVal <= 0.0) {
                             scope.launch {
                                 toastState.show(
-                                    message = "El monto m\u00ednimo no puede ser mayor al m\u00e1ximo",
+                                    message = "La cantidad debe ser mayor a 0",
                                     variant = ToastVariant.Destructive
                                 )
                             }
                         } else {
-                            selectedOffer?.let {
-                                viewModel.editOffer(
-                                    offerId = it.offerId,
-                                    montoTotal = editAmount.toDoubleOrNull() ?: it.amount,
-                                    montoMinimo = minVal ?: it.minLimit,
-                                    montoMaximo = maxVal ?: it.maxLimit
-                                )
-                            }
+                            viewModel.editOffer(
+                                offerId = currentOffer.offerId,
+                                cantidad = cantVal,
+                                monedaTengo = currentOffer.monedaTengo,
+                                monedaRecibo = currentOffer.monedaRecibo
+                            )
                             showEditDialog = false
                         }
                     },
@@ -474,10 +457,7 @@ fun MyOffersScreen(navController: NavController) {
                                                         }
                                                     } else if (offer.status == "Activa") {
                                                         selectedOffer = offer
-                                                        editAmount = offer.amount.toString()
-                                                        editRate = offer.rate.toString()
-                                                        editMinLimit = offer.minLimit.toString()
-                                                        editMaxLimit = offer.maxLimit.toString()
+                                                        editAmount = offer.montoTengo.toString()
                                                         showEditDialog = true
                                                     }
                                                 },
@@ -492,7 +472,7 @@ fun MyOffersScreen(navController: NavController) {
                                                     ) {
                                                         val isCompra = offer.type == "Compra"
                                                         Text(
-                                                            text = "${offer.type} - ${offer.currency}",
+                                                            text = "${offer.type} - ${offer.monedaTengo}/${offer.monedaRecibo}",
                                                             variant = TextVariant.Large,
                                                             color = if (isCompra) RikkaTheme.colors.primary else RikkaTheme.colors.destructive
                                                         )
@@ -526,18 +506,19 @@ fun MyOffersScreen(navController: NavController) {
                                                     Spacer(modifier = Modifier.height(6.dp))
 
                                                     Text(
-                                                        text = "Monto: ${offer.currency} ${String.format("%.2f", offer.amount)}",
+                                                        text = "Tengo: ${String.format(java.util.Locale.US, "%,.2f", offer.montoTengo)} ${offer.monedaTengo}",
                                                         variant = TextVariant.Large,
                                                         color = RikkaTheme.colors.onBackground
                                                     )
                                                     Spacer(modifier = Modifier.height(4.dp))
                                                     Text(
-                                                        text = "T.C.: ${String.format("%.2f", offer.rate)}  |  M\u00e9todo: ${offer.paymentMethod}",
-                                                        variant = TextVariant.Small,
-                                                        color = Color.Gray
+                                                        text = "Recibo: ${String.format(java.util.Locale.US, "%,.2f", offer.montoRecibo)} ${offer.monedaRecibo}",
+                                                        variant = TextVariant.Large,
+                                                        color = RikkaTheme.colors.primary
                                                     )
+                                                    Spacer(modifier = Modifier.height(4.dp))
                                                     Text(
-                                                        text = "L\u00edmites: Min ${String.format("%.2f", offer.minLimit)} / Max ${String.format("%.2f", offer.maxLimit)}",
+                                                        text = "T.C.: ${String.format(java.util.Locale.US, "%.4f", offer.rate)}  |  Método: ${offer.paymentMethod}",
                                                         variant = TextVariant.Small,
                                                         color = Color.Gray
                                                     )

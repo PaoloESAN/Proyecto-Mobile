@@ -121,10 +121,11 @@ class MatchViewModel : ViewModel() {
             try {
                 val params = MatchParams(
                     usuarioId = userId,
-                    moneda = offer.currency,
-                    tipoOperacion = offer.tipoOperacion,
-                    monto = offer.montoTotal,
-                    tipoCambio = offer.price
+                    monedaTengo = offer.monedaTengo,
+                    monedaRecibo = offer.monedaRecibo,
+                    montoTengo = offer.montoTengo,
+                    montoRecibo = offer.montoRecibo,
+                    tipoOperacion = offer.tipoOperacion
                 )
 
                 val result = Supabase.client.postgrest.rpc(

@@ -134,19 +134,12 @@ class OfferDetailViewModel : ViewModel() {
             _uiState.update { it.copy(errorMessage = "Selecciona un método de pago") }
             return
         }
-        val amount = state.amountInput.toDoubleOrNull() ?: run {
-            _uiState.update { it.copy(errorMessage = "Monto inválido") }
-            return
-        }
 
         _uiState.update { it.copy(isCreatingTransaction = true, errorMessage = null) }
 
         viewModelScope.launch {
             try {
                 // Determinar vendedor/comprador según tipo de operación de la oferta
-                // La oferta tiene un "tipo_operacion" (Compra/Venta desde la perspectiva del creador)
-                // Si el creador pone "Venta", vende USD → el que acepta es el comprador
-                // Si el creador pone "Compra", compra USD → el que acepta es el vendedor
                 val (compradorId, vendedorId) = if (offer.tipoOperacion == "Venta") {
                     myUserId to offer.usuarioCreadorId
                 } else {
@@ -158,7 +151,7 @@ class OfferDetailViewModel : ViewModel() {
                     usuarioCompradorId = compradorId,
                     usuarioVendedorId = vendedorId,
                     metodoPagoCompradorId = selectedMethodId,
-                    amount = amount,
+                    amount = offer.montoTengo,
                     tipoCambioAplicado = offer.price,
                     status = "Pendiente"
                 )

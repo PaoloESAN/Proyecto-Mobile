@@ -189,7 +189,7 @@ fun MatchScreen(
                                 Spacer(modifier = Modifier.height(4.dp))
                                 uiState.selectedOffer?.let { offer ->
                                     Text(
-                                        text = "${offer.tipoOperacion} - ${offer.currency} ${offer.montoTotal} (T.C. ${offer.price})",
+                                        text = "${offer.tipoOperacion} - ${offer.montoTengo} ${offer.monedaTengo} ⇄ ${offer.montoRecibo} ${offer.monedaRecibo} (T.C. ${offer.price})",
                                         variant = TextVariant.P,
                                         color = RikkaTheme.colors.onBackground
                                     )
@@ -304,11 +304,18 @@ fun MatchScreen(
                                             horizontalArrangement = Arrangement.SpaceBetween,
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
-                                            Text(
-                                                text = "${match.moneda} ${match.montoTotal}",
-                                                variant = TextVariant.H3,
-                                                color = RikkaTheme.colors.onBackground
-                                            )
+                                            Column {
+                                                Text(
+                                                    text = "Tengo: ${String.format(java.util.Locale.US, "%,.2f", match.montoTengo)} ${match.monedaTengo}",
+                                                    variant = TextVariant.P,
+                                                    color = RikkaTheme.colors.onBackground
+                                                )
+                                                Text(
+                                                    text = "Recibo: ${String.format(java.util.Locale.US, "%,.2f", match.montoRecibo)} ${match.monedaRecibo}",
+                                                    variant = TextVariant.P,
+                                                    color = RikkaTheme.colors.primary
+                                                )
+                                            }
                                             Row(verticalAlignment = Alignment.CenterVertically) {
                                                 androidx.compose.material3.Icon(
                                                     imageVector = Icons.Default.AttachMoney,
@@ -318,7 +325,7 @@ fun MatchScreen(
                                                 )
                                                 Spacer(modifier = Modifier.width(4.dp))
                                                 Text(
-                                                    text = "T.C.: ${match.tipoCambio}",
+                                                    text = "T.C.: ${String.format(java.util.Locale.US, "%.4f", match.tipoCambio)}",
                                                     variant = TextVariant.P,
                                                     color = RikkaTheme.colors.onBackground
                                                 )
@@ -331,7 +338,7 @@ fun MatchScreen(
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
                                             Text(
-                                                text = "Límites: Min ${match.montoMinimo.toInt()} / Max ${match.montoMaximo.toInt()}",
+                                                text = "${match.monedaTengo}/${match.monedaRecibo}",
                                                 variant = TextVariant.Small,
                                                 color = Color.Gray
                                             )
@@ -411,14 +418,19 @@ fun MatchScreen(
                                     ) {
                                         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                             Text(
-                                                text = "${offer.tipoOperacion} - ${offer.currency}",
+                                                text = "${offer.tipoOperacion} - ${offer.monedaTengo}",
                                                 variant = TextVariant.Small,
                                                 color = if (offer.tipoOperacion == "Compra") RikkaTheme.colors.primary else RikkaTheme.colors.destructive
                                             )
                                             Text(
-                                                text = "Monto: ${offer.currency} ${offer.montoTotal}",
+                                                text = "Tengo: ${offer.montoTengo} ${offer.monedaTengo}",
                                                 variant = TextVariant.P,
                                                 color = RikkaTheme.colors.onBackground
+                                            )
+                                            Text(
+                                                text = "Recibo: ${offer.montoRecibo} ${offer.monedaRecibo}",
+                                                variant = TextVariant.Small,
+                                                color = Color.Gray
                                             )
                                             Text(
                                                 text = "T.C.: ${offer.price}",

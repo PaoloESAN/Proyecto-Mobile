@@ -77,25 +77,40 @@ fun PublishOfferScreen(
     val publishSheetState = rememberModalBottomSheetState()
 
     var type by remember { mutableStateOf("Compra") }
-    var currency by remember { mutableStateOf("USD") }
     var amount by remember { mutableStateOf("") }
-    var rate by remember { mutableStateOf("") }
-    var minAmount by remember { mutableStateOf("") }
-    var maxAmount by remember { mutableStateOf("") }
     var paymentMethod by remember { mutableStateOf("") }
+    var monedaTengo by remember { mutableStateOf("USD") }
+    var monedaRecibo by remember { mutableStateOf("PEN") }
 
     val toastState = rememberToastHostState()
     val scope = rememberCoroutineScope()
     val focusManager = LocalFocusManager.current
 
-    val currencyOptions = listOf(
-        SelectOption("USD", "USD"),
-        SelectOption("PEN", "PEN")
-    )
+    val todasLasMonedas = listOf("USD", "PEN", "MXN", "EUR", "GBP", "JPY")
 
-    val paymentOptions = remember(uiState.paymentMethods, currency) {
+    val monedaTengoOptions = remember {
+        todasLasMonedas.map { SelectOption(it, it) }
+    }
+
+    val monedaReciboOptions = remember(monedaTengo) {
+        todasLasMonedas
+            .filter { !it.equals(monedaTengo, ignoreCase = true) }
+            .map { SelectOption(it, it) }
+    }
+
+    LaunchedEffect(monedaTengo) {
+        val options = todasLasMonedas.filter { !it.equals(monedaTengo, ignoreCase = true) }
+        if (options.isNotEmpty()) {
+            if (monedaRecibo.equals(monedaTengo, ignoreCase = true) || !options.contains(monedaRecibo)) {
+                monedaRecibo = options.first()
+            }
+        }
+    }
+
+    // Filter payment methods based on monedaTengo
+    val paymentOptions = remember(uiState.paymentMethods, monedaTengo) {
         uiState.paymentMethods
-            .filter { it.tipoMoneda.equals(currency, ignoreCase = true) }
+            .filter { it.tipoMoneda.equals(monedaTengo, ignoreCase = true) }
             .map {
                 SelectOption(
                     value = it.metodoPagoId.toString(),
@@ -104,12 +119,69 @@ fun PublishOfferScreen(
             }
     }
 
-    LaunchedEffect(uiState.paymentMethods, currency) {
-        val filtered = uiState.paymentMethods.filter { it.tipoMoneda.equals(currency, ignoreCase = true) }
+    LaunchedEffect(monedaTengo, uiState.paymentMethods) {
+        val filtered = uiState.paymentMethods.filter { it.tipoMoneda.equals(monedaTengo, ignoreCase = true) }
         if (filtered.isNotEmpty()) {
-            paymentMethod = filtered.first().metodoPagoId.toString()
+            if (paymentMethod.isBlank() || !filtered.any { it.metodoPagoId.toString() == paymentMethod }) {
+                paymentMethod = filtered.first().metodoPagoId.toString()
+            }
         } else {
             paymentMethod = ""
+        }
+    }
+
+    // Funciones para calcular el tipo de cambio dinámico
+    fun obtenerTasaBase(moneda: String): Double {
+        return when (moneda.uppercase()) {
+            "USD" -> 1.0
+            "PEN" -> 3.80
+            "MXN" -> 18.00
+            "EUR" -> 0.92
+            "GBP" -> 0.78
+            "JPY" -> 155.00
+            else -> 1.0
+        }
+    }
+
+    fun obtenerTipoCambio(mTengo: String, mRecibo: String): Double {
+        val tasaTengo = obtenerTasaBase(mTengo)
+        val tasaRecibo = obtenerTasaBase(mRecibo)
+        return tasaRecibo / tasaTengo
+    }
+
+    val tipoCambioCalculado by remember(monedaTengo, monedaRecibo) {
+        derivedStateOf { obtenerTipoCambio(monedaTengo, monedaRecibo) }
+    }
+
+    val montoTengoCalculado by remember(amount, type, tipoCambioCalculado) {
+        derivedStateOf {
+            val amt = amount.toDoubleOrNull() ?: 0.0
+            if (type == "Compra") {
+                if (tipoCambioCalculado > 0.0) amt / tipoCambioCalculado else 0.0
+            } else {
+                amt
+            }
+        }
+    }
+
+    val montoReciboCalculado by remember(amount, type, tipoCambioCalculado) {
+        derivedStateOf {
+            val amt = amount.toDoubleOrNull() ?: 0.0
+            if (type == "Compra") {
+                amt
+            } else {
+                amt * tipoCambioCalculado
+            }
+        }
+    }
+
+    val cantidadLabel by remember(type, monedaTengo, monedaRecibo) {
+        derivedStateOf {
+            if (type == "Compra") {
+                "Cantidad que quieres recibir ($monedaRecibo)"
+            } else {
+                "Cantidad que tienes para vender ($monedaTengo)"
+            }
         }
     }
 
@@ -123,9 +195,6 @@ fun PublishOfferScreen(
                 )
             }
             amount = ""
-            rate = ""
-            minAmount = ""
-            maxAmount = ""
             paymentMethod = ""
             navController.popBackStack()
         }
@@ -143,41 +212,16 @@ fun PublishOfferScreen(
         }
     }
 
-    // Validaciones de publicación
-    val isMinMaxError by remember {
-        derivedStateOf {
-            val min = minAmount.toDoubleOrNull()
-            val max = maxAmount.toDoubleOrNull()
-            minAmount.isNotBlank() && maxAmount.isNotBlank() &&
-                    min != null && max != null && min > max
-        }
-    }
-
-    val isMinZero by remember {
-        derivedStateOf {
-            minAmount.isNotBlank() && (minAmount.toDoubleOrNull() ?: -1.0) <= 0
-        }
-    }
-
-    val isMaxZero by remember {
-        derivedStateOf {
-            maxAmount.isNotBlank() && (maxAmount.toDoubleOrNull() ?: -1.0) <= 0
-        }
-    }
-
     val canPublish by remember {
         derivedStateOf {
-            val min = minAmount.toDoubleOrNull()
-            val max = maxAmount.toDoubleOrNull()
+            val amt = amount.toDoubleOrNull() ?: 0.0
             !uiState.isLoading &&
-                    minAmount.isNotBlank() && maxAmount.isNotBlank() &&
-                    amount.isNotBlank() && rate.isNotBlank() &&
-                    (amount.toDoubleOrNull() ?: 0.0) > 0 &&
-                    (rate.toDoubleOrNull() ?: 0.0) > 0 &&
-                    min != null && min > 0 &&
-                    max != null && max > 0 &&
-                    !isMinMaxError &&
-                    paymentMethod.isNotBlank()
+                    amount.isNotBlank() &&
+                    amt > 0.0 &&
+                    paymentMethod.isNotBlank() &&
+                    monedaTengo.isNotBlank() &&
+                    monedaRecibo.isNotBlank() &&
+                    !monedaTengo.equals(monedaRecibo, ignoreCase = true)
         }
     }
 
@@ -249,17 +293,13 @@ fun PublishOfferScreen(
                     )
                 }
 
-                item {
-                    PartialOffersInfoCard()
-                }
-
-                // Selector Compra/Venta
+                // 1. Selector Compra/Venta
                 item {
                     Column(
                         modifier = Modifier.fillMaxWidth(),
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        Label(text = "Tipo de transacción")
+                        Label(text = "¿Qué deseas hacer?")
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -268,30 +308,30 @@ fun PublishOfferScreen(
                                 onClick = { type = "Compra" },
                                 variant = if (type == "Compra") ButtonVariant.Default else ButtonVariant.Outline,
                                 modifier = Modifier.weight(1f),
-                                text = "Compra"
+                                text = "Comprar"
                             )
                             Button(
                                 onClick = { type = "Venta" },
                                 variant = if (type == "Venta") ButtonVariant.Default else ButtonVariant.Outline,
                                 modifier = Modifier.weight(1f),
-                                text = "Venta"
+                                text = "Vender"
                             )
                         }
                     }
                 }
 
-                // Moneda Select
+                // 2. Moneda que tienes
                 item {
                     Column(
                         modifier = Modifier.fillMaxWidth(),
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        Label(text = "Moneda")
+                        Label(text = "Moneda que tienes")
                         Select(
-                            selectedValue = currency,
-                            onValueChange = { currency = it },
-                            options = currencyOptions,
-                            placeholder = "Seleccione moneda...",
+                            selectedValue = monedaTengo,
+                            onValueChange = { monedaTengo = it },
+                            options = monedaTengoOptions,
+                            placeholder = "Selecciona",
                             animation = PopupAnimation.Fade,
                             maxHeight = 300.dp,
                             modifier = Modifier.fillMaxWidth()
@@ -299,44 +339,40 @@ fun PublishOfferScreen(
                     }
                 }
 
-                // Monto Input
+                // 3. Moneda que quieres recibir
                 item {
                     Column(
                         modifier = Modifier.fillMaxWidth(),
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        Label(text = "Monto")
-                        Input(
-                            value = amount,
-                            onValueChange = { input ->
-                                if (input.all { it.isDigit() }) {
-                                    amount = input
-                                }
-                            },
-                            placeholder = "Ingrese monto",
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            leadingIcon = Icons.Default.AttachMoney,
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true
+                        Label(text = "Moneda que quieres recibir")
+                        Select(
+                            selectedValue = monedaRecibo,
+                            onValueChange = { monedaRecibo = it },
+                            options = monedaReciboOptions,
+                            placeholder = "Selecciona",
+                            animation = PopupAnimation.Fade,
+                            maxHeight = 300.dp,
+                            modifier = Modifier.fillMaxWidth()
                         )
                     }
                 }
 
-                // Tipo de Cambio Input
+                // 4. Cantidad Input
                 item {
                     Column(
                         modifier = Modifier.fillMaxWidth(),
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        Label(text = "Tipo de cambio")
+                        Label(text = cantidadLabel)
                         Input(
-                            value = rate,
+                            value = amount,
                             onValueChange = { input ->
                                 if (input.all { it.isDigit() || it == '.' }) {
-                                    rate = input
+                                    amount = input
                                 }
                             },
-                            placeholder = "3.75",
+                            placeholder = "Ej: 1000",
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                             leadingIcon = Icons.Default.AttachMoney,
                             modifier = Modifier.fillMaxWidth(),
@@ -345,35 +381,26 @@ fun PublishOfferScreen(
                     }
                 }
 
-                // Monto Mínimo Input
+                // 5. Método de Pago (cuenta en monedaTengo)
                 item {
                     Column(
                         modifier = Modifier.fillMaxWidth(),
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        Label(text = "Monto mínimo")
-                        Input(
-                            value = minAmount,
-                            onValueChange = { input ->
-                                if (input.all { it.isDigit() }) {
-                                    minAmount = input
-                                }
-                            },
-                            placeholder = "Mínimo",
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            leadingIcon = Icons.Default.AttachMoney,
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true
-                        )
-                        if (isMinMaxError) {
-                            Text(
-                                text = "El monto mínimo no puede ser mayor al máximo",
-                                variant = TextVariant.Small,
-                                color = RikkaTheme.colors.destructive
+                        Label(text = "Tu cuenta bancaria (de la moneda que tienes)")
+                        if (paymentOptions.isNotEmpty()) {
+                            Select(
+                                selectedValue = paymentMethod,
+                                onValueChange = { paymentMethod = it },
+                                options = paymentOptions,
+                                placeholder = "Elige una cuenta...",
+                                animation = PopupAnimation.Fade,
+                                maxHeight = 300.dp,
+                                modifier = Modifier.fillMaxWidth()
                             )
-                        } else if (isMinZero) {
+                        } else {
                             Text(
-                                text = "El monto debe ser mayor a 0",
+                                text = "⚠️ No tienes cuentas registradas en $monedaTengo. Agrega una en tu perfil.",
                                 variant = TextVariant.Small,
                                 color = RikkaTheme.colors.destructive
                             )
@@ -381,81 +408,64 @@ fun PublishOfferScreen(
                     }
                 }
 
-                // Monto Máximo Input
+                // 6. Vista previa de conversión
                 item {
                     Column(
                         modifier = Modifier.fillMaxWidth(),
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        Label(text = "Monto máximo")
-                        Input(
-                            value = maxAmount,
-                            onValueChange = { input ->
-                                if (input.all { it.isDigit() }) {
-                                    maxAmount = input
+                        Label(text = "Vista previa de conversión")
+                        Card(modifier = Modifier.fillMaxWidth()) {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                if (amount.isBlank() || amount.toDoubleOrNull() == null || amount.toDoubleOrNull() == 0.0) {
+                                    Text(
+                                        text = "Completa monedas y cantidad para ver el cálculo automático.",
+                                        variant = TextVariant.Small,
+                                        color = Color.Gray
+                                    )
+                                } else {
+                                    Text(
+                                        text = "Tipo de cambio actual: ${String.format(java.util.Locale.US, "%.6f", tipoCambioCalculado)}",
+                                        variant = TextVariant.Small,
+                                        color = Color.Gray
+                                    )
+                                    Text(
+                                        text = "Tú entregas: ${String.format(java.util.Locale.US, "%,.2f", montoTengoCalculado)} $monedaTengo",
+                                        variant = TextVariant.P,
+                                        color = RikkaTheme.colors.onBackground
+                                    )
+                                    Text(
+                                        text = "Tú recibes: ${String.format(java.util.Locale.US, "%,.2f", montoReciboCalculado)} $monedaRecibo",
+                                        variant = TextVariant.P,
+                                        color = RikkaTheme.colors.primary
+                                    )
                                 }
-                            },
-                            placeholder = "Máximo",
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            leadingIcon = Icons.Default.AttachMoney,
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true
-                        )
-                        if (isMaxZero && !isMinMaxError) {
-                            Text(
-                                text = "El monto debe ser mayor a 0",
-                                variant = TextVariant.Small,
-                                color = RikkaTheme.colors.destructive
-                            )
+                            }
                         }
                     }
                 }
 
-                // Método de Pago Select
-                item {
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Label(text = "Método de Pago")
-                        Select(
-                            selectedValue = paymentMethod,
-                            onValueChange = { paymentMethod = it },
-                            options = paymentOptions,
-                            placeholder = "Seleccione método de pago...",
-                            animation = PopupAnimation.Fade,
-                            maxHeight = 300.dp,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-                }
-
-                // Botón Publicar
+                // 7. Botón Publicar
                 item {
                     Spacer(modifier = Modifier.height(8.dp))
                     Button(
                         enabled = canPublish,
                         onClick = {
-                            val amt = amount.toDoubleOrNull() ?: 0.0
-                            val rt = rate.toDoubleOrNull() ?: 0.0
-                            val min = minAmount.toDoubleOrNull() ?: 0.0
-                            val max = maxAmount.toDoubleOrNull() ?: 0.0
                             val selectedMethodId = paymentMethod.toIntOrNull()
-
                             if (selectedMethodId != null) {
                                 viewModel.publishOffer(
                                     metodoPagoId = selectedMethodId,
                                     tipoOperacion = type,
-                                    moneda = currency,
-                                    montoTotal = amt,
-                                    montoMinimo = min,
-                                    montoMaximo = max,
-                                    tipoCambio = rt
+                                    monedaTengo = monedaTengo,
+                                    monedaRecibo = monedaRecibo,
+                                    montoTengo = montoTengoCalculado,
+                                    montoRecibo = montoReciboCalculado,
+                                    tipoCambio = tipoCambioCalculado
                                 )
                             }
                         },
                         modifier = Modifier.fillMaxWidth(),
-                        text = "Publicar"
+                        text = "Publicar oferta"
                     )
                     Spacer(modifier = Modifier.height(24.dp))
                 }
@@ -482,9 +492,9 @@ fun PublishOfferScreen(
                         color = RikkaTheme.colors.onBackground
                     )
 
-                    // Selector Compra/Venta
+                    // 1. Selector Compra/Venta
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Label(text = "Tipo de transacción")
+                        Label(text = "¿Qué deseas hacer?")
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -493,60 +503,56 @@ fun PublishOfferScreen(
                                 onClick = { type = "Compra" },
                                 variant = if (type == "Compra") ButtonVariant.Default else ButtonVariant.Outline,
                                 modifier = Modifier.weight(1f),
-                                text = "Compra"
+                                text = "Comprar"
                             )
                             Button(
                                 onClick = { type = "Venta" },
                                 variant = if (type == "Venta") ButtonVariant.Default else ButtonVariant.Outline,
                                 modifier = Modifier.weight(1f),
-                                text = "Venta"
+                                text = "Vender"
                             )
                         }
                     }
 
-                    // Moneda Select
+                    // 2. Moneda que tienes
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Label(text = "Moneda")
+                        Label(text = "Moneda que tienes")
                         Select(
-                            selectedValue = currency,
-                            onValueChange = { currency = it },
-                            options = currencyOptions,
-                            placeholder = "Seleccione moneda...",
+                            selectedValue = monedaTengo,
+                            onValueChange = { monedaTengo = it },
+                            options = monedaTengoOptions,
+                            placeholder = "Selecciona",
                             animation = PopupAnimation.Fade,
                             maxHeight = 300.dp,
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
 
-                    // Monto Input
+                    // 3. Moneda que quieres recibir
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Label(text = "Monto")
-                        Input(
-                            value = amount,
-                            onValueChange = { input ->
-                                if (input.all { it.isDigit() }) {
-                                    amount = input
-                                }
-                            },
-                            placeholder = "Ingrese monto",
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            leadingIcon = Icons.Default.AttachMoney,
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true
+                        Label(text = "Moneda que quieres recibir")
+                        Select(
+                            selectedValue = monedaRecibo,
+                            onValueChange = { monedaRecibo = it },
+                            options = monedaReciboOptions,
+                            placeholder = "Selecciona",
+                            animation = PopupAnimation.Fade,
+                            maxHeight = 300.dp,
+                            modifier = Modifier.fillMaxWidth()
                         )
                     }
 
-                    // Tipo de Cambio Input
+                    // 4. Cantidad Input
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Label(text = "Tipo de cambio")
+                        Label(text = cantidadLabel)
                         Input(
-                            value = rate,
+                            value = amount,
                             onValueChange = { input ->
                                 if (input.all { it.isDigit() || it == '.' }) {
-                                    rate = input
+                                    amount = input
                                 }
                             },
-                            placeholder = "3.75",
+                            placeholder = "Ej: 1000",
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                             leadingIcon = Icons.Default.AttachMoney,
                             modifier = Modifier.fillMaxWidth(),
@@ -554,79 +560,63 @@ fun PublishOfferScreen(
                         )
                     }
 
-                    // Monto Mínimo Input
+                    // 5. Tu cuenta bancaria (de la moneda que tienes)
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Label(text = "Monto mínimo")
-                        Input(
-                            value = minAmount,
-                            onValueChange = { input ->
-                                if (input.all { it.isDigit() }) {
-                                    minAmount = input
-                                }
-                            },
-                            placeholder = "Mínimo",
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            leadingIcon = Icons.Default.AttachMoney,
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true
-                        )
-                        if (isMinMaxError) {
-                            Text(
-                                text = "El monto mínimo no puede ser mayor al máximo",
-                                variant = TextVariant.Small,
-                                color = RikkaTheme.colors.destructive
+                        Label(text = "Tu cuenta bancaria (de la moneda que tienes)")
+                        if (paymentOptions.isNotEmpty()) {
+                            Select(
+                                selectedValue = paymentMethod,
+                                onValueChange = { paymentMethod = it },
+                                options = paymentOptions,
+                                placeholder = "Elige una cuenta...",
+                                animation = PopupAnimation.Fade,
+                                maxHeight = 300.dp,
+                                modifier = Modifier.fillMaxWidth()
                             )
-                        } else if (isMinZero) {
+                        } else {
                             Text(
-                                text = "El monto debe ser mayor a 0",
+                                text = "⚠️ No tienes cuentas registradas en $monedaTengo. Agrega una en tu perfil.",
                                 variant = TextVariant.Small,
                                 color = RikkaTheme.colors.destructive
                             )
                         }
                     }
 
-                    // Monto Máximo Input
+                    // 6. Vista previa de conversión
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Label(text = "Monto máximo")
-                        Input(
-                            value = maxAmount,
-                            onValueChange = { input ->
-                                if (input.all { it.isDigit() }) {
-                                    maxAmount = input
+                        Label(text = "Vista previa de conversión")
+                        Card(modifier = Modifier.fillMaxWidth()) {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                if (amount.isBlank() || amount.toDoubleOrNull() == null || amount.toDoubleOrNull() == 0.0) {
+                                    Text(
+                                        text = "Completa monedas y cantidad para ver el cálculo automático.",
+                                        variant = TextVariant.Small,
+                                        color = Color.Gray
+                                    )
+                                } else {
+                                    Text(
+                                        text = "Tipo de cambio actual: ${String.format(java.util.Locale.US, "%.6f", tipoCambioCalculado)}",
+                                        variant = TextVariant.Small,
+                                        color = Color.Gray
+                                    )
+                                    Text(
+                                        text = "Tú entregas: ${String.format(java.util.Locale.US, "%,.2f", montoTengoCalculado)} $monedaTengo",
+                                        variant = TextVariant.P,
+                                        color = RikkaTheme.colors.onBackground
+                                    )
+                                    Text(
+                                        text = "Tú recibes: ${String.format(java.util.Locale.US, "%,.2f", montoReciboCalculado)} $monedaRecibo",
+                                        variant = TextVariant.P,
+                                        color = RikkaTheme.colors.primary
+                                    )
                                 }
-                            },
-                            placeholder = "Máximo",
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            leadingIcon = Icons.Default.AttachMoney,
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true
-                        )
-                        if (isMaxZero && !isMinMaxError) {
-                            Text(
-                                text = "El monto debe ser mayor a 0",
-                                variant = TextVariant.Small,
-                                color = RikkaTheme.colors.destructive
-                            )
+                            }
                         }
-                    }
-
-                    // Método de Pago Select
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Label(text = "Método de Pago")
-                        Select(
-                            selectedValue = paymentMethod,
-                            onValueChange = { paymentMethod = it },
-                            options = paymentOptions,
-                            placeholder = "Seleccione método de pago...",
-                            animation = PopupAnimation.Fade,
-                            maxHeight = 300.dp,
-                            modifier = Modifier.fillMaxWidth()
-                        )
                     }
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    // Botones Cancelar / Publicar
+                    // 7. Botones Cancelar / Publicar
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -640,21 +630,16 @@ fun PublishOfferScreen(
                         Button(
                             enabled = canPublish,
                             onClick = {
-                                val amt = amount.toDoubleOrNull() ?: 0.0
-                                val rt = rate.toDoubleOrNull() ?: 0.0
-                                val min = minAmount.toDoubleOrNull() ?: 0.0
-                                val max = maxAmount.toDoubleOrNull() ?: 0.0
                                 val selectedMethodId = paymentMethod.toIntOrNull()
-
                                 if (selectedMethodId != null) {
                                     viewModel.publishOffer(
                                         metodoPagoId = selectedMethodId,
                                         tipoOperacion = type,
-                                        moneda = currency,
-                                        montoTotal = amt,
-                                        montoMinimo = min,
-                                        montoMaximo = max,
-                                        tipoCambio = rt
+                                        monedaTengo = monedaTengo,
+                                        monedaRecibo = monedaRecibo,
+                                        montoTengo = montoTengoCalculado,
+                                        montoRecibo = montoReciboCalculado,
+                                        tipoCambio = tipoCambioCalculado
                                     )
                                     showPublishSheet = false
                                 }

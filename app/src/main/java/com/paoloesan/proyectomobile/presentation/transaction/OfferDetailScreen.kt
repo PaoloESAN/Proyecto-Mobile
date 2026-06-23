@@ -107,12 +107,19 @@ fun OfferDetailScreen(
 
     val offer = uiState.offer
     val rate = offer?.price ?: 3.85
-    val minLimit = offer?.montoMinimo ?: 50.0
-    val maxLimit = offer?.montoMaximo ?: 200.0
-    val currency = offer?.currency ?: "USD"
+    val monedaTengo = offer?.monedaTengo ?: "USD"
+    val monedaRecibo = offer?.monedaRecibo ?: "PEN"
+    val montoTengo = offer?.montoTengo ?: 0.0
+    val montoRecibo = offer?.montoRecibo ?: 0.0
 
-    val amountDouble = uiState.amountInput.toDoubleOrNull() ?: 0.0
-    val isValidAmount = amountDouble >= minLimit && amountDouble <= maxLimit && amountDouble > 0.0
+    val esVenta = offer?.tipoOperacion == "Venta"
+
+    val mySendAmount = if (esVenta) montoRecibo else montoTengo
+    val mySendCurrency = if (esVenta) monedaRecibo else monedaTengo
+    val myReceiveAmount = if (esVenta) montoTengo else montoRecibo
+    val myReceiveCurrency = if (esVenta) monedaTengo else monedaRecibo
+
+    val isValidAmount = offer != null
 
     val accountOptions = uiState.myPaymentMethods.map { pm ->
         SelectOption(
@@ -152,12 +159,12 @@ fun OfferDetailScreen(
                     ) {
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text(
-                                text = "Monto: ${uiState.amountInput} $currency",
+                                text = "Monto: ${String.format(java.util.Locale.US, "%,.2f", offer?.montoTengo ?: 0.0)} $monedaTengo -> Recibes: ${String.format(java.util.Locale.US, "%,.2f", offer?.montoRecibo ?: 0.0)} $monedaRecibo",
                                 variant = TextVariant.P,
                                 color = RikkaTheme.colors.onBackground
                             )
                             Text(
-                                text = "Tipo de cambio: 1 USD = $rate PEN",
+                                text = "Tipo de cambio: ${String.format(java.util.Locale.US, "%.4f", rate)}",
                                 variant = TextVariant.Small,
                                 color = RikkaTheme.colors.onBackground.copy(alpha = 0.7f)
                             )
@@ -341,23 +348,52 @@ fun OfferDetailScreen(
                             modifier = Modifier.fillMaxWidth(),
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Label(text = "Monto a recibir ($currency)")
-                                Input(
-                                    value = uiState.amountInput,
-                                    onValueChange = { input ->
-                                        if (input.all { it.isDigit() || it == '.' }) {
-                                            viewModel.onAmountChange(input)
-                                        }
-                                    },
-                                    placeholder = "Ingrese monto...",
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-                                if (!isValidAmount && uiState.amountInput.isNotEmpty()) {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Label(text = "Intercambio de Monto Fijo")
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
                                     Text(
-                                        text = "El monto debe estar entre ${String.format("%.2f", minLimit)} y ${String.format("%.2f", maxLimit)} $currency",
-                                        color = RikkaTheme.colors.destructive,
-                                        variant = TextVariant.Small
+                                        text = "El creador ofrece:",
+                                        variant = TextVariant.P,
+                                        color = Color.Gray
+                                    )
+                                    Text(
+                                        text = "${String.format(java.util.Locale.US, "%,.2f", offer?.montoTengo ?: 0.0)} $monedaTengo",
+                                        variant = TextVariant.P,
+                                        color = RikkaTheme.colors.onBackground
+                                    )
+                                }
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        text = "El creador solicita:",
+                                        variant = TextVariant.P,
+                                        color = Color.Gray
+                                    )
+                                    Text(
+                                        text = "${String.format(java.util.Locale.US, "%,.2f", offer?.montoRecibo ?: 0.0)} $monedaRecibo",
+                                        variant = TextVariant.P,
+                                        color = RikkaTheme.colors.primary
+                                    )
+                                }
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        text = "Tipo de cambio:",
+                                        variant = TextVariant.P,
+                                        color = Color.Gray
+                                    )
+                                    Text(
+                                        text = "${String.format(java.util.Locale.US, "%.4f", rate)}",
+                                        variant = TextVariant.P,
+                                        color = RikkaTheme.colors.onBackground
                                     )
                                 }
                             }
@@ -399,9 +435,9 @@ fun OfferDetailScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(text = "Envías", variant = TextVariant.P, color = Color.Gray)
-                                val enviasValue = String.format(java.util.Locale.US, "%,.2f", amountDouble * rate)
+                                val enviasValue = String.format(java.util.Locale.US, "%,.2f", mySendAmount)
                                 Text(
-                                    text = "$enviasValue PEN",
+                                    text = "$enviasValue $mySendCurrency",
                                     variant = TextVariant.H2,
                                     color = RikkaTheme.colors.onBackground
                                 )
@@ -438,9 +474,9 @@ fun OfferDetailScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(text = "Recibes", variant = TextVariant.P, color = Color.Gray)
-                                val recibesValue = String.format(java.util.Locale.US, "%,.2f", amountDouble)
+                                val recibesValue = String.format(java.util.Locale.US, "%,.2f", myReceiveAmount)
                                 Text(
-                                    text = "$recibesValue $currency",
+                                    text = "$recibesValue $myReceiveCurrency",
                                     variant = TextVariant.H2,
                                     color = RikkaTheme.colors.primary
                                 )
@@ -464,7 +500,7 @@ fun OfferDetailScreen(
                                     color = Color.Gray
                                 )
                                 Text(
-                                    text = "1 USD = $rate PEN",
+                                    text = "1 $monedaTengo = ${String.format(java.util.Locale.US, "%.4f", rate)} $monedaRecibo",
                                     variant = TextVariant.P,
                                     color = RikkaTheme.colors.onBackground
                                 )
@@ -481,22 +517,22 @@ fun OfferDetailScreen(
                             DetailItemRow(
                                 icon = Icons.Default.CurrencyExchange,
                                 label = "Tipo de operación",
-                                value = "${offer.tipoOperacion} de ${offer.currency}"
-                            )
-                            DetailItemRow(
-                                icon = Icons.Default.AccountBalance,
-                                label = "Moneda de la oferta",
-                                value = offer.currency
-                            )
-                            DetailItemRow(
-                                icon = Icons.Default.Tune,
-                                label = "Límites permitidos",
-                                value = "Mín ${String.format("%.2f", minLimit)} / Máx ${String.format("%.2f", maxLimit)} $currency"
+                                value = "${offer.tipoOperacion} de $monedaTengo"
                             )
                             DetailItemRow(
                                 icon = Icons.Default.TrendingUp,
-                                label = "Disponible",
-                                value = "${String.format("%.2f", offer.montoTotal)} $currency"
+                                label = "Tengo (Creador)",
+                                value = "${String.format(java.util.Locale.US, "%,.2f", offer.montoTengo)} $monedaTengo"
+                            )
+                            DetailItemRow(
+                                icon = Icons.Default.AccountBalance,
+                                label = "Recibo (Creador)",
+                                value = "${String.format(java.util.Locale.US, "%,.2f", offer.montoRecibo)} $monedaRecibo"
+                            )
+                            DetailItemRow(
+                                icon = Icons.Default.Tune,
+                                label = "Tipo de cambio",
+                                value = "1 $monedaTengo = ${String.format(java.util.Locale.US, "%.4f", rate)} $monedaRecibo"
                             )
                         }
                     }

@@ -142,21 +142,26 @@ fun BankDetailsScreen(
 
     val esComprador = !isSeller
     val currencyClean = (if (uiState.currency.isNotEmpty()) uiState.currency else currency).uppercase()
-    val amountDouble = if (uiState.transactionAmount > 0.0) uiState.transactionAmount else amount.toDoubleOrNull() ?: 100.0
     val rateDouble = if (uiState.exchangeRate > 0.0) uiState.exchangeRate else rate.toDoubleOrNull() ?: 3.85
 
-    val (usdAmount, penAmount) = if (currencyClean == "PEN") {
-        (amountDouble / rateDouble) to amountDouble
+    val monedaTengo = uiState.monedaTengo
+    val monedaRecibo = uiState.monedaRecibo
+    val montoTengo = uiState.montoTengo
+    val montoRecibo = uiState.montoRecibo
+
+    val formattedTengo = String.format(java.util.Locale.US, "%,.2f", montoTengo)
+    val formattedRecibo = String.format(java.util.Locale.US, "%,.2f", montoRecibo)
+
+    // Fallbacks to maintain compatibility in sub-elements
+    val formattedUsd = formattedTengo
+    val formattedPen = formattedRecibo
+
+    val displayAmount = if (esComprador) {
+        "$formattedRecibo $monedaRecibo"
     } else {
-        amountDouble to (amountDouble * rateDouble)
+        "$formattedTengo $monedaTengo"
     }
-
-    val formattedPen = String.format(java.util.Locale.US, "%,.2f", penAmount)
-    val formattedUsd = String.format(java.util.Locale.US, "%,.2f", usdAmount)
-
-    val isTransferringPen = !isSeller
-    val displayAmount = if (isTransferringPen) "$formattedPen PEN" else "$formattedUsd USD"
-    val displayCurrency = if (isTransferringPen) "PEN" else "USD"
+    val displayCurrency = if (esComprador) monedaRecibo else monedaTengo
 
     val bankParts = bank.split(" - ")
     val parsedBankName = if (uiState.bankName.isNotEmpty()) uiState.bankName else bankParts.getOrNull(0) ?: "BCP"
@@ -663,8 +668,8 @@ fun BankDetailsScreen(
                                     if (mineUploaded) {
                                         Button(
                                             onClick = {
-                                                selectedVoucherTitle = if (isSeller) "Tu Comprobante (USD)" else "Tu Comprobante (PEN)"
-                                                selectedVoucherAmount = if (isSeller) "$formattedUsd USD" else "$formattedPen PEN"
+                                                selectedVoucherTitle = if (isSeller) "Tu Comprobante ($monedaTengo)" else "Tu Comprobante ($monedaRecibo)"
+                                                selectedVoucherAmount = if (isSeller) "$formattedTengo $monedaTengo" else "$formattedRecibo $monedaRecibo"
                                                 selectedVoucherUrl = uiState.myVoucherUrl
                                                 showVoucherDialog = true
                                             },
@@ -735,8 +740,8 @@ fun BankDetailsScreen(
                                     if (peerUploaded) {
                                         Button(
                                             onClick = {
-                                                selectedVoucherTitle = if (isSeller) "Comprobante del Comprador (PEN)" else "Comprobante del Vendedor (USD)"
-                                                selectedVoucherAmount = if (isSeller) "$formattedPen PEN" else "$formattedUsd USD"
+                                                selectedVoucherTitle = if (isSeller) "Comprobante del Comprador ($monedaRecibo)" else "Comprobante del Vendedor ($monedaTengo)"
+                                                selectedVoucherAmount = if (isSeller) "$formattedRecibo $monedaRecibo" else "$formattedTengo $monedaTengo"
                                                 selectedVoucherUrl = uiState.peerVoucherUrl
                                                 showVoucherDialog = true
                                             },

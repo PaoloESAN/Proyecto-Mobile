@@ -132,18 +132,37 @@ fun TransactionStatusScreen(
     val tx = uiState.transaction
     val offer = uiState.offer
 
-    // Cálculos de montos
-    val amountDouble = tx?.amount ?: 0.0
+    // Cálculos de montos universales
     val rateDouble = tx?.tipoCambioAplicado ?: offer?.price ?: 3.85
-    val currency = offer?.currency ?: "USD"
+    val destCurrency = uiState.destCurrency.ifEmpty { offer?.monedaRecibo ?: "PEN" }
 
-    val (usdAmount, penAmount) = if (currency == "PEN") {
-        (amountDouble / rateDouble) to amountDouble
+    var montoEnvio = 0.0
+    var monedaEnvio = "PEN"
+    var montoRecepcion = 0.0
+    var monedaRecepcion = "USD"
+
+    if (offer != null) {
+        if (destCurrency.equals(offer.monedaTengo, ignoreCase = true)) {
+            montoEnvio = offer.montoTengo
+            monedaEnvio = offer.monedaTengo
+            montoRecepcion = offer.montoRecibo
+            monedaRecepcion = offer.monedaRecibo
+        } else {
+            montoEnvio = offer.montoRecibo
+            monedaEnvio = offer.monedaRecibo
+            montoRecepcion = offer.montoTengo
+            monedaRecepcion = offer.monedaTengo
+        }
     } else {
-        amountDouble to (amountDouble * rateDouble)
+        val amt = tx?.amount ?: 0.0
+        montoEnvio = amt * rateDouble
+        monedaEnvio = "PEN"
+        montoRecepcion = amt
+        monedaRecepcion = "USD"
     }
-    val formattedPen = String.format(java.util.Locale.US, "%,.2f", penAmount)
-    val formattedUsd = String.format(java.util.Locale.US, "%,.2f", usdAmount)
+
+    val formattedEnvio = String.format(java.util.Locale.US, "%,.2f", montoEnvio)
+    val formattedRecepcion = String.format(java.util.Locale.US, "%,.2f", montoRecepcion)
     val txIdStr = transactionId.toString()
 
     // ── Diálogo de disputa ────────────────────────────────────────────────────
@@ -389,7 +408,7 @@ fun TransactionStatusScreen(
                                 TransactionBriefRow(
                                     icon = Icons.Default.CurrencyExchange,
                                     label = "Operación",
-                                    value = "${offer?.tipoOperacion ?: "Compra"} de ${currency}"
+                                    value = "${offer?.tipoOperacion ?: "Compra"} de ${offer?.monedaTengo ?: "USD"}"
                                 )
 
                                 TransactionBriefRow(
@@ -404,29 +423,16 @@ fun TransactionStatusScreen(
                                     value = "S/ ${String.format("%.2f", rateDouble)}"
                                 )
 
-                                if (!isSeller) {
-                                    TransactionBriefRow(
-                                        icon = Icons.Default.CheckCircle,
-                                        label = "Tú Envías (Pago)",
-                                        value = "$formattedPen PEN"
-                                    )
-                                    TransactionBriefRow(
-                                        icon = Icons.Default.CheckCircle,
-                                        label = "Tú Recibes",
-                                        value = "$formattedUsd USD"
-                                    )
-                                } else {
-                                    TransactionBriefRow(
-                                        icon = Icons.Default.CheckCircle,
-                                        label = "Tú Envías",
-                                        value = "$formattedUsd USD"
-                                    )
-                                    TransactionBriefRow(
-                                        icon = Icons.Default.CheckCircle,
-                                        label = "Tú Recibes (Cobro)",
-                                        value = "$formattedPen PEN"
-                                    )
-                                }
+                                TransactionBriefRow(
+                                    icon = Icons.Default.CheckCircle,
+                                    label = if (!isSeller) "Tú Envías (Pago)" else "Tú Envías",
+                                    value = "$formattedEnvio $monedaEnvio"
+                                )
+                                TransactionBriefRow(
+                                    icon = Icons.Default.CheckCircle,
+                                    label = if (!isSeller) "Tú Recibes" else "Tú Recibes (Cobro)",
+                                    value = "$formattedRecepcion $monedaRecepcion"
+                                )
 
                                 if (uiState.destBankName.isNotEmpty()) {
                                     TransactionBriefRow(
