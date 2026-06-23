@@ -1,22 +1,32 @@
 package com.paoloesan.proyectomobile.presentation.p2p
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.paoloesan.proyectomobile.data.Supabase
+import com.paoloesan.proyectomobile.data.currentUserAwaitInit
+import com.paoloesan.proyectomobile.data.model.OfferModel
+import com.paoloesan.proyectomobile.data.model.PaymentMethodModel
+import com.paoloesan.proyectomobile.data.model.UserProfileModel
+import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 data class P2POffer(
     val id: String,
     val username: String,
-    val amount: Double,
-    val currency: String,
-    val rate: Double,
-    val paymentMethod: String,
     val type: String, // "Compra" o "Venta"
-    val minLimit: Double,
-    val maxLimit: Double
+    val monedaTengo: String,
+    val monedaRecibo: String,
+    val montoTengo: Double,
+    val montoRecibo: Double,
+    val rate: Double,
+    val paymentMethod: String
 )
 
 data class MarketplaceFilters(
@@ -28,36 +38,111 @@ data class MarketplaceFilters(
 
 class MarketplaceViewModel : ViewModel() {
 
-    private val _offers = MutableStateFlow(
-        listOf(
-            P2POffer("1", "Carlos Perez", 150.0, "USD", 3.75, "BCP", "Compra", 50.0, 200.0),
-            P2POffer("2", "Ana Gomez", 500.0, "PEN", 1.0, "Yape", "Venta", 10.0, 500.0),
-            P2POffer("3", "Luis Rodriguez", 2500.0, "PEN", 1.0, "Interbank", "Compra", 100.0, 3000.0),
-            P2POffer("4", "Maria Lopez", 300.0, "USD", 3.76, "BCP", "Venta", 100.0, 400.0),
-            P2POffer("5", "Juan Castro", 100.0, "USD", 3.74, "Yape", "Compra", 20.0, 150.0),
-            P2POffer("6", "Sofia Martinez", 1200.0, "PEN", 1.0, "Interbank", "Venta", 200.0, 1500.0),
-            P2POffer("7", "Pedro Sanchez", 450.0, "USD", 3.77, "BCP", "Compra", 100.0, 500.0),
-            P2POffer("8", "Lucia Diaz", 80.0, "USD", 3.73, "Yape", "Venta", 10.0, 100.0),
-            P2POffer("9", "Jorge Silva", 3000.0, "PEN", 1.0, "Interbank", "Compra", 500.0, 5000.0),
-            P2POffer("10", "Elena Ruiz", 200.0, "USD", 3.75, "BCP", "Venta", 50.0, 300.0)
-        )
-    )
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+
+    private val _offers = MutableStateFlow<List<P2POffer>>(emptyList())
     val offers: StateFlow<List<P2POffer>> = _offers
 
     private val _filters = MutableStateFlow(MarketplaceFilters())
     val filters: StateFlow<MarketplaceFilters> = _filters
 
+    init {
+        loadData()
+    }
+
+    fun loadData() {
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                // 1. Obtener el perfil del usuario actual (si está logueado) para no mostrar sus propias ofertas
+                val authId = Supabase.client.auth.currentUserAwaitInit()?.id
+                val currentUserId = if (authId != null) {
+                    try {
+                        val perfil = Supabase.client.postgrest["usuarios"]
+                            .select { filter { eq("auth_id", authId) } }
+                            .decodeSingle<UserProfileModel>()
+                        perfil.usuarioId
+                    } catch (e: Exception) {
+                        null
+                    }
+                } else null
+
+                // 2. Consultar las ofertas en estado "Activa" en Supabase
+                val activeOffers = Supabase.client.postgrest["ofertas"]
+                    .select {
+                        filter {
+                            eq("estado", "Activa")
+                            if (currentUserId != null) {
+                                neq("usuario_creador_id", currentUserId)
+                            }
+                        }
+                    }
+                    .decodeList<OfferModel>()
+
+                // 3. Obtener nombres de creadores y nombres de banco de métodos de pago
+                val creatorIds = activeOffers.map { it.usuarioCreadorId }.distinct()
+                val paymentMethodIds = activeOffers.map { it.metodoPagoId }.distinct()
+
+                val userNames = if (creatorIds.isNotEmpty()) {
+                    Supabase.client.postgrest["usuarios"]
+                        .select { filter { isIn("usuario_id", creatorIds) } }
+                        .decodeList<UserProfileModel>()
+                        .associate { (it.usuarioId ?: -1) to "${it.nombres} ${it.apellidos}" }
+                } else emptyMap()
+
+                val paymentMethods = if (paymentMethodIds.isNotEmpty()) {
+                    Supabase.client.postgrest["metodos_pago"]
+                        .select { filter { isIn("metodo_pago_id", paymentMethodIds) } }
+                        .decodeList<PaymentMethodModel>()
+                        .associateBy { it.metodoPagoId }
+                } else emptyMap()
+
+                // 4. Mapear a la lista de ofertas UI
+                val p2pOffers = activeOffers.map { offer ->
+                    val creatorName = userNames[offer.usuarioCreadorId] ?: "Usuario ${offer.usuarioCreadorId}"
+                    val paymentMethodLabel = paymentMethods[offer.metodoPagoId]?.banco ?: "Cuenta"
+                    P2POffer(
+                        id = offer.offerId?.toString() ?: "",
+                        username = creatorName,
+                        type = offer.tipoOperacion,
+                        monedaTengo = offer.monedaTengo,
+                        monedaRecibo = offer.monedaRecibo,
+                        montoTengo = offer.montoTengo,
+                        montoRecibo = offer.montoRecibo,
+                        rate = offer.price,
+                        paymentMethod = paymentMethodLabel
+                    )
+                }
+
+                _offers.value = p2pOffers
+            } catch (e: Exception) {
+                _offers.value = emptyList()
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
     val filteredOffers: StateFlow<List<P2POffer>> = combine(_offers, _filters) { offersList, activeFilters ->
         offersList.filter { offer ->
-            val matchesCurrency = activeFilters.currency == "TODOS" || offer.currency.equals(activeFilters.currency, ignoreCase = true)
-            val matchesType = activeFilters.type == "TODOS" || offer.type.equals(activeFilters.type, ignoreCase = true)
-            val matchesPayment = activeFilters.paymentMethod == "TODOS" || offer.paymentMethod.equals(activeFilters.paymentMethod, ignoreCase = true)
-            val matchesAmount = activeFilters.amount == null || (activeFilters.amount >= offer.minLimit && activeFilters.amount <= offer.maxLimit)
+            val matchesCurrency = activeFilters.currency == "TODOS" ||
+                    offer.monedaTengo.equals(activeFilters.currency, ignoreCase = true) ||
+                    offer.monedaRecibo.equals(activeFilters.currency, ignoreCase = true)
+
+            val matchesType = activeFilters.type == "TODOS" ||
+                    offer.type.equals(activeFilters.type, ignoreCase = true)
+
+            val matchesPayment = activeFilters.paymentMethod == "TODOS" ||
+                    offer.paymentMethod.contains(activeFilters.paymentMethod, ignoreCase = true)
+
+            val matchesAmount = activeFilters.amount == null ||
+                    offer.montoTengo >= activeFilters.amount
 
             matchesCurrency && matchesType && matchesPayment && matchesAmount
         }
     }.stateIn(
-        scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Default),
+        scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = emptyList()
     )
