@@ -25,7 +25,6 @@ import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
@@ -73,29 +72,7 @@ fun PublishOfferScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    // Listado de ofertas activas ("Mis Ofertas")
-    var offers by remember {
-        mutableStateOf(
-            listOf(
-                MyOffer("1", "Compra", "USD", 150.0, 3.75, 50.0, 200.0, "BCP"),
-                MyOffer("2", "Venta", "PEN", 500.0, 1.0, 10.0, 500.0, "Yape"),
-                MyOffer(
-                    "3",
-                    "Compra",
-                    "USD",
-                    300.0,
-                    3.76,
-                    100.0,
-                    400.0,
-                    "Interbank",
-                    hasActiveTransaction = true
-                ),
-                MyOffer("4", "Venta", "USD", 200.0, 3.74, 50.0, 250.0, "BCP")
-            )
-        )
-    }
-
-    // Estados para publicación (Formulario en BottomSheet)
+    // Estados para publicación
     var showPublishSheet by remember { mutableStateOf(false) }
     val publishSheetState = rememberModalBottomSheetState()
 
@@ -106,17 +83,6 @@ fun PublishOfferScreen(
     var minAmount by remember { mutableStateOf("") }
     var maxAmount by remember { mutableStateOf("") }
     var paymentMethod by remember { mutableStateOf("") }
-
-    // Estados para edición y cancelación
-    var showCancelDialog by remember { mutableStateOf(false) }
-    var showEditDialog by remember { mutableStateOf(false) }
-    var selectedOffer by remember { mutableStateOf<MyOffer?>(null) }
-
-    var editAmount by remember { mutableStateOf("") }
-    var editRate by remember { mutableStateOf("") }
-    var editMinLimit by remember { mutableStateOf("") }
-    var editMaxLimit by remember { mutableStateOf("") }
-    var editPaymentMethod by remember { mutableStateOf("") }
 
     val toastState = rememberToastHostState()
     val scope = rememberCoroutineScope()
@@ -213,191 +179,6 @@ fun PublishOfferScreen(
                     !isMinMaxError &&
                     paymentMethod.isNotBlank()
         }
-    }
-
-    // Diálogo de confirmación para cancelar oferta
-    if (showCancelDialog && selectedOffer != null) {
-        AlertDialog(
-            onDismissRequest = { showCancelDialog = false },
-            containerColor = RikkaTheme.colors.background,
-            title = {
-                Text(
-                    text = "Cancelar Oferta",
-                    variant = TextVariant.Large,
-                    color = RikkaTheme.colors.onBackground
-                )
-            },
-            text = {
-                Text(
-                    text = "¿Está seguro de cancelar esta oferta?",
-                    variant = TextVariant.P,
-                    color = RikkaTheme.colors.onBackground
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        offers = offers.filter { it.id != selectedOffer!!.id }
-                        showCancelDialog = false
-                        scope.launch {
-                            toastState.show(
-                                message = "Oferta cancelada correctamente",
-                                variant = ToastVariant.Success
-                            )
-                        }
-                    },
-                    text = "Confirmar"
-                )
-            },
-            dismissButton = {
-                Button(
-                    onClick = { showCancelDialog = false },
-                    variant = ButtonVariant.Outline,
-                    text = "Cancelar"
-                )
-            }
-        )
-    }
-
-    // Diálogo para editar oferta
-    if (showEditDialog && selectedOffer != null) {
-        AlertDialog(
-            onDismissRequest = { showEditDialog = false },
-            containerColor = RikkaTheme.colors.background,
-            title = {
-                Text(
-                    text = "Editar Oferta",
-                    variant = TextVariant.Large,
-                    color = RikkaTheme.colors.onBackground
-                )
-            },
-            text = {
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.verticalScroll(rememberScrollState())
-                ) {
-                    Text(
-                        text = "Monto",
-                        variant = TextVariant.Small,
-                        color = RikkaTheme.colors.onBackground
-                    )
-                    Input(
-                        value = editAmount,
-                        onValueChange = {
-                            if (it.all { c -> c.isDigit() || c == '.' }) editAmount = it
-                        },
-                        placeholder = "Monto",
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
-                    )
-
-                    Text(
-                        text = "Tipo de Cambio",
-                        variant = TextVariant.Small,
-                        color = RikkaTheme.colors.onBackground
-                    )
-                    Input(
-                        value = editRate,
-                        onValueChange = {
-                            if (it.all { c -> c.isDigit() || c == '.' }) editRate = it
-                        },
-                        placeholder = "Tipo de cambio",
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
-                    )
-
-                    Text(
-                        text = "Límite Mínimo",
-                        variant = TextVariant.Small,
-                        color = RikkaTheme.colors.onBackground
-                    )
-                    Input(
-                        value = editMinLimit,
-                        onValueChange = {
-                            if (it.all { c -> c.isDigit() || c == '.' }) editMinLimit = it
-                        },
-                        placeholder = "Límite mínimo",
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
-                    )
-
-                    Text(
-                        text = "Límite Máximo",
-                        variant = TextVariant.Small,
-                        color = RikkaTheme.colors.onBackground
-                    )
-                    Input(
-                        value = editMaxLimit,
-                        onValueChange = {
-                            if (it.all { c -> c.isDigit() || c == '.' }) editMaxLimit = it
-                        },
-                        placeholder = "Límite máximo",
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
-                    )
-
-                    Text(
-                        text = "Método de Pago",
-                        variant = TextVariant.Small,
-                        color = RikkaTheme.colors.onBackground
-                    )
-                    Input(
-                        value = editPaymentMethod,
-                        onValueChange = { editPaymentMethod = it },
-                        placeholder = "BCP, Yape, etc.",
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
-                    )
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        val minVal = editMinLimit.toDoubleOrNull()
-                        val maxVal = editMaxLimit.toDoubleOrNull()
-                        if (minVal != null && maxVal != null && minVal > maxVal) {
-                            scope.launch {
-                                toastState.show(
-                                    message = "El monto mínimo no puede ser mayor al máximo",
-                                    variant = ToastVariant.Destructive
-                                )
-                            }
-                        } else {
-                            offers = offers.map {
-                                if (it.id == selectedOffer!!.id) {
-                                    it.copy(
-                                        amount = editAmount.toDoubleOrNull() ?: it.amount,
-                                        rate = editRate.toDoubleOrNull() ?: it.rate,
-                                        minLimit = minVal ?: it.minLimit,
-                                        maxLimit = maxVal ?: it.maxLimit,
-                                        paymentMethod = editPaymentMethod.ifBlank { it.paymentMethod }
-                                    )
-                                } else it
-                            }
-                            showEditDialog = false
-                            scope.launch {
-                                toastState.show(
-                                    message = "Oferta actualizada correctamente",
-                                    variant = ToastVariant.Success
-                                )
-                            }
-                        }
-                    },
-                    text = "Guardar"
-                )
-            },
-            dismissButton = {
-                Button(
-                    onClick = { showEditDialog = false },
-                    variant = ButtonVariant.Outline,
-                    text = "Cancelar"
-                )
-            }
-        )
     }
 
     Box(
