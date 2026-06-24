@@ -114,18 +114,22 @@ fun OfferDetailScreen(
 
     val esVenta = offer?.tipoOperacion == "Venta"
 
-    val mySendAmount = if (esVenta) montoRecibo else montoTengo
-    val mySendCurrency = if (esVenta) monedaRecibo else monedaTengo
-    val myReceiveAmount = if (esVenta) montoTengo else montoRecibo
-    val myReceiveCurrency = if (esVenta) monedaTengo else monedaRecibo
+    val mySendAmount = montoRecibo
+    val mySendCurrency = monedaRecibo
+    val myReceiveAmount = montoTengo
+    val myReceiveCurrency = monedaTengo
 
     val isValidAmount = offer != null
 
-    val accountOptions = uiState.myPaymentMethods.map { pm ->
-        SelectOption(
-            value = pm.metodoPagoId.toString(),
-            label = "${pm.banco} - ${pm.numeroCuenta} (${pm.tipoMoneda})"
-        )
+    val accountOptions = remember(uiState.myPaymentMethods, myReceiveCurrency) {
+        uiState.myPaymentMethods
+            .filter { it.tipoMoneda.equals(myReceiveCurrency, ignoreCase = true) }
+            .map { pm ->
+                SelectOption(
+                    value = pm.metodoPagoId.toString(),
+                    label = "${pm.banco} - ${pm.numeroCuenta} (${pm.tipoMoneda})"
+                )
+            }
     }
     val selectedMethodOption = uiState.selectedMethodId?.toString() ?: accountOptions.firstOrNull()?.value ?: ""
 
@@ -159,7 +163,7 @@ fun OfferDetailScreen(
                     ) {
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text(
-                                text = "Monto: ${String.format(java.util.Locale.US, "%,.2f", offer?.montoTengo ?: 0.0)} $monedaTengo -> Recibes: ${String.format(java.util.Locale.US, "%,.2f", offer?.montoRecibo ?: 0.0)} $monedaRecibo",
+                                text = "Envías: ${String.format(java.util.Locale.US, "%,.2f", mySendAmount)} $mySendCurrency → Recibes: ${String.format(java.util.Locale.US, "%,.2f", myReceiveAmount)} $myReceiveCurrency",
                                 variant = TextVariant.P,
                                 color = RikkaTheme.colors.onBackground
                             )
@@ -415,7 +419,7 @@ fun OfferDetailScreen(
                                 }
                             } else {
                                 Text(
-                                    text = "⚠️ No tienes métodos de pago registrados. Ve a tu perfil para agregar uno.",
+                                    text = "⚠️ No tienes cuentas registradas en $myReceiveCurrency. Agrega una en tu perfil.",
                                     variant = TextVariant.Small,
                                     color = RikkaTheme.colors.destructive
                                 )

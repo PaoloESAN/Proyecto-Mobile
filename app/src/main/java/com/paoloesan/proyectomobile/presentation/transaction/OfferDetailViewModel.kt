@@ -83,6 +83,8 @@ class OfferDetailViewModel : ViewModel() {
                     }
                     .decodeList<PaymentMethodModel>()
 
+                val initialMethodId = myMethods.firstOrNull { it.tipoMoneda.equals(offer.monedaTengo, ignoreCase = true) }?.metodoPagoId
+
                 _uiState.update {
                     it.copy(
                         isLoading = false,
@@ -90,7 +92,7 @@ class OfferDetailViewModel : ViewModel() {
                         vendorName = vendorName,
                         vendorRating = vendorRating,
                         myPaymentMethods = myMethods,
-                        selectedMethodId = myMethods.firstOrNull()?.metodoPagoId,
+                        selectedMethodId = initialMethodId,
                         currentUserId = myPerfil.usuarioId
                     )
                 }
@@ -123,7 +125,7 @@ class OfferDetailViewModel : ViewModel() {
 
     /**
      * Crea la transacción en Supabase:
-     * 1. INSERT en `transacciones` con estado "Pendiente"
+     * 1. INSERT en `transacciones` con estado "En Proceso"
      * 2. UPDATE `ofertas` estado → "En Proceso"
      */
     fun createTransaction() {
@@ -153,7 +155,7 @@ class OfferDetailViewModel : ViewModel() {
                     metodoPagoCompradorId = selectedMethodId,
                     amount = offer.montoTengo,
                     tipoCambioAplicado = offer.price,
-                    status = "Pendiente"
+                    status = "En Proceso"
                 )
 
                 val transaccionCreada = Supabase.client.postgrest["transacciones"]

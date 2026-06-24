@@ -45,7 +45,7 @@ data class TransactionUiState(
     val errorMessage: String? = null,
     val successMessage: String? = null,
     // Estado calculado de la transacción (del servidor)
-    val transactionStatus: String = "Pendiente"
+    val transactionStatus: String = "En Proceso"
 )
 
 class TransactionViewModel : ViewModel() {
@@ -93,12 +93,10 @@ class TransactionViewModel : ViewModel() {
             val isSeller = myUserId == tx.usuarioVendedorId
 
             // 4. Método de pago destino (a quién le pago)
-            val destMethodId = if (isSeller) {
-                // El vendedor paga al comprador en USD → método del comprador
-                tx.metodoPagoCompradorId
+            val destMethodId = if (offer.tipoOperacion == "Venta") {
+                if (isSeller) tx.metodoPagoCompradorId else offer.metodoPagoId
             } else {
-                // El comprador paga al vendedor en PEN → método del vendedor (en la oferta)
-                offer.metodoPagoId
+                if (isSeller) offer.metodoPagoId else tx.metodoPagoCompradorId
             }
 
             var bName = ""; var accNum = ""; var cci = ""; var tit = ""; var curr = ""

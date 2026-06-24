@@ -68,6 +68,7 @@ fun MarketplaceScreen(
 ) {
     val offers by viewModel.filteredOffers.collectAsState()
     val activeFilters by viewModel.filters.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
 
     var showFilterBottomSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState()
@@ -245,91 +246,102 @@ fun MarketplaceScreen(
                 }
 
                 // Offers List
-                LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    item {
-                        // Matching Automático Card
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            onClick = { navController.navigate(Destination.Matches.route) },
-                            animation = CardAnimation.Press
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                if (isLoading) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        androidx.compose.material3.CircularProgressIndicator(
+                            color = RikkaTheme.colors.primary
+                        )
+                    }
+                } else {
+                    LazyColumn(
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        item {
+                            // Matching Automático Card
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                onClick = { navController.navigate(Destination.Matches.route) },
+                                animation = CardAnimation.Press
                             ) {
                                 Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                    modifier = Modifier
+                                        .fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(40.dp)
-                                            .background(
-                                                color = RikkaTheme.colors.primary.copy(alpha = 0.12f),
-                                                shape = androidx.compose.foundation.shape.CircleShape
-                                            ),
-                                        contentAlignment = Alignment.Center
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                                     ) {
-                                        androidx.compose.material3.Icon(
-                                            imageVector = Icons.Default.SwapHoriz,
-                                            contentDescription = null,
-                                            tint = RikkaTheme.colors.primary,
-                                            modifier = Modifier.size(24.dp)
-                                        )
+                                        Box(
+                                            modifier = Modifier
+                                                .size(40.dp)
+                                                .background(
+                                                    color = RikkaTheme.colors.primary.copy(alpha = 0.12f),
+                                                    shape = androidx.compose.foundation.shape.CircleShape
+                                                ),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            androidx.compose.material3.Icon(
+                                                imageVector = Icons.Default.SwapHoriz,
+                                                contentDescription = null,
+                                                tint = RikkaTheme.colors.primary,
+                                                modifier = Modifier.size(24.dp)
+                                            )
+                                        }
+                                        Column {
+                                            Text(
+                                                text = "Matching Automático",
+                                                variant = TextVariant.P,
+                                                color = RikkaTheme.colors.onBackground
+                                            )
+                                            Spacer(modifier = Modifier.height(2.dp))
+                                            Text(
+                                                text = "Encuentra ofertas ideales al instante",
+                                                variant = TextVariant.Small,
+                                                color = RikkaTheme.colors.onBackground.copy(alpha = 0.6f)
+                                            )
+                                        }
                                     }
-                                    Column {
-                                        Text(
-                                            text = "Matching Automático",
-                                            variant = TextVariant.P,
-                                            color = RikkaTheme.colors.onBackground
-                                        )
-                                        Spacer(modifier = Modifier.height(2.dp))
-                                        Text(
-                                            text = "Encuentra ofertas ideales al instante",
-                                            variant = TextVariant.Small,
-                                            color = RikkaTheme.colors.onBackground.copy(alpha = 0.6f)
-                                        )
-                                    }
+                                    androidx.compose.material3.Icon(
+                                        imageVector = Icons.Default.ChevronRight,
+                                        contentDescription = null,
+                                        tint = RikkaTheme.colors.onBackground.copy(alpha = 0.4f),
+                                        modifier = Modifier.size(20.dp)
+                                    )
                                 }
-                                androidx.compose.material3.Icon(
-                                    imageVector = Icons.Default.ChevronRight,
-                                    contentDescription = null,
-                                    tint = RikkaTheme.colors.onBackground.copy(alpha = 0.4f),
-                                    modifier = Modifier.size(20.dp)
-                                )
                             }
                         }
-                    }
 
-                    if (offers.isEmpty()) {
-                        item {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 48.dp),
-                                verticalArrangement = Arrangement.Center,
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Text(
-                                    text = "No se encontraron ofertas disponibles",
-                                    variant = TextVariant.Large,
-                                    color = Color.Gray
+                        if (offers.isEmpty()) {
+                            item {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 48.dp),
+                                    verticalArrangement = Arrangement.Center,
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text(
+                                        text = "No se encontraron ofertas disponibles",
+                                        variant = TextVariant.Large,
+                                        color = Color.Gray
+                                    )
+                                }
+                            }
+                        } else {
+                            items(offers, key = { it.id }) { offer ->
+                                OfferCard(
+                                    offer = offer,
+                                    onSelect = {
+                                        navController.navigate("offerDetail/${offer.id}")
+                                    }
                                 )
                             }
-                        }
-                    } else {
-                        items(offers, key = { it.id }) { offer ->
-                            OfferCard(
-                                offer = offer,
-                                onSelect = {
-                                    navController.navigate("offerDetail/${offer.id}")
-                                }
-                            )
                         }
                     }
                 }

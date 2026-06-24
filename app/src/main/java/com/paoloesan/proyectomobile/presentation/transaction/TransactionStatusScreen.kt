@@ -548,7 +548,7 @@ fun TransactionStatusScreen(
                                                         color = Color.Gray
                                                     )
                                                 }
-                                            } else if (currentState == TransactionState.PAGADA_CON_VOUCHER) {
+                                            } else if (step4Status == TimelineStepStatus.ACTIVE) {
                                                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                                         Text(text = "Tú: ", variant = TextVariant.Small, color = Color.Gray)

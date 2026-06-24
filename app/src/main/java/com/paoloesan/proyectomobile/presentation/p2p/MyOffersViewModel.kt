@@ -76,7 +76,12 @@ class MyOffersViewModel : ViewModel() {
             try {
                 val authId = Supabase.client.auth.currentUserAwaitInit()?.id
                 if (authId == null) {
-                    _uiState.update { it.copy(isLoading = false, errorMessage = "Usuario no autenticado") }
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            errorMessage = "Usuario no autenticado"
+                        )
+                    }
                     return@launch
                 }
 
@@ -95,6 +100,7 @@ class MyOffersViewModel : ViewModel() {
                         }
                     }
                     .decodeList<OfferModel>()
+                    .sortedByDescending { it.offerId ?: 0 }
 
                 val metodos = Supabase.client.postgrest["metodos_pago"]
                     .select { filter { eq("usuario_id", userId) } }
@@ -107,20 +113,29 @@ class MyOffersViewModel : ViewModel() {
                         .select {
                             filter {
                                 isIn("oferta_id", offerIds)
-                                isIn("estado", listOf("Pendiente", "En Proceso", "Pagado", "Disputa"))
+                                isIn(
+                                    "estado",
+                                    listOf("Pendiente", "En Proceso", "Pagado", "Disputa")
+                                )
                             }
                         }
                         .decodeList<TransactionModel>()
+                        .sortedByDescending { it.transactionId ?: 0 }
                 } else emptyList()
 
                 val sentTx = Supabase.client.postgrest["transacciones"]
                     .select {
                         filter {
-                            eq("usuario_comprador_id", userId)
+                            or {
+                                eq("usuario_comprador_id", userId)
+                                eq("usuario_vendedor_id", userId)
+                            }
                             isIn("estado", listOf("Pendiente", "En Proceso", "Pagado", "Disputa"))
                         }
                     }
                     .decodeList<TransactionModel>()
+                    .filter { !offerIds.contains(it.offerId) }
+                    .sortedByDescending { it.transactionId ?: 0 }
 
                 val sentOfferIds = sentTx.map { it.offerId }.distinct()
                 val sentOffers = if (sentOfferIds.isNotEmpty()) {
@@ -153,7 +168,7 @@ class MyOffersViewModel : ViewModel() {
                 val myOfferItems = offers.map { offer ->
                     val metodo = allMetodoMap[offer.metodoPagoId]
                     val activeTx = incomingTx.firstOrNull {
-                        it.offerId == offer.offerId && it.status == "En Proceso"
+                        it.offerId == offer.offerId && (it.status == "En Proceso" || it.status == "Pagado" || it.status == "Disputa" || it.status == "Pendiente")
                     }
                     MyOfferUiItem(
                         offerId = offer.offerId ?: -1,
@@ -174,7 +189,8 @@ class MyOffersViewModel : ViewModel() {
                     IncomingTransactionItem(
                         transactionId = tx.transactionId ?: -1,
                         offerId = tx.offerId,
-                        buyerName = userNames[tx.usuarioCompradorId] ?: "Usuario ${tx.usuarioCompradorId}",
+                        buyerName = userNames[tx.usuarioCompradorId]
+                            ?: "Usuario ${tx.usuarioCompradorId}",
                         type = offer?.tipoOperacion ?: "",
                         currency = offer?.monedaTengo ?: "",
                         amount = tx.amount,
@@ -208,7 +224,10 @@ class MyOffersViewModel : ViewModel() {
                 }
             } catch (e: Exception) {
                 _uiState.update {
-                    it.copy(isLoading = false, errorMessage = "Error al cargar datos: ${e.localizedMessage}")
+                    it.copy(
+                        isLoading = false,
+                        errorMessage = "Error al cargar datos: ${e.localizedMessage}"
+                    )
                 }
             }
         }
@@ -226,14 +245,14 @@ class MyOffersViewModel : ViewModel() {
                 else -> 1.0
             }
         }
+
         val rate = obtenerTasaBase(monedaRecibo) / obtenerTasaBase(monedaTengo)
-        val montoTengo = cantidad
         val montoRecibo = cantidad * rate
 
         viewModelScope.launch {
             try {
                 Supabase.client.postgrest["ofertas"].update({
-                    set("monto_tengo", montoTengo)
+                    set("monto_tengo", cantidad)
                     set("monto_recibo", montoRecibo)
                     set("tipo_cambio", rate)
                 }) {

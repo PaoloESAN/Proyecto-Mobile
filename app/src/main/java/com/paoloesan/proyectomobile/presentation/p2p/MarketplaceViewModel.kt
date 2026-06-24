@@ -79,6 +79,7 @@ class MarketplaceViewModel : ViewModel() {
                         }
                     }
                     .decodeList<OfferModel>()
+                    .sortedByDescending { it.offerId ?: 0 }
 
                 // 3. Obtener nombres de creadores y nombres de banco de métodos de pago
                 val creatorIds = activeOffers.map { it.usuarioCreadorId }.distinct()

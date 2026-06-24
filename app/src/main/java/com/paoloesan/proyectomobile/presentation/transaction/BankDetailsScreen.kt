@@ -34,9 +34,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Image
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.UploadFile
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
@@ -79,6 +77,7 @@ import zed.rainxch.rikkaui.components.ui.toast.ToastHost
 import zed.rainxch.rikkaui.components.ui.toast.ToastVariant
 import zed.rainxch.rikkaui.components.ui.toast.rememberToastHostState
 import zed.rainxch.rikkaui.foundation.RikkaTheme
+import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -89,7 +88,7 @@ fun BankDetailsScreen(
     rate: String = "3.85",
     bank: String = "BCP - 191-99882211-0-45 (PEN)",
     type: String = "Compra",
-    status: String = "Pendiente",
+    status: String = "En Proceso",
     uploaded: Boolean = false,
     currency: String = "USD",
     navController: NavController,
@@ -111,7 +110,11 @@ fun BankDetailsScreen(
     var selectedVoucherAmount by remember { mutableStateOf("") }
     var selectedVoucherUrl by remember { mutableStateOf<String?>(null) }
     var showIaDetailsDialog by remember { mutableStateOf(false) }
-    var selectedIaVerification by remember { mutableStateOf<com.paoloesan.proyectomobile.data.model.VerificacionIaModel?>(null) }
+    var selectedIaVerification by remember {
+        mutableStateOf<com.paoloesan.proyectomobile.data.model.VerificacionIaModel?>(
+            null
+        )
+    }
 
     val sheetState = rememberModalBottomSheetState()
     var showUploadSheet by remember { mutableStateOf(false) }
@@ -140,9 +143,8 @@ fun BankDetailsScreen(
         }
     }
 
-    val esComprador = !isSeller
-    val currencyClean = (if (uiState.currency.isNotEmpty()) uiState.currency else currency).uppercase()
-    val rateDouble = if (uiState.exchangeRate > 0.0) uiState.exchangeRate else rate.toDoubleOrNull() ?: 3.85
+    val currencyClean =
+        (uiState.currency.ifEmpty { currency }).uppercase()
 
     val monedaTengo = uiState.monedaTengo
     val monedaRecibo = uiState.monedaRecibo
@@ -152,22 +154,31 @@ fun BankDetailsScreen(
     val formattedTengo = String.format(java.util.Locale.US, "%,.2f", montoTengo)
     val formattedRecibo = String.format(java.util.Locale.US, "%,.2f", montoRecibo)
 
-    // Fallbacks to maintain compatibility in sub-elements
-    val formattedUsd = formattedTengo
-    val formattedPen = formattedRecibo
-
-    val displayAmount = if (esComprador) {
+    val isRecibo = currencyClean.equals(monedaRecibo, ignoreCase = true)
+    val displayAmount = if (isRecibo) {
         "$formattedRecibo $monedaRecibo"
     } else {
         "$formattedTengo $monedaTengo"
     }
-    val displayCurrency = if (esComprador) monedaRecibo else monedaTengo
+    val displayCurrency = if (isRecibo) monedaRecibo else monedaTengo
+
+    val peerCurrency = if (isRecibo) monedaTengo else monedaRecibo
+    val formattedPeerAmount = if (isRecibo) formattedTengo else formattedRecibo
+    val peerAmountWithCurrency = "$formattedPeerAmount $peerCurrency"
 
     val bankParts = bank.split(" - ")
-    val parsedBankName = if (uiState.bankName.isNotEmpty()) uiState.bankName else bankParts.getOrNull(0) ?: "BCP"
-    val parsedAccountNumber = if (uiState.accountNumber.isNotEmpty()) uiState.accountNumber else bankParts.getOrNull(1)?.replace(Regex("\\(.*\\)"), "")?.trim() ?: "191-99882211-0-45"
-    val parsedCCI = if (uiState.cci.isNotEmpty()) uiState.cci else if (parsedBankName.uppercase().contains("BCP")) "002-$parsedAccountNumber-45" else "003-$parsedAccountNumber-12"
-    val displayTitular = if (uiState.titularName.isNotEmpty()) uiState.titularName else if (isSeller) "Mateo Rojas (Comprador)" else "Juan Perez (Vendedor)"
+    val parsedBankName =
+        uiState.bankName.ifEmpty { bankParts.getOrNull(0) ?: "BCP" }
+    val parsedAccountNumber =
+        uiState.accountNumber.ifEmpty {
+            bankParts.getOrNull(1)
+                ?.replace(Regex("\\(.*\\)"), "")?.trim() ?: "191-99882211-0-45"
+        }
+    val parsedCCI = if (uiState.cci.isNotEmpty()) uiState.cci else if (parsedBankName.uppercase()
+            .contains("BCP")
+    ) "002-$parsedAccountNumber-45" else "003-$parsedAccountNumber-12"
+    val displayTitular =
+        if (uiState.titularName.isNotEmpty()) uiState.titularName else if (isSeller) "Mateo Rojas (Comprador)" else "Juan Perez (Vendedor)"
 
     val mineUploaded = uiState.myVoucherUploaded
     val peerUploaded = uiState.peerVoucherUploaded
@@ -299,8 +310,15 @@ fun BankDetailsScreen(
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .background(RikkaTheme.colors.destructive.copy(alpha = 0.1f), shape = RoundedCornerShape(8.dp))
-                                    .border(1.dp, RikkaTheme.colors.destructive.copy(alpha = 0.2f), shape = RoundedCornerShape(8.dp))
+                                    .background(
+                                        RikkaTheme.colors.destructive.copy(alpha = 0.1f),
+                                        shape = RoundedCornerShape(8.dp)
+                                    )
+                                    .border(
+                                        1.dp,
+                                        RikkaTheme.colors.destructive.copy(alpha = 0.2f),
+                                        shape = RoundedCornerShape(8.dp)
+                                    )
                                     .padding(12.dp)
                             ) {
                                 Text(
@@ -326,7 +344,8 @@ fun BankDetailsScreen(
                                 val regex = Regex("\"([^\"]+)\"\\s*:\\s*(?:\"([^\"]*)\"|([0-9.]+))")
                                 regex.findAll(jsonStr).forEach { match ->
                                     val key = match.groupValues[1]
-                                    val value = match.groupValues[2].ifEmpty { match.groupValues[3] }
+                                    val value =
+                                        match.groupValues[2].ifEmpty { match.groupValues[3] }
                                     fields[key] = value
                                 }
                             }
@@ -425,7 +444,7 @@ fun BankDetailsScreen(
                                 message = "Disputa iniciada correctamente. Soporte revisará el caso.",
                                 variant = ToastVariant.Success
                             )
-                            kotlinx.coroutines.delay(1000)
+                            kotlinx.coroutines.delay(1000.milliseconds)
                             navController.navigate("transactionStatus/$transactionId?isSeller=$isSeller&amount=$amount&rate=$rate&bank=$bank&type=$type&status=En disputa&uploaded=$mineUploaded&currency=$currency&isRated=false") {
                                 popUpTo("transactionStatus/$transactionId?isSeller=$isSeller&amount=$amount&rate=$rate&bank=$bank&type=$type&status=$status") {
                                     inclusive = true
@@ -536,7 +555,14 @@ fun BankDetailsScreen(
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Button(
                                         onClick = {
-                                            clipboardManager.setText(AnnotatedString(displayAmount.replace(" PEN", "").replace(" USD", "").trim()))
+                                            clipboardManager.setText(
+                                                AnnotatedString(
+                                                    displayAmount.replace(
+                                                        " PEN",
+                                                        ""
+                                                    ).replace(" USD", "").trim()
+                                                )
+                                            )
                                             scope.launch {
                                                 toastState.show(
                                                     message = "Monto copiado: $displayAmount",
@@ -632,11 +658,17 @@ fun BankDetailsScreen(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Column {
-                                        Text(text = "Tú Comprobante", variant = TextVariant.P, color = RikkaTheme.colors.onBackground)
+                                        Text(
+                                            text = "Tú Comprobante",
+                                            variant = TextVariant.P,
+                                            color = RikkaTheme.colors.onBackground
+                                        )
                                         Text(
                                             text = if (mineUploaded) "Subido (Listo)" else "Pendiente de subir",
                                             variant = TextVariant.Small,
-                                            color = if (mineUploaded) Color(0xFF4CAF50) else Color(0xFFD32F2F)
+                                            color = if (mineUploaded) Color(0xFF4CAF50) else Color(
+                                                0xFFD32F2F
+                                            )
                                         )
                                         if (mineUploaded) {
                                             Row(
@@ -645,22 +677,37 @@ fun BankDetailsScreen(
                                                 modifier = Modifier
                                                     .padding(top = 4.dp)
                                                     .clickable {
-                                                        selectedIaVerification = uiState.myIaVerification
+                                                        selectedIaVerification =
+                                                            uiState.myIaVerification
                                                         showIaDetailsDialog = true
                                                     }
                                             ) {
                                                 val verif = uiState.myIaVerification
                                                 val (statusText, statusColor) = when {
-                                                    verif == null -> "IA: Procesando..." to Color(0xFFFF9800)
-                                                    verif.esValido -> "IA: Correcto ✓" to Color(0xFF4CAF50)
-                                                    else -> "IA: Discrepancia ⚠️" to Color(0xFFD32F2F)
+                                                    verif == null -> "IA: Procesando..." to Color(
+                                                        0xFFFF9800
+                                                    )
+
+                                                    verif.esValido -> "IA: Correcto ✓" to Color(
+                                                        0xFF4CAF50
+                                                    )
+
+                                                    else -> "IA: Discrepancia ⚠️" to Color(
+                                                        0xFFD32F2F
+                                                    )
                                                 }
-                                                Text(text = statusText, variant = TextVariant.Small, color = statusColor)
+                                                Text(
+                                                    text = statusText,
+                                                    variant = TextVariant.Small,
+                                                    color = statusColor
+                                                )
                                                 Text(
                                                     text = "(detalles)",
                                                     variant = TextVariant.Small,
                                                     color = RikkaTheme.colors.primary,
-                                                    style = androidx.compose.ui.text.TextStyle(textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline)
+                                                    style = androidx.compose.ui.text.TextStyle(
+                                                        textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline
+                                                    )
                                                 )
                                             }
                                         }
@@ -668,8 +715,9 @@ fun BankDetailsScreen(
                                     if (mineUploaded) {
                                         Button(
                                             onClick = {
-                                                selectedVoucherTitle = if (isSeller) "Tu Comprobante ($monedaTengo)" else "Tu Comprobante ($monedaRecibo)"
-                                                selectedVoucherAmount = if (isSeller) "$formattedTengo $monedaTengo" else "$formattedRecibo $monedaRecibo"
+                                                selectedVoucherTitle =
+                                                    "Tu Comprobante ($displayCurrency)"
+                                                selectedVoucherAmount = displayAmount
                                                 selectedVoucherUrl = uiState.myVoucherUrl
                                                 showVoucherDialog = true
                                             },
@@ -704,11 +752,17 @@ fun BankDetailsScreen(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Column {
-                                        Text(text = "Comprobante de Contraparte", variant = TextVariant.P, color = RikkaTheme.colors.onBackground)
+                                        Text(
+                                            text = "Comprobante de Contraparte",
+                                            variant = TextVariant.P,
+                                            color = RikkaTheme.colors.onBackground
+                                        )
                                         Text(
                                             text = if (peerUploaded) "Subido (Listo)" else "Pendiente de recibir",
                                             variant = TextVariant.Small,
-                                            color = if (peerUploaded) Color(0xFF4CAF50) else Color(0xFFD32F2F)
+                                            color = if (peerUploaded) Color(0xFF4CAF50) else Color(
+                                                0xFFD32F2F
+                                            )
                                         )
                                         if (peerUploaded) {
                                             Row(
@@ -717,22 +771,37 @@ fun BankDetailsScreen(
                                                 modifier = Modifier
                                                     .padding(top = 4.dp)
                                                     .clickable {
-                                                        selectedIaVerification = uiState.peerIaVerification
+                                                        selectedIaVerification =
+                                                            uiState.peerIaVerification
                                                         showIaDetailsDialog = true
                                                     }
                                             ) {
                                                 val verif = uiState.peerIaVerification
                                                 val (statusText, statusColor) = when {
-                                                    verif == null -> "IA: Procesando..." to Color(0xFFFF9800)
-                                                    verif.esValido -> "IA: Correcto ✓" to Color(0xFF4CAF50)
-                                                    else -> "IA: Discrepancia ⚠️" to Color(0xFFD32F2F)
+                                                    verif == null -> "IA: Procesando..." to Color(
+                                                        0xFFFF9800
+                                                    )
+
+                                                    verif.esValido -> "IA: Correcto ✓" to Color(
+                                                        0xFF4CAF50
+                                                    )
+
+                                                    else -> "IA: Discrepancia ⚠️" to Color(
+                                                        0xFFD32F2F
+                                                    )
                                                 }
-                                                Text(text = statusText, variant = TextVariant.Small, color = statusColor)
+                                                Text(
+                                                    text = statusText,
+                                                    variant = TextVariant.Small,
+                                                    color = statusColor
+                                                )
                                                 Text(
                                                     text = "(detalles)",
                                                     variant = TextVariant.Small,
                                                     color = RikkaTheme.colors.primary,
-                                                    style = androidx.compose.ui.text.TextStyle(textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline)
+                                                    style = androidx.compose.ui.text.TextStyle(
+                                                        textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline
+                                                    )
                                                 )
                                             }
                                         }
@@ -740,8 +809,9 @@ fun BankDetailsScreen(
                                     if (peerUploaded) {
                                         Button(
                                             onClick = {
-                                                selectedVoucherTitle = if (isSeller) "Comprobante del Comprador ($monedaRecibo)" else "Comprobante del Vendedor ($monedaTengo)"
-                                                selectedVoucherAmount = if (isSeller) "$formattedRecibo $monedaRecibo" else "$formattedTengo $monedaTengo"
+                                                selectedVoucherTitle =
+                                                    "Comprobante de Contraparte ($peerCurrency)"
+                                                selectedVoucherAmount = peerAmountWithCurrency
                                                 selectedVoucherUrl = uiState.peerVoucherUrl
                                                 showVoucherDialog = true
                                             },
@@ -771,9 +841,10 @@ fun BankDetailsScreen(
                         .padding(start = 24.dp, end = 24.dp, top = 16.dp, bottom = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    if (uiState.errorMessage != null) {
+                    val errorMsg = uiState.errorMessage
+                    if (errorMsg != null && !errorMsg.contains("Discrepancia", ignoreCase = true)) {
                         Text(
-                            text = uiState.errorMessage ?: "",
+                            text = errorMsg,
                             color = RikkaTheme.colors.destructive,
                             variant = TextVariant.P
                         )
@@ -784,8 +855,11 @@ fun BankDetailsScreen(
                             onClick = {
                                 viewModel.confirmarRecepcion {
                                     scope.launch {
-                                        toastState.show("Recepción confirmada con éxito", ToastVariant.Success)
-                                        kotlinx.coroutines.delay(1000)
+                                        toastState.show(
+                                            "Recepción confirmada con éxito",
+                                            ToastVariant.Success
+                                        )
+                                        kotlinx.coroutines.delay(1000.milliseconds)
                                         navController.navigate("transactionStatus/$transactionId?isSeller=$isSeller&amount=$amount&rate=$rate&bank=$bank&type=$type&status=Finalizado&uploaded=true&isRated=false") {
                                             popUpTo("transactionStatus/$transactionId?isSeller=$isSeller&amount=$amount&rate=$rate&bank=$bank&type=$type&status=$status") {
                                                 inclusive = true
@@ -931,6 +1005,7 @@ fun BankDetailsScreen(
                                     )
                                 }
                             }
+
                             voucherUri == null -> {
                                 Column(
                                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -954,6 +1029,7 @@ fun BankDetailsScreen(
                                     )
                                 }
                             }
+
                             else -> {
                                 Box(
                                     modifier = Modifier.fillMaxSize(),
@@ -1000,7 +1076,10 @@ fun BankDetailsScreen(
                             viewModel.uploadVoucher(context, voucherUri!!)
                             showUploadSheet = false
                             scope.launch {
-                                toastState.show("Comprobante enviado con éxito", ToastVariant.Success)
+                                toastState.show(
+                                    "Comprobante enviado con éxito",
+                                    ToastVariant.Success
+                                )
                             }
                         }
                     },
@@ -1121,9 +1200,11 @@ private fun getFileNameFromUri(context: Context, uri: Uri): String {
                 }
             } ?: "archivo"
         }
+
         uri.path != null -> {
             uri.path!!.substringAfterLast("/")
         }
+
         else -> "archivo"
     }
 }

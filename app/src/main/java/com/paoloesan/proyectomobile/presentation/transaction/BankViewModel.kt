@@ -123,10 +123,10 @@ class BankViewModel : ViewModel() {
                     .decodeSingle<OfferModel>()
 
                 // Determinar cuál es el método de pago de la contraparte a la que se le debe pagar
-                val paymentMethodId = if (esComprador) {
-                    offer.metodoPagoId
+                val paymentMethodId = if (offer.tipoOperacion == "Venta") {
+                    if (esComprador) offer.metodoPagoId else tx.metodoPagoCompradorId
                 } else {
-                    tx.metodoPagoCompradorId
+                    if (esComprador) tx.metodoPagoCompradorId else offer.metodoPagoId
                 }
 
                 var bName = ""

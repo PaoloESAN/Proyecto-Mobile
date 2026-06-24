@@ -12,7 +12,7 @@ data class TransactionModel(
     @SerialName("metodo_pago_comprador_id") val metodoPagoCompradorId: Int? = null,
     @SerialName("monto_operacion") val amount: Double,
     @SerialName("tipo_cambio_aplicado") val tipoCambioAplicado: Double = 0.0,
-    @SerialName("estado") val status: String = "Pendiente",
+    @SerialName("estado") val status: String = "En Proceso",
     @SerialName("confirmado_comprador") val confirmadoComprador: Boolean = false,
     @SerialName("confirmado_vendedor") val confirmadoVendedor: Boolean = false,
     @SerialName("ya_calificado") val yaCalificado: Boolean = false,

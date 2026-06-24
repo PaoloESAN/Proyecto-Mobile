@@ -1,7 +1,6 @@
 package com.paoloesan.proyectomobile.presentation.p2p
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -20,7 +19,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -31,13 +29,13 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
@@ -70,7 +68,7 @@ fun MyOffersScreen(navController: NavController) {
     val viewModel: MyOffersViewModel = viewModel()
     val uiState by viewModel.uiState.collectAsState()
 
-    var selectedTab by remember { mutableStateOf(0) }
+    var selectedTab by remember { mutableIntStateOf(0) }
 
     var showCancelDialog by remember { mutableStateOf(false) }
     var showEditDialog by remember { mutableStateOf(false) }
@@ -168,7 +166,9 @@ fun MyOffersScreen(navController: NavController) {
                             if (it.all { c -> c.isDigit() || c == '.' }) editAmount = it
                         },
                         placeholder = "Cantidad",
-                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = KeyboardType.Number),
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                            keyboardType = KeyboardType.Number
+                        ),
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
                     )
@@ -193,7 +193,11 @@ fun MyOffersScreen(navController: NavController) {
                         color = RikkaTheme.colors.onBackground
                     )
                     Input(
-                        value = String.format(java.util.Locale.US, "%,.2f", editMontoReciboCalculado),
+                        value = String.format(
+                            java.util.Locale.US,
+                            "%,.2f",
+                            editMontoReciboCalculado
+                        ),
                         onValueChange = {},
                         enabled = false,
                         placeholder = "Recibes",
@@ -352,7 +356,9 @@ fun MyOffersScreen(navController: NavController) {
                                         verticalArrangement = Arrangement.spacedBy(12.dp),
                                         contentPadding = PaddingValues(vertical = 12.dp)
                                     ) {
-                                        items(uiState.sentTransactions, key = { it.transactionId }) { tx ->
+                                        items(
+                                            uiState.sentTransactions,
+                                            key = { it.transactionId }) { tx ->
                                             Card(
                                                 onClick = {
                                                     navController.navigate("transactionStatus/${tx.transactionId}")
@@ -372,10 +378,21 @@ fun MyOffersScreen(navController: NavController) {
                                                             color = RikkaTheme.colors.onBackground
                                                         )
                                                         val badgeBgColor = when (tx.status) {
-                                                            "Aceptada", "En Proceso" -> RikkaTheme.colors.primary.copy(alpha = 0.15f)
-                                                            "Rechazada", "Cancelado", "Disputa" -> RikkaTheme.colors.destructive.copy(alpha = 0.15f)
-                                                            "Pagado" -> RikkaTheme.colors.success.copy(alpha = 0.15f)
-                                                            else -> RikkaTheme.colors.warning.copy(alpha = 0.15f)
+                                                            "Aceptada", "En Proceso" -> RikkaTheme.colors.primary.copy(
+                                                                alpha = 0.15f
+                                                            )
+
+                                                            "Rechazada", "Cancelado", "Disputa" -> RikkaTheme.colors.destructive.copy(
+                                                                alpha = 0.15f
+                                                            )
+
+                                                            "Pagado" -> RikkaTheme.colors.success.copy(
+                                                                alpha = 0.15f
+                                                            )
+
+                                                            else -> RikkaTheme.colors.warning.copy(
+                                                                alpha = 0.15f
+                                                            )
                                                         }
                                                         val badgeTextColor = when (tx.status) {
                                                             "Aceptada", "En Proceso" -> RikkaTheme.colors.primary
@@ -389,7 +406,10 @@ fun MyOffersScreen(navController: NavController) {
                                                                     color = badgeBgColor,
                                                                     shape = RoundedCornerShape(4.dp)
                                                                 )
-                                                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                                                                .padding(
+                                                                    horizontal = 8.dp,
+                                                                    vertical = 4.dp
+                                                                )
                                                         ) {
                                                             Text(
                                                                 text = tx.status,
@@ -402,13 +422,19 @@ fun MyOffersScreen(navController: NavController) {
                                                     Spacer(modifier = Modifier.height(2.dp))
 
                                                     Text(
-                                                        text = "Quieres ${if (tx.type == "Compra") "comprar" else "vender"} ${tx.currency} ${String.format("%.2f", tx.amount)}",
+                                                        text = "Quieres ${if (tx.type == "Compra") "comprar" else "vender"} ${tx.currency} ${
+                                                            "%.2f".format(
+                                                                tx.amount
+                                                            )
+                                                        }",
                                                         variant = TextVariant.P,
-                                                        color = RikkaTheme.colors.onBackground.copy(alpha = 0.8f)
+                                                        color = RikkaTheme.colors.onBackground.copy(
+                                                            alpha = 0.8f
+                                                        )
                                                     )
 
                                                     Text(
-                                                        text = "T.C.: ${String.format("%.2f", tx.rate)}",
+                                                        text = "T.C.: ${"%.2f".format(tx.rate)}",
                                                         variant = TextVariant.Small,
                                                         color = Color.Gray
                                                     )
@@ -478,9 +504,17 @@ fun MyOffersScreen(navController: NavController) {
                                                         )
 
                                                         val badgeBgColor = when (offer.status) {
-                                                            "Activa" -> RikkaTheme.colors.success.copy(alpha = 0.15f)
-                                                            "En Proceso" -> RikkaTheme.colors.warning.copy(alpha = 0.15f)
-                                                            else -> RikkaTheme.colors.muted.copy(alpha = 0.15f)
+                                                            "Activa" -> RikkaTheme.colors.success.copy(
+                                                                alpha = 0.15f
+                                                            )
+
+                                                            "En Proceso" -> RikkaTheme.colors.warning.copy(
+                                                                alpha = 0.15f
+                                                            )
+
+                                                            else -> RikkaTheme.colors.muted.copy(
+                                                                alpha = 0.15f
+                                                            )
                                                         }
                                                         val badgeTextColor = when (offer.status) {
                                                             "Activa" -> RikkaTheme.colors.success
@@ -493,7 +527,10 @@ fun MyOffersScreen(navController: NavController) {
                                                                     color = badgeBgColor,
                                                                     shape = RoundedCornerShape(4.dp)
                                                                 )
-                                                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                                                                .padding(
+                                                                    horizontal = 8.dp,
+                                                                    vertical = 4.dp
+                                                                )
                                                         ) {
                                                             Text(
                                                                 text = offer.status,
@@ -506,68 +543,40 @@ fun MyOffersScreen(navController: NavController) {
                                                     Spacer(modifier = Modifier.height(6.dp))
 
                                                     Text(
-                                                        text = "Tengo: ${String.format(java.util.Locale.US, "%,.2f", offer.montoTengo)} ${offer.monedaTengo}",
+                                                        text = "Tengo: ${
+                                                            String.format(
+                                                                java.util.Locale.US,
+                                                                "%,.2f",
+                                                                offer.montoTengo
+                                                            )
+                                                        } ${offer.monedaTengo}",
                                                         variant = TextVariant.Large,
                                                         color = RikkaTheme.colors.onBackground
                                                     )
                                                     Spacer(modifier = Modifier.height(4.dp))
                                                     Text(
-                                                        text = "Recibo: ${String.format(java.util.Locale.US, "%,.2f", offer.montoRecibo)} ${offer.monedaRecibo}",
+                                                        text = "Recibo: ${
+                                                            String.format(
+                                                                java.util.Locale.US,
+                                                                "%,.2f",
+                                                                offer.montoRecibo
+                                                            )
+                                                        } ${offer.monedaRecibo}",
                                                         variant = TextVariant.Large,
                                                         color = RikkaTheme.colors.primary
                                                     )
                                                     Spacer(modifier = Modifier.height(4.dp))
                                                     Text(
-                                                        text = "T.C.: ${String.format(java.util.Locale.US, "%.4f", offer.rate)}  |  Método: ${offer.paymentMethod}",
+                                                        text = "T.C.: ${
+                                                            String.format(
+                                                                java.util.Locale.US,
+                                                                "%.4f",
+                                                                offer.rate
+                                                            )
+                                                        }  |  Método: ${offer.paymentMethod}",
                                                         variant = TextVariant.Small,
                                                         color = Color.Gray
                                                     )
-
-                                                    if (offer.status == "En Proceso") {
-                                                        Spacer(modifier = Modifier.height(12.dp))
-                                                        Box(
-                                                            modifier = Modifier
-                                                                .fillMaxWidth()
-                                                                .height(1.dp)
-                                                                .background(RikkaTheme.colors.muted.copy(alpha = 0.15f))
-                                                        )
-                                                        Spacer(modifier = Modifier.height(8.dp))
-                                                        Text(
-                                                            text = "Transacci\u00f3n activa:",
-                                                            variant = TextVariant.Small,
-                                                            color = Color.Gray
-                                                        )
-                                                        Spacer(modifier = Modifier.height(6.dp))
-                                                        Box(
-                                                            modifier = Modifier
-                                                                .fillMaxWidth()
-                                                                .clip(RoundedCornerShape(8.dp))
-                                                                .background(RikkaTheme.colors.muted.copy(alpha = 0.05f))
-                                                                .border(
-                                                                    1.dp,
-                                                                    RikkaTheme.colors.muted.copy(alpha = 0.15f),
-                                                                    RoundedCornerShape(8.dp)
-                                                                )
-                                                                .padding(12.dp)
-                                                        ) {
-                                                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                                                Text(
-                                                                    text = "Transacci\u00f3n en curso",
-                                                                    variant = TextVariant.P,
-                                                                    color = RikkaTheme.colors.onBackground,
-                                                                    style = androidx.compose.ui.text.TextStyle(
-                                                                        fontWeight = FontWeight.Bold
-                                                                    )
-                                                                )
-                                                                Spacer(modifier = Modifier.height(4.dp))
-                                                                Text(
-                                                                    text = "Toca la tarjeta para ver y gestionar la transacci\u00f3n",
-                                                                    variant = TextVariant.Small,
-                                                                    color = RikkaTheme.colors.primary
-                                                                )
-                                                            }
-                                                        }
-                                                    }
                                                 }
                                             }
                                         }
@@ -583,13 +592,19 @@ fun MyOffersScreen(navController: NavController) {
                                                 )
                                             }
 
-                                            items(uiState.incomingTransactions, key = { it.transactionId }) { req ->
+                                            items(
+                                                uiState.incomingTransactions,
+                                                key = { it.transactionId }) { req ->
                                                 Card(
                                                     onClick = {},
                                                     modifier = Modifier.fillMaxWidth(),
                                                     animation = CardAnimation.Press
                                                 ) {
-                                                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                                    Column(
+                                                        verticalArrangement = Arrangement.spacedBy(
+                                                            8.dp
+                                                        )
+                                                    ) {
                                                         Row(
                                                             modifier = Modifier.fillMaxWidth(),
                                                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -606,10 +621,15 @@ fun MyOffersScreen(navController: NavController) {
                                                             Box(
                                                                 modifier = Modifier
                                                                     .background(
-                                                                        color = RikkaTheme.colors.warning.copy(alpha = 0.15f),
+                                                                        color = RikkaTheme.colors.warning.copy(
+                                                                            alpha = 0.15f
+                                                                        ),
                                                                         shape = RoundedCornerShape(4.dp)
                                                                     )
-                                                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                                                                    .padding(
+                                                                        horizontal = 8.dp,
+                                                                        vertical = 4.dp
+                                                                    )
                                                             ) {
                                                                 Text(
                                                                     text = "Pendiente",
@@ -620,22 +640,38 @@ fun MyOffersScreen(navController: NavController) {
                                                         }
 
                                                         Text(
-                                                            text = "${req.type} ${req.currency} ${String.format("%.2f", req.amount)} a T.C. ${String.format("%.2f", req.rate)}",
+                                                            text = "${req.type} ${req.currency} ${
+                                                                "%.2f".format(
+                                                                    req.amount
+                                                                )
+                                                            } a T.C. ${"%.2f".format(req.rate)}",
                                                             variant = TextVariant.P,
-                                                            color = RikkaTheme.colors.onBackground.copy(alpha = 0.8f)
+                                                            color = RikkaTheme.colors.onBackground.copy(
+                                                                alpha = 0.8f
+                                                            )
                                                         )
 
                                                         Row(
                                                             modifier = Modifier.fillMaxWidth(),
-                                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                                            horizontalArrangement = Arrangement.spacedBy(
+                                                                8.dp
+                                                            )
                                                         ) {
                                                             Button(
-                                                                onClick = { viewModel.acceptTransaction(req.transactionId) },
+                                                                onClick = {
+                                                                    viewModel.acceptTransaction(
+                                                                        req.transactionId
+                                                                    )
+                                                                },
                                                                 modifier = Modifier.weight(1f),
                                                                 text = "Aceptar"
                                                             )
                                                             Button(
-                                                                onClick = { viewModel.rejectTransaction(req.transactionId) },
+                                                                onClick = {
+                                                                    viewModel.rejectTransaction(
+                                                                        req.transactionId
+                                                                    )
+                                                                },
                                                                 variant = ButtonVariant.Destructive,
                                                                 modifier = Modifier.weight(1f),
                                                                 text = "Rechazar"

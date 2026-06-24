@@ -204,7 +204,7 @@ sealed class Destination(
             val rate = arguments?.getString("rate") ?: "3.85"
             val bank = arguments?.getString("bank") ?: ""
             val type = arguments?.getString("type") ?: "Compra"
-            val status = arguments?.getString("status") ?: "Pendiente"
+            val status = arguments?.getString("status") ?: "En Proceso"
             val uploaded = arguments?.getString("uploaded")?.toBoolean() ?: false
             val currency = arguments?.getString("currency") ?: "USD"
             BankDetailsScreen(
