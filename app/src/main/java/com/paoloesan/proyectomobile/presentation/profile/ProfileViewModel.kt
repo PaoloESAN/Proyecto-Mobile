@@ -38,6 +38,10 @@ class ProfileViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(ProfileUiState())
     val uiState: StateFlow<ProfileUiState> = _uiState.asStateFlow()
 
+    /**
+     * CONSULTAR: Obtiene el promedio de reputación y las cuentas bancarias activas.
+     * Equivale al loadAllData solicitado.
+     */
     fun loadProfile(context: Context? = null) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
@@ -54,7 +58,7 @@ class ProfileViewModel : ViewModel() {
 
                     val userId = profile.usuarioId!!
 
-                    // 2. Calcular reputación desde la tabla 'calificaciones'
+                    // 2. REPUTACIÓN: Obtener promedio de la tabla calificaciones
                     val calificaciones = Supabase.client.postgrest["calificaciones"]
                         .select {
                             filter {
@@ -68,7 +72,7 @@ class ProfileViewModel : ViewModel() {
                         profile.calificacion
                     }
 
-                    // 3. Consultar métodos de pago activos
+                    // 3. CUENTAS BANCARIAS: Listar metodos_pago activos
                     val cuentas = Supabase.client.postgrest["metodos_pago"]
                         .select {
                             filter {
@@ -77,7 +81,7 @@ class ProfileViewModel : ViewModel() {
                             }
                         }.decodeList<PaymentMethodModel>()
 
-                    // 4. Consultar alertas de tipo de cambio
+                    // 4. ALERTAS: Consultar alertas de tipo de cambio
                     val alertas = Supabase.client.postgrest["alertas_cambio"]
                         .select {
                             filter {
@@ -108,8 +112,8 @@ class ProfileViewModel : ViewModel() {
                     _uiState.update { it.copy(isLoading = false, errorMessage = "Sesión no iniciada") }
                 }
             } catch (e: Exception) {
-                Log.e("ProfileViewModel", "Error loading profile from Supabase", e)
-                _uiState.update { it.copy(isLoading = false, errorMessage = "Error al cargar perfil") }
+                Log.e("ProfileViewModel", "Error loading profile data", e)
+                _uiState.update { it.copy(isLoading = false, errorMessage = "Error al cargar datos del perfil") }
             }
         }
     }
@@ -125,9 +129,10 @@ class ProfileViewModel : ViewModel() {
     }
 
     /**
-     * Registra un nuevo método de pago en Supabase
+     * INSERTAR: Tras insertar en metodos_pago, llama a loadProfile (loadAllData) 
+     * para que la lista sea reactiva.
      */
-    fun registrarMetodoPago(banco: String, numero: String, titular: String, moneda: String) {
+    fun addMetodoPago(banco: String, numero: String, titular: String, moneda: String) {
         viewModelScope.launch {
             val userId = _uiState.value.usuarioId ?: return@launch
             try {
@@ -140,16 +145,76 @@ class ProfileViewModel : ViewModel() {
                     estado = "Activo"
                 )
                 Supabase.client.postgrest["metodos_pago"].insert(nuevaCuenta)
-                loadProfile() // Recargar datos
+                
+                // Refresco automático de la UI
+                loadProfile() 
             } catch (e: Exception) {
-                _uiState.update { it.copy(errorMessage = "Error al registrar cuenta: ${e.message}") }
+                Log.e("ProfileViewModel", "Error al insertar cuenta", e)
+                _uiState.update { it.copy(errorMessage = "Error de red al registrar cuenta: ${e.message}") }
             }
         }
     }
 
     /**
-     * Crea una alerta de tipo de cambio
+     * ELIMINAR: Borra una alerta y recarga la lista automáticamente.
      */
+    fun deleteAlerta(alertaId: Int) {
+        viewModelScope.launch {
+            try {
+                Supabase.client.postgrest["alertas_cambio"].delete {
+                    filter {
+                        eq("alerta_id", alertaId)
+                    }
+                }
+                // Refresco automático de la UI
+                loadProfile()
+            } catch (e: Exception) {
+                Log.e("ProfileViewModel", "Error al eliminar alerta", e)
+                _uiState.update { it.copy(errorMessage = "Error de red al eliminar alerta") }
+            }
+        }
+    }
+
+    /**
+     * ACTUALIZAR: Guarda cambios del perfil filtrando por correo.
+     * Dispara isSuccess para eventos reactivos en la UI.
+     */
+    fun saveChanges(context: Context) {
+        val current = _uiState.value
+        if (current.nombres.isBlank() || current.apellidos.isBlank()) {
+            _uiState.update {
+                it.copy(errorMessage = "Complete todos los campos obligatorios")
+            }
+            return
+        }
+
+        viewModelScope.launch {
+            try {
+                val userEmail = current.correo
+                
+                // Actualizar en Supabase filtrando por correo
+                Supabase.client.postgrest["usuarios"].update({
+                    set("nombres", current.nombres)
+                    set("apellidos", current.apellidos)
+                }) {
+                    filter {
+                        eq("correo", userEmail)
+                    }
+                }
+
+                // Sincronizar localmente en SessionManager
+                SessionManager.saveProfileInfo(context, current.nombres, current.apellidos)
+
+                _uiState.update {
+                    it.copy(isSuccess = true, errorMessage = null)
+                }
+            } catch (e: Exception) {
+                Log.e("ProfileViewModel", "Error al guardar perfil", e)
+                _uiState.update { it.copy(errorMessage = "Error de red al guardar cambios: ${e.message}") }
+            }
+        }
+    }
+
     fun crearAlerta(moneda: String, tipoCambio: Double) {
         viewModelScope.launch {
             val userId = _uiState.value.usuarioId ?: return@launch
@@ -167,60 +232,7 @@ class ProfileViewModel : ViewModel() {
         }
     }
 
-    /**
-     * Elimina una alerta de tipo de cambio
-     */
-    fun eliminarAlerta(alertaId: Int) {
-        viewModelScope.launch {
-            try {
-                Supabase.client.postgrest["alertas_cambio"].delete {
-                    filter {
-                        eq("alerta_id", alertaId)
-                    }
-                }
-                loadProfile()
-            } catch (e: Exception) {
-                _uiState.update { it.copy(errorMessage = "Error al eliminar alerta: ${e.message}") }
-            }
-        }
-    }
-
     fun consumeSuccess() {
         _uiState.update { it.copy(isSuccess = false) }
-    }
-
-    fun saveChanges(context: Context) {
-        val current = _uiState.value
-        if (current.nombres.isBlank() || current.apellidos.isBlank()) {
-            _uiState.update {
-                it.copy(errorMessage = "Complete todos los campos obligatorios")
-            }
-            return
-        }
-
-        viewModelScope.launch {
-            try {
-                val userId = current.usuarioId ?: return@launch
-                
-                // Actualizar en Supabase
-                Supabase.client.postgrest["usuarios"].update({
-                    set("nombres", current.nombres)
-                    set("apellidos", current.apellidos)
-                }) {
-                    filter {
-                        eq("usuario_id", userId)
-                    }
-                }
-
-                // Sincronizar localmente
-                SessionManager.saveProfileInfo(context, current.nombres, current.apellidos)
-
-                _uiState.update {
-                    it.copy(isSuccess = true, errorMessage = null)
-                }
-            } catch (e: Exception) {
-                _uiState.update { it.copy(errorMessage = "Error al guardar cambios: ${e.message}") }
-            }
-        }
     }
 }
