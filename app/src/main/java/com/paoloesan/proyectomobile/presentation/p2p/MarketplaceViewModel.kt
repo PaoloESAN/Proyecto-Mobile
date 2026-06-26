@@ -20,6 +20,7 @@ import kotlinx.coroutines.launch
 data class P2POffer(
     val id: String,
     val username: String,
+    val avatarUrl: String? = null,
     val type: String, // "Compra" o "Venta"
     val monedaTengo: String,
     val monedaRecibo: String,
@@ -85,11 +86,13 @@ class MarketplaceViewModel : ViewModel() {
                 val creatorIds = activeOffers.map { it.usuarioCreadorId }.distinct()
                 val paymentMethodIds = activeOffers.map { it.metodoPagoId }.distinct()
 
-                val userNames = if (creatorIds.isNotEmpty()) {
+                // Mapear a (nombre, avatarUrl) por usuario_id
+                data class UserInfo(val name: String, val avatarUrl: String?)
+                val userProfiles = if (creatorIds.isNotEmpty()) {
                     Supabase.client.postgrest["usuarios"]
                         .select { filter { isIn("usuario_id", creatorIds) } }
                         .decodeList<UserProfileModel>()
-                        .associate { (it.usuarioId ?: -1) to "${it.nombres} ${it.apellidos}" }
+                        .associate { (it.usuarioId ?: -1) to UserInfo("${it.nombres} ${it.apellidos}", it.fotoPerfil) }
                 } else emptyMap()
 
                 val paymentMethods = if (paymentMethodIds.isNotEmpty()) {
@@ -101,11 +104,13 @@ class MarketplaceViewModel : ViewModel() {
 
                 // 4. Mapear a la lista de ofertas UI
                 val p2pOffers = activeOffers.map { offer ->
-                    val creatorName = userNames[offer.usuarioCreadorId] ?: "Usuario ${offer.usuarioCreadorId}"
+                    val creatorInfo = userProfiles[offer.usuarioCreadorId]
+                    val creatorName = creatorInfo?.name ?: "Usuario ${offer.usuarioCreadorId}"
                     val paymentMethodLabel = paymentMethods[offer.metodoPagoId]?.banco ?: "Cuenta"
                     P2POffer(
                         id = offer.offerId?.toString() ?: "",
                         username = creatorName,
+                        avatarUrl = creatorInfo?.avatarUrl,
                         type = offer.tipoOperacion,
                         monedaTengo = offer.monedaTengo,
                         monedaRecibo = offer.monedaRecibo,

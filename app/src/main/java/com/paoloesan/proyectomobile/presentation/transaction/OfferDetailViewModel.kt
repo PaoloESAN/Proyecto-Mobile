@@ -21,6 +21,7 @@ data class OfferDetailUiState(
     val offer: OfferModel? = null,
     val vendorName: String = "",
     val vendorRating: Double = 5.0,
+    val vendorPhotoUrl: String? = null,
     val myPaymentMethods: List<PaymentMethodModel> = emptyList(),
     val selectedMethodId: Int? = null,
     val amountInput: String = "",
@@ -62,15 +63,17 @@ class OfferDetailViewModel : ViewModel() {
                     .select { filter { eq("oferta_id", offerId) } }
                     .decodeSingle<OfferModel>()
 
-                // 3. Cargar nombre del vendedor
+                // 3. Cargar nombre, rating y foto del vendedor
                 var vendorName = "Vendedor"
                 var vendorRating = 5.0
+                var vendorPhotoUrl: String? = null
                 try {
                     val vendor = Supabase.client.postgrest["usuarios"]
                         .select { filter { eq("usuario_id", offer.usuarioCreadorId) } }
                         .decodeSingle<UserProfileModel>()
                     vendorName = "${vendor.nombres} ${vendor.apellidos}"
                     vendorRating = vendor.calificacion
+                    vendorPhotoUrl = vendor.fotoPerfil
                 } catch (_: Exception) {}
 
                 // 4. Cargar métodos de pago del usuario actual
@@ -91,6 +94,7 @@ class OfferDetailViewModel : ViewModel() {
                         offer = offer,
                         vendorName = vendorName,
                         vendorRating = vendorRating,
+                        vendorPhotoUrl = vendorPhotoUrl,
                         myPaymentMethods = myMethods,
                         selectedMethodId = initialMethodId,
                         currentUserId = myPerfil.usuarioId

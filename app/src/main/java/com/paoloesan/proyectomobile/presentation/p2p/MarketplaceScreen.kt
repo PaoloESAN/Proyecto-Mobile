@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -48,6 +49,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import coil3.compose.AsyncImage
 import com.paoloesan.proyectomobile.presentation.navigation.Destination
 import zed.rainxch.rikkaui.components.ui.button.Button
 import zed.rainxch.rikkaui.components.ui.button.ButtonSize
@@ -59,6 +61,9 @@ import zed.rainxch.rikkaui.components.ui.input.Input
 import zed.rainxch.rikkaui.components.ui.text.Text
 import zed.rainxch.rikkaui.components.ui.text.TextVariant
 import zed.rainxch.rikkaui.foundation.RikkaTheme
+import androidx.compose.foundation.border
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -541,12 +546,39 @@ fun OfferCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    androidx.compose.material3.Icon(
-                        imageVector = Icons.Default.Person,
-                        contentDescription = null,
-                        tint = RikkaTheme.colors.primary,
-                        modifier = Modifier.size(18.dp)
-                    )
+                    // Avatar: foto real o icono genérico como fallback
+                    if (offer.avatarUrl != null) {
+                        AsyncImage(
+                            model = offer.avatarUrl,
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .size(28.dp)
+                                .clip(CircleShape)
+                                .border(
+                                    width = 1.dp,
+                                    color = RikkaTheme.colors.primary.copy(alpha = 0.4f),
+                                    shape = CircleShape
+                                )
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .size(28.dp)
+                                .background(
+                                    color = RikkaTheme.colors.primary.copy(alpha = 0.12f),
+                                    shape = CircleShape
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            androidx.compose.material3.Icon(
+                                imageVector = Icons.Default.Person,
+                                contentDescription = null,
+                                tint = RikkaTheme.colors.primary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = offer.username,

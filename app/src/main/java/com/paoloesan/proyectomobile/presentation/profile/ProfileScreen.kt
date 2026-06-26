@@ -3,6 +3,7 @@ package com.paoloesan.proyectomobile.presentation.profile
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -54,6 +55,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import coil3.compose.AsyncImage
 import com.paoloesan.proyectomobile.data.model.AlertaCambioModel
 import com.paoloesan.proyectomobile.data.model.PaymentMethodModel
 import kotlinx.coroutines.launch
@@ -194,28 +196,44 @@ fun ProfileScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(96.dp)
-                                .background(
-                                    color = RikkaTheme.colors.primary.copy(alpha = 0.12f),
-                                    shape = CircleShape
-                                )
-                                .border(
-                                    width = 2.dp,
-                                    color = RikkaTheme.colors.primary.copy(alpha = 0.5f),
-                                    shape = CircleShape
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            val firstLetter = uiState.nombres.firstOrNull()?.toString() ?: ""
-                            val secondLetter = uiState.apellidos.firstOrNull()?.toString() ?: ""
-                            val initials = (firstLetter + secondLetter).uppercase()
-                            Text(
-                                text = initials,
-                                color = RikkaTheme.colors.primary,
-                                variant = TextVariant.H1
+                        if (uiState.fotoPerfil != null) {
+                            AsyncImage(
+                                model = uiState.fotoPerfil,
+                                contentDescription = "Foto de perfil",
+                                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                                modifier = Modifier
+                                    .size(96.dp)
+                                    .clip(CircleShape)
+                                    .border(
+                                        width = 2.dp,
+                                        color = RikkaTheme.colors.primary.copy(alpha = 0.5f),
+                                        shape = CircleShape
+                                    )
                             )
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .size(96.dp)
+                                    .background(
+                                        color = RikkaTheme.colors.primary.copy(alpha = 0.12f),
+                                        shape = CircleShape
+                                    )
+                                    .border(
+                                        width = 2.dp,
+                                        color = RikkaTheme.colors.primary.copy(alpha = 0.5f),
+                                        shape = CircleShape
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                val firstLetter = uiState.nombres.firstOrNull()?.toString() ?: ""
+                                val secondLetter = uiState.apellidos.firstOrNull()?.toString() ?: ""
+                                val initials = (firstLetter + secondLetter).uppercase()
+                                Text(
+                                    text = initials,
+                                    color = RikkaTheme.colors.primary,
+                                    variant = TextVariant.H1
+                                )
+                            }
                         }
 
                         Text(

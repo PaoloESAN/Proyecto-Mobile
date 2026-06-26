@@ -1,6 +1,7 @@
 package com.paoloesan.proyectomobile.presentation.profile
 
 import android.content.Context
+import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -13,6 +14,7 @@ import com.paoloesan.proyectomobile.data.model.PaymentMethodModel
 import com.paoloesan.proyectomobile.data.model.UserProfileModel
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.storage.storage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -26,9 +28,13 @@ data class ProfileUiState(
     val correo: String = "",
     val isVerified: Boolean = false,
     val calificacion: Double = 5.0,
+    val fotoPerfil: String? = null,
+    // URI local seleccionada, aún no subida (solo para preview en EditProfile)
+    val pendingAvatarUri: Uri? = null,
     val cuentas: List<PaymentMethodModel> = emptyList(),
     val alertas: List<AlertaCambioModel> = emptyList(),
     val isLoading: Boolean = false,
+    val isSaving: Boolean = false,
     val errorMessage: String? = null,
     val isSuccess: Boolean = false
 )
@@ -97,6 +103,7 @@ class ProfileViewModel : ViewModel() {
                             correo = profile.correo,
                             isVerified = profile.esVerificado,
                             calificacion = promedio,
+                            fotoPerfil = profile.fotoPerfil,
                             cuentas = cuentas,
                             alertas = alertas,
                             isLoading = false
@@ -126,6 +133,14 @@ class ProfileViewModel : ViewModel() {
     fun onApellidosChange(value: String) {
         val filtered = value.filter { it.isLetter() || it == ' ' }
         _uiState.update { it.copy(apellidos = filtered, errorMessage = null) }
+    }
+
+    /**
+     * Guarda la URI seleccionada en el estado para mostrar preview local.
+     * NO sube nada a Supabase hasta que el usuario presione "Guardar cambios".
+     */
+    fun onAvatarSelected(uri: Uri) {
+        _uiState.update { it.copy(pendingAvatarUri = uri) }
     }
 
     /**
@@ -176,41 +191,60 @@ class ProfileViewModel : ViewModel() {
     }
 
     /**
-     * ACTUALIZAR: Guarda cambios del perfil filtrando por correo.
-     * Dispara isSuccess para eventos reactivos en la UI.
+     * ACTUALIZAR: Si hay una imagen pendiente, la sube primero al bucket `avatars`
+     * y actualiza `foto_perfil_url`. Luego guarda nombres y apellidos.
+     * Al terminar, dispara isSuccess para que la UI navegue de regreso.
      */
     fun saveChanges(context: Context) {
         val current = _uiState.value
         if (current.nombres.isBlank() || current.apellidos.isBlank()) {
-            _uiState.update {
-                it.copy(errorMessage = "Complete todos los campos obligatorios")
-            }
+            _uiState.update { it.copy(errorMessage = "Complete todos los campos obligatorios") }
             return
         }
 
         viewModelScope.launch {
+            _uiState.update { it.copy(isSaving = true, errorMessage = null) }
             try {
+                val userId = current.usuarioId ?: throw Exception("Usuario no identificado")
                 val userEmail = current.correo
-                
-                // Actualizar en Supabase filtrando por correo
+
+                // 1. Subir avatar si hay uno pendiente
+                if (current.pendingAvatarUri != null) {
+                    val bytes = context.contentResolver
+                        .openInputStream(current.pendingAvatarUri)
+                        ?.use { it.readBytes() }
+                        ?: throw Exception("No se pudo leer la imagen seleccionada")
+
+                    val storagePath = "$userId/avatar.jpg"
+                    Supabase.client.storage["avatars"].upload(path = storagePath, data = bytes) {
+                        upsert = true
+                    }
+                    val publicUrl = Supabase.client.storage["avatars"].publicUrl(storagePath)
+
+                    Supabase.client.postgrest["usuarios"].update({
+                        set("foto_perfil_url", publicUrl)
+                    }) {
+                        filter { eq("usuario_id", userId) }
+                    }
+                }
+
+                // 2. Actualizar nombres y apellidos
                 Supabase.client.postgrest["usuarios"].update({
                     set("nombres", current.nombres)
                     set("apellidos", current.apellidos)
                 }) {
-                    filter {
-                        eq("correo", userEmail)
-                    }
+                    filter { eq("correo", userEmail) }
                 }
 
-                // Sincronizar localmente en SessionManager
+                // 3. Sincronizar localmente
                 SessionManager.saveProfileInfo(context, current.nombres, current.apellidos)
 
                 _uiState.update {
-                    it.copy(isSuccess = true, errorMessage = null)
+                    it.copy(isSaving = false, isSuccess = true, pendingAvatarUri = null, errorMessage = null)
                 }
             } catch (e: Exception) {
                 Log.e("ProfileViewModel", "Error al guardar perfil", e)
-                _uiState.update { it.copy(errorMessage = "Error de red al guardar cambios: ${e.message}") }
+                _uiState.update { it.copy(isSaving = false, errorMessage = "Error al guardar cambios: ${e.message}") }
             }
         }
     }

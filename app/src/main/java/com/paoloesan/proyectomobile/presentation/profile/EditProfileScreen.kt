@@ -1,6 +1,10 @@
 package com.paoloesan.proyectomobile.presentation.profile
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -16,10 +20,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
@@ -29,13 +34,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import coil3.compose.AsyncImage
 import kotlinx.coroutines.launch
 import zed.rainxch.rikkaui.components.ui.button.Button
 import zed.rainxch.rikkaui.components.ui.button.ButtonSize
@@ -63,6 +70,13 @@ fun EditProfileScreen(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
+    // Launcher para seleccionar imagen — solo guarda la URI en el estado (sin subir)
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let { viewModel.onAvatarSelected(it) }
+    }
+
     LaunchedEffect(Unit) {
         viewModel.loadProfile(context)
     }
@@ -78,15 +92,11 @@ fun EditProfileScreen(
         }
     }
 
+    // Al guardar con éxito: consumir el evento y regresar a la pantalla anterior
     LaunchedEffect(uiState.isSuccess) {
         if (uiState.isSuccess) {
             viewModel.consumeSuccess()
-            scope.launch {
-                toastState.show(
-                    message = "Cambios guardados con exito",
-                    variant = ToastVariant.Success
-                )
-            }
+            navController.popBackStack()
         }
     }
 
@@ -98,9 +108,7 @@ fun EditProfileScreen(
         Scaffold(
             containerColor = RikkaTheme.colors.background,
             snackbarHost = {
-                ToastHost(
-                    hostState = toastState
-                )
+                ToastHost(hostState = toastState)
             },
             topBar = {
                 Row(
@@ -140,19 +148,123 @@ fun EditProfileScreen(
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null
-                    ) {
-                        focusManager.clearFocus()
-                    }
+                    ) { focusManager.clearFocus() }
                     .padding(horizontal = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 contentPadding = PaddingValues(vertical = 12.dp)
             ) {
-                item {
-                    Spacer(modifier = Modifier.height(8.dp))
 
-                    Card(
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
+                // ── Sección foto de perfil ──────────────────────────────────────
+                item {
+                    Card(modifier = Modifier.fillMaxWidth()) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Text(
+                                text = "Foto de Perfil",
+                                variant = TextVariant.Large,
+                                color = RikkaTheme.colors.onBackground
+                            )
+
+                            // Avatar circular clicable (abre galería)
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier
+                                    .size(100.dp)
+                                    .clickable(
+                                        enabled = !uiState.isSaving,
+                                        interactionSource = remember { MutableInteractionSource() },
+                                        indication = null
+                                    ) {
+                                        imagePickerLauncher.launch("image/*")
+                                    }
+                            ) {
+                                // Prioridad de visualización:
+                                // 1. URI local pendiente (preview inmediato)
+                                // 2. URL remota ya guardada en Supabase
+                                // 3. Placeholder con icono de cámara
+                                val previewModel: Any? = uiState.pendingAvatarUri
+                                    ?: uiState.fotoPerfil
+
+                                if (previewModel != null) {
+                                    AsyncImage(
+                                        model = previewModel,
+                                        contentDescription = "Vista previa de foto de perfil",
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier
+                                            .size(100.dp)
+                                            .clip(CircleShape)
+                                            .border(
+                                                width = 2.dp,
+                                                color = RikkaTheme.colors.primary.copy(alpha = 0.5f),
+                                                shape = CircleShape
+                                            )
+                                    )
+                                } else {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(100.dp)
+                                            .background(
+                                                color = RikkaTheme.colors.primary.copy(alpha = 0.12f),
+                                                shape = CircleShape
+                                            )
+                                            .border(
+                                                width = 2.dp,
+                                                color = RikkaTheme.colors.primary.copy(alpha = 0.5f),
+                                                shape = CircleShape
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        androidx.compose.material3.Icon(
+                                            imageVector = Icons.Default.CameraAlt,
+                                            contentDescription = "Agregar foto",
+                                            tint = RikkaTheme.colors.primary,
+                                            modifier = Modifier.size(36.dp)
+                                        )
+                                    }
+                                }
+
+                                // Overlay de carga durante el guardado
+                                if (uiState.isSaving) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(100.dp)
+                                            .background(
+                                                color = RikkaTheme.colors.background.copy(alpha = 0.7f),
+                                                shape = CircleShape
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(32.dp),
+                                            color = RikkaTheme.colors.primary,
+                                            strokeWidth = 3.dp
+                                        )
+                                    }
+                                }
+                            }
+
+                            // Texto de ayuda dinámico
+                            Text(
+                                text = when {
+                                    uiState.pendingAvatarUri != null -> "Nueva foto seleccionada — guarda para aplicar"
+                                    uiState.fotoPerfil != null -> "Toca para cambiar la foto"
+                                    else -> "Toca para agregar una foto"
+                                },
+                                variant = TextVariant.Small,
+                                color = RikkaTheme.colors.onBackground.copy(alpha = 0.6f)
+                            )
+                        }
+                    }
+                }
+
+                // ── Sección datos personales ────────────────────────────────────
+                item {
+                    Spacer(modifier = Modifier.height(0.dp))
+
+                    Card(modifier = Modifier.fillMaxWidth()) {
                         Column(
                             modifier = Modifier.fillMaxWidth(),
                             verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -187,14 +299,13 @@ fun EditProfileScreen(
                                 )
                             }
 
-
-
                             Spacer(modifier = Modifier.height(4.dp))
 
                             Button(
                                 onClick = { viewModel.saveChanges(context) },
                                 modifier = Modifier.fillMaxWidth(),
-                                text = "Guardar cambios"
+                                text = if (uiState.isSaving) "Guardando..." else "Guardar cambios",
+                                enabled = !uiState.isSaving
                             )
                         }
                     }
