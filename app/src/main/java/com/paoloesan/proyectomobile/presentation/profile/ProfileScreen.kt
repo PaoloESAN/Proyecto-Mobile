@@ -3,6 +3,7 @@ package com.paoloesan.proyectomobile.presentation.profile
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -54,6 +55,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import coil3.compose.AsyncImage
+import com.paoloesan.proyectomobile.data.model.AlertaCambioModel
+import com.paoloesan.proyectomobile.data.model.PaymentMethodModel
 import kotlinx.coroutines.launch
 import zed.rainxch.rikkaui.components.ui.PopupAnimation
 import zed.rainxch.rikkaui.components.ui.button.Button
@@ -72,11 +76,6 @@ import zed.rainxch.rikkaui.components.ui.toast.ToastVariant
 import zed.rainxch.rikkaui.components.ui.toast.rememberToastHostState
 import zed.rainxch.rikkaui.foundation.RikkaTheme
 
-data class Alert(
-    val currency: String,
-    val rate: String
-)
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
@@ -88,10 +87,7 @@ fun ProfileScreen(
     val alertSheetState = rememberModalBottomSheetState()
     var showBottomSheet by remember { mutableStateOf(false) }
     var showAlertSheet by remember { mutableStateOf(false) }
-    var savedAlerts by remember { mutableStateOf(listOf<Alert>(
-        Alert("USD", "3.85"),
-        Alert("PEN", "3.72")
-    )) }
+    
     val focusManager = LocalFocusManager.current
     val toastState = rememberToastHostState()
     val scope = rememberCoroutineScope()
@@ -200,28 +196,44 @@ fun ProfileScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(96.dp)
-                                .background(
-                                    color = RikkaTheme.colors.primary.copy(alpha = 0.12f),
-                                    shape = CircleShape
-                                )
-                                .border(
-                                    width = 2.dp,
-                                    color = RikkaTheme.colors.primary.copy(alpha = 0.5f),
-                                    shape = CircleShape
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            val firstLetter = uiState.nombres.firstOrNull()?.toString() ?: ""
-                            val secondLetter = uiState.apellidos.firstOrNull()?.toString() ?: ""
-                            val initials = (firstLetter + secondLetter).uppercase()
-                            Text(
-                                text = initials,
-                                color = RikkaTheme.colors.primary,
-                                variant = TextVariant.H1
+                        if (uiState.fotoPerfil != null) {
+                            AsyncImage(
+                                model = uiState.fotoPerfil,
+                                contentDescription = "Foto de perfil",
+                                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                                modifier = Modifier
+                                    .size(96.dp)
+                                    .clip(CircleShape)
+                                    .border(
+                                        width = 2.dp,
+                                        color = RikkaTheme.colors.primary.copy(alpha = 0.5f),
+                                        shape = CircleShape
+                                    )
                             )
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .size(96.dp)
+                                    .background(
+                                        color = RikkaTheme.colors.primary.copy(alpha = 0.12f),
+                                        shape = CircleShape
+                                    )
+                                    .border(
+                                        width = 2.dp,
+                                        color = RikkaTheme.colors.primary.copy(alpha = 0.5f),
+                                        shape = CircleShape
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                val firstLetter = uiState.nombres.firstOrNull()?.toString() ?: ""
+                                val secondLetter = uiState.apellidos.firstOrNull()?.toString() ?: ""
+                                val initials = (firstLetter + secondLetter).uppercase()
+                                Text(
+                                    text = initials,
+                                    color = RikkaTheme.colors.primary,
+                                    variant = TextVariant.H1
+                                )
+                            }
                         }
 
                         Text(
@@ -239,9 +251,10 @@ fun ProfileScreen(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(2.dp)
                                 ) {
+                                    val rating = uiState.calificacion
                                     for (i in 1..5) {
                                         val starColor =
-                                            if (i <= 4) Color(0xFFFFB74D) else Color.Gray.copy(alpha = 0.3f)
+                                            if (i <= rating) Color(0xFFFFB74D) else Color.Gray.copy(alpha = 0.3f)
                                         androidx.compose.material3.Icon(
                                             imageVector = Icons.Default.Star,
                                             contentDescription = null,
@@ -251,13 +264,13 @@ fun ProfileScreen(
                                     }
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(
-                                        text = "4.5",
+                                        text = String.format(java.util.Locale.US, "%.1f", rating),
                                         variant = TextVariant.Large,
                                         color = RikkaTheme.colors.onBackground
                                     )
                                 }
                                 Text(
-                                    text = "120 reseñas",
+                                    text = "Reputación del usuario",
                                     variant = TextVariant.Small,
                                     color = Color.Gray
                                 )
@@ -358,7 +371,7 @@ fun ProfileScreen(
                         }
                     }
                 } else {
-                    items(uiState.cuentas, key = { it.id }) { cuenta ->
+                    items(uiState.cuentas, key = { it.metodoPagoId ?: it.hashCode() }) { cuenta ->
                         BankAccountCard(cuenta)
                     }
                 }
@@ -404,7 +417,7 @@ fun ProfileScreen(
                     }
                 }
 
-                if (savedAlerts.isEmpty()) {
+                if (uiState.alertas.isEmpty()) {
                     item {
                         Card(
                             modifier = Modifier.fillMaxWidth()
@@ -419,11 +432,13 @@ fun ProfileScreen(
                         }
                     }
                 } else {
-                    items(savedAlerts) { alert ->
+                    items(uiState.alertas, key = { it.alertaId ?: it.hashCode() }) { alert ->
                         AlertCard(alert, onDelete = {
-                            savedAlerts = savedAlerts.filter { it != alert }
-                            scope.launch {
-                                toastState.show("Alerta eliminada", ToastVariant.Success)
+                            alert.alertaId?.let { id ->
+                                viewModel.deleteAlerta(id)
+                                scope.launch {
+                                    toastState.show("Alerta eliminada", ToastVariant.Success)
+                                }
                             }
                         })
                     }
@@ -442,9 +457,12 @@ fun ProfileScreen(
         ) {
             AddBankAccountSheet(
                 onCancel = { showBottomSheet = false },
-                onConfirm = { cuenta ->
-                    viewModel.addCuenta(cuenta)
+                onConfirm = { banco, numero, titular, moneda ->
+                    viewModel.addMetodoPago(banco, numero, titular, moneda)
                     showBottomSheet = false
+                    scope.launch {
+                        toastState.show("Cuenta registrada correctamente", ToastVariant.Success)
+                    }
                 }
             )
         }
@@ -458,8 +476,8 @@ fun ProfileScreen(
         ) {
             AddAlertSheet(
                 onCancel = { showAlertSheet = false },
-                onConfirm = { alert ->
-                    savedAlerts = savedAlerts + alert
+                onConfirm = { moneda, tasa ->
+                    viewModel.crearAlerta(moneda, tasa)
                     showAlertSheet = false
                     scope.launch {
                         toastState.show("Alerta registrada correctamente", ToastVariant.Success)
@@ -471,7 +489,7 @@ fun ProfileScreen(
 }
 
 @Composable
-private fun BankAccountCard(cuenta: BankAccount) {
+private fun BankAccountCard(cuenta: PaymentMethodModel) {
     Card(
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -507,7 +525,7 @@ private fun BankAccountCard(cuenta: BankAccount) {
                     color = Color.Gray
                 )
                 Text(
-                    text = cuenta.titular,
+                    text = cuenta.nombreTitular,
                     variant = TextVariant.Small,
                     color = Color.Gray
                 )
@@ -521,7 +539,7 @@ private fun BankAccountCard(cuenta: BankAccount) {
                     .padding(horizontal = 8.dp, vertical = 4.dp)
             ) {
                 Text(
-                    text = cuenta.moneda,
+                    text = cuenta.tipoMoneda,
                     variant = TextVariant.Small,
                     color = RikkaTheme.colors.primary
                 )
@@ -533,7 +551,7 @@ private fun BankAccountCard(cuenta: BankAccount) {
 @Composable
 private fun AddBankAccountSheet(
     onCancel: () -> Unit,
-    onConfirm: (BankAccount) -> Unit
+    onConfirm: (String, String, String, String) -> Unit
 ) {
     val monedas = listOf(
         SelectOption("USD", "USD"),
@@ -663,14 +681,7 @@ private fun AddBankAccountSheet(
                         monedaSeleccionada.isBlank() -> errorMessage = "Seleccione una moneda"
                         else -> {
                             errorMessage = null
-                            onConfirm(
-                                BankAccount(
-                                    banco = banco,
-                                    numeroCuenta = numeroCuenta,
-                                    titular = titular,
-                                    moneda = monedaSeleccionada
-                                )
-                            )
+                            onConfirm(banco, numeroCuenta, titular, monedaSeleccionada)
                         }
                     }
                 },
@@ -684,7 +695,7 @@ private fun AddBankAccountSheet(
 }
 
 @Composable
-private fun AlertCard(alert: Alert, onDelete: () -> Unit) {
+private fun AlertCard(alert: AlertaCambioModel, onDelete: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -715,7 +726,7 @@ private fun AlertCard(alert: Alert, onDelete: () -> Unit) {
                 }
 
                 Text(
-                    text = alert.currency,
+                    text = alert.moneda,
                     variant = TextVariant.Large,
                     color = RikkaTheme.colors.onBackground
                 )
@@ -726,7 +737,7 @@ private fun AlertCard(alert: Alert, onDelete: () -> Unit) {
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Text(
-                    text = "T.C.: ${alert.rate}",
+                    text = "T.C.: ${alert.tipoCambioDeseado}",
                     variant = TextVariant.Large,
                     color = RikkaTheme.colors.primary
                 )
@@ -751,7 +762,7 @@ private fun AlertCard(alert: Alert, onDelete: () -> Unit) {
 @Composable
 private fun AddAlertSheet(
     onCancel: () -> Unit,
-    onConfirm: (Alert) -> Unit
+    onConfirm: (String, Double) -> Unit
 ) {
     val currencyOptions = listOf(
         SelectOption("USD", "USD"),
@@ -839,7 +850,7 @@ private fun AddAlertSheet(
                         rateError = true
                     } else {
                         rateError = false
-                        onConfirm(Alert(currency = currency, rate = rate))
+                        onConfirm(currency, rateVal)
                     }
                 },
                 modifier = Modifier.weight(1f),

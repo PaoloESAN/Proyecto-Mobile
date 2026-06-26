@@ -1,6 +1,7 @@
 package com.paoloesan.proyectomobile.presentation.transaction
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -19,6 +20,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessTime
@@ -49,6 +52,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil3.compose.AsyncImage
 import kotlinx.coroutines.launch
 import zed.rainxch.rikkaui.components.ui.PopupAnimation
 import zed.rainxch.rikkaui.components.ui.button.Button
@@ -303,21 +307,38 @@ fun OfferDetailScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(44.dp)
-                                    .background(
-                                        color = RikkaTheme.colors.primary.copy(alpha = 0.12f),
-                                        shape = CircleShape
-                                    ),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                androidx.compose.material3.Icon(
-                                    imageVector = Icons.Default.Person,
+                            // Avatar: foto real o icono genérico como fallback
+                            if (uiState.vendorPhotoUrl != null) {
+                                AsyncImage(
+                                    model = uiState.vendorPhotoUrl,
                                     contentDescription = null,
-                                    modifier = Modifier.size(24.dp),
-                                    tint = RikkaTheme.colors.primary
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier
+                                        .size(44.dp)
+                                        .clip(CircleShape)
+                                        .border(
+                                            width = 1.5.dp,
+                                            color = RikkaTheme.colors.primary.copy(alpha = 0.5f),
+                                            shape = CircleShape
+                                        )
                                 )
+                            } else {
+                                Box(
+                                    modifier = Modifier
+                                        .size(44.dp)
+                                        .background(
+                                            color = RikkaTheme.colors.primary.copy(alpha = 0.12f),
+                                            shape = CircleShape
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    androidx.compose.material3.Icon(
+                                        imageVector = Icons.Default.Person,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(24.dp),
+                                        tint = RikkaTheme.colors.primary
+                                    )
+                                }
                             }
 
                             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
