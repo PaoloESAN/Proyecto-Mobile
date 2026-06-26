@@ -10,6 +10,7 @@ import com.paoloesan.proyectomobile.presentation.transaction.BankDetailsScreen
 import com.paoloesan.proyectomobile.presentation.transaction.OfferDetailScreen
 import com.paoloesan.proyectomobile.presentation.transaction.TransactionStatusScreen
 import com.paoloesan.proyectomobile.presentation.transaction.UploadVoucherScreen
+import com.paoloesan.proyectomobile.presentation.verification.IdentityVerificationScreen
 
 sealed class Destination(
     val route: String,
@@ -85,6 +86,21 @@ sealed class Destination(
             )
         }
     )
+
+    object IdentityVerification : Destination(
+        route = "identity_verification",
+        title = "Verificación de DNI",
+        content = { navController ->
+            IdentityVerificationScreen(
+                onBack = {
+                    navController.popBackStack()
+                },
+                onVerificationComplete = {
+                    navController.popBackStack()
+                }
+            )
+        }
+    )
 }
 
 //Luego agregalo a la lista
@@ -93,7 +109,8 @@ val appDestinations = listOf(
     Destination.OfferDetail,
     Destination.TransactionStatus,
     Destination.BankDetails,
-    Destination.UploadVoucher
+    Destination.UploadVoucher,
+    Destination.IdentityVerification
 )
 
 @Composable
