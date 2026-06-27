@@ -174,9 +174,7 @@ fun BankDetailsScreen(
             bankParts.getOrNull(1)
                 ?.replace(Regex("\\(.*\\)"), "")?.trim() ?: "191-99882211-0-45"
         }
-    val parsedCCI = if (uiState.cci.isNotEmpty()) uiState.cci else if (parsedBankName.uppercase()
-            .contains("BCP")
-    ) "002-$parsedAccountNumber-45" else "003-$parsedAccountNumber-12"
+
     val displayTitular =
         if (uiState.titularName.isNotEmpty()) uiState.titularName else if (isSeller) "Mateo Rojas (Comprador)" else "Juan Perez (Vendedor)"
 
@@ -604,15 +602,6 @@ fun BankDetailsScreen(
                                     icon = Icons.Default.ContentCopy,
                                     label = "NUMERO DE CUENTA",
                                     value = parsedAccountNumber,
-                                    clipboardManager = clipboardManager,
-                                    toastState = toastState,
-                                    scope = scope,
-                                    showDivider = true
-                                )
-                                CopyableDetailRow(
-                                    icon = Icons.Default.ContentCopy,
-                                    label = "CCI",
-                                    value = parsedCCI,
                                     clipboardManager = clipboardManager,
                                     toastState = toastState,
                                     scope = scope,

@@ -237,8 +237,10 @@ class BankViewModel : ViewModel() {
                 val bytes = inputStream.readBytes()
                 inputStream.close()
 
-                val fileName = getFileName(context, uri)
-                val storagePath = "private/$transaccionId/$userId/$fileName"
+                val originalFileName = getFileName(context, uri)
+                val cleanFileName = originalFileName.replace("\\s+".toRegex(), "_")
+                val uniqueFileName = "voucher_${System.currentTimeMillis()}_$cleanFileName"
+                val storagePath = "private/$transaccionId/$userId/$uniqueFileName"
 
                 Supabase.client.storage.from("vouchers").upload(
                     path = storagePath,
