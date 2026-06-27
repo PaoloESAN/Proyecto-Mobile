@@ -2,7 +2,9 @@ package com.paoloesan.proyectomobile.presentation.navigation
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.History
@@ -15,6 +17,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -331,7 +334,7 @@ fun AppNav() {
 
         if (showBottomBar) {
             NavigationBar(
-                modifier = Modifier.padding(bottom = RikkaTheme.spacing.md)
+                modifier = Modifier.navigationBarsPadding().padding(bottom = RikkaTheme.spacing.xs)
             ) {
                 bottomBarDestinations.forEach { dest ->
                     dest.icon?.let {
