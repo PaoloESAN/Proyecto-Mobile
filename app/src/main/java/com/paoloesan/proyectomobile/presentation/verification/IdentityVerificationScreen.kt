@@ -67,6 +67,7 @@ fun IdentityVerificationScreen(navController: NavController) {
     var selectedFrontImageUri by remember { mutableStateOf<Uri?>(null) }
     var selectedBackImageUri by remember { mutableStateOf<Uri?>(null) }
     var isUploading by remember { mutableStateOf(false) }
+    var showSuccess by remember { mutableStateOf(false) }
 
     val toastState = rememberToastHostState()
     val scope = rememberCoroutineScope()
@@ -75,7 +76,7 @@ fun IdentityVerificationScreen(navController: NavController) {
     val validateUri: (Uri) -> Boolean = { uri ->
         val mimeType = context.contentResolver.getType(uri)
         val isTypeValid = mimeType == "image/jpeg" || mimeType == "image/png" || mimeType == "image/jpg"
-        
+
         var isSizeValid = false
         try {
             context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
@@ -83,7 +84,7 @@ fun IdentityVerificationScreen(navController: NavController) {
                     val sizeIndex = cursor.getColumnIndex(OpenableColumns.SIZE)
                     if (sizeIndex != -1) {
                         val size = cursor.getLong(sizeIndex)
-                        isSizeValid = size <= 5 * 1024 * 1024 // 5MB limit
+                        isSizeValid = size <= 5 * 1024 * 1024
                     }
                 }
             }
@@ -135,9 +136,7 @@ fun IdentityVerificationScreen(navController: NavController) {
         Scaffold(
             containerColor = RikkaTheme.colors.background,
             snackbarHost = {
-                ToastHost(
-                    hostState = toastState
-                )
+                ToastHost(hostState = toastState)
             },
             topBar = {
                 Row(
@@ -170,7 +169,37 @@ fun IdentityVerificationScreen(navController: NavController) {
                 }
             }
         ) { innerPadding ->
-            LazyColumn(
+            if (showSuccess) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                        .padding(horizontal = 24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Spacer(modifier = Modifier.height(32.dp))
+                    androidx.compose.material3.Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        modifier = Modifier.size(72.dp),
+                        tint = RikkaTheme.colors.success
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "Verificacion completada",
+                        variant = TextVariant.H2,
+                        color = RikkaTheme.colors.onBackground
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Tus documentos han sido enviados correctamente",
+                        variant = TextVariant.P,
+                        color = Color.Gray
+                    )
+                }
+            } else {
+                LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
@@ -192,11 +221,8 @@ fun IdentityVerificationScreen(navController: NavController) {
                     )
                 }
 
-                // DNI Frontal Card
                 item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
+                    Card(modifier = Modifier.fillMaxWidth()) {
                         Column(
                             modifier = Modifier.fillMaxWidth(),
                             verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -263,11 +289,8 @@ fun IdentityVerificationScreen(navController: NavController) {
                     }
                 }
 
-                // DNI Posterior Card
                 item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
+                    Card(modifier = Modifier.fillMaxWidth()) {
                         Column(
                             modifier = Modifier.fillMaxWidth(),
                             verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -334,7 +357,6 @@ fun IdentityVerificationScreen(navController: NavController) {
                     }
                 }
 
-                // Upload Progress Indicators
                 if (isUploading) {
                     item {
                         Column(
@@ -354,32 +376,28 @@ fun IdentityVerificationScreen(navController: NavController) {
                     }
                 }
 
-                // Submit Button
                 item {
                     Spacer(modifier = Modifier.height(8.dp))
                     Button(
                         onClick = {
                             if (selectedFrontImageUri == null || selectedBackImageUri == null) {
-                                scope.launch {
-                                    toastState.show(
-                                        message = "Debe adjuntar ambas imagenes del documento",
-                                        variant = ToastVariant.Destructive
-                                    )
-                                }
-                            } else {
-                                scope.launch {
-                                    isUploading = true
-                                    delay(2000) // Simulación de carga
-                                    isUploading = false
-                                    selectedFrontImageUri = null
-                                    selectedBackImageUri = null
-                                    com.paoloesan.proyectomobile.data.local.SessionManager.saveVerified(context, true)
-                                    toastState.show(
-                                        message = "Verificacion enviada correctamente",
-                                        variant = ToastVariant.Success
-                                    )
-                                }
-                            }
+                                        scope.launch {
+                                            toastState.show(
+                                                message = "Debe adjuntar ambas imagenes del documento",
+                                                variant = ToastVariant.Destructive
+                                            )
+                                        }
+                                    } else {
+                                        scope.launch {
+                                            isUploading = true
+                                            delay(2000)
+                                            isUploading = false
+                                            selectedFrontImageUri = null
+                                            selectedBackImageUri = null
+                                            com.paoloesan.proyectomobile.data.local.SessionManager.saveVerified(context, true)
+                                            showSuccess = true
+                                        }
+                                    }
                         },
                         enabled = !isUploading,
                         modifier = Modifier.fillMaxWidth()
@@ -402,6 +420,7 @@ fun IdentityVerificationScreen(navController: NavController) {
                         }
                     }
                 }
+            }
             }
         }
     }
