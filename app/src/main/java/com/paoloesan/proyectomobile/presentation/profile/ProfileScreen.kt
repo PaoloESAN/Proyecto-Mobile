@@ -315,132 +315,219 @@ fun ProfileScreen(
                     }
                 }
 
-                // Bank Accounts Header
-                item {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 8.dp, bottom = 4.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Mis Cuentas Bancarias",
-                            variant = TextVariant.Large,
-                            color = RikkaTheme.colors.onBackground
-                        )
-
-                        Button(
-                            onClick = { showBottomSheet = true },
-                            variant = ButtonVariant.Outline,
-                            size = ButtonSize.Sm
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center
-                            ) {
-                                androidx.compose.material3.Icon(
-                                    imageVector = Icons.Default.Add,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(16.dp),
-                                    tint = RikkaTheme.colors.onBackground
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = "Agregar",
-                                    variant = TextVariant.Small,
-                                    color = RikkaTheme.colors.onBackground
-                                )
-                            }
-                        }
-                    }
-                }
-
-                if (uiState.cuentas.isEmpty()) {
+                if (uiState.rol == "Administrador") {
+                    // Admin panel links
                     item {
                         Card(
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(
-                                text = "No tienes cuentas registradas",
-                                variant = TextVariant.P,
-                                color = Color.Gray,
-                                modifier = Modifier.fillMaxWidth(),
-                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                            )
-                        }
-                    }
-                } else {
-                    items(uiState.cuentas, key = { it.metodoPagoId ?: it.hashCode() }) { cuenta ->
-                        BankAccountCard(cuenta)
-                    }
-                }
-
-                // Alertas de Tipo de Cambio Header
-                item {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 16.dp, bottom = 4.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Alertas de Tipo de Cambio",
-                            variant = TextVariant.Large,
-                            color = RikkaTheme.colors.onBackground
-                        )
-
-                        Button(
-                            onClick = { showAlertSheet = true },
-                            variant = ButtonVariant.Outline,
-                            size = ButtonSize.Sm
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { navController.navigate("admin_users") }
                         ) {
                             Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center
-                            ) {
-                                androidx.compose.material3.Icon(
-                                    imageVector = Icons.Default.Add,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(16.dp),
-                                    tint = RikkaTheme.colors.onBackground
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = "Agregar",
-                                    variant = TextVariant.Small,
-                                    color = RikkaTheme.colors.onBackground
-                                )
-                            }
-                        }
-                    }
-                }
-
-                if (uiState.alertas.isEmpty()) {
-                    item {
-                        Card(
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(
-                                text = "No tienes alertas configuradas",
-                                variant = TextVariant.P,
-                                color = Color.Gray,
                                 modifier = Modifier.fillMaxWidth(),
-                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                            )
-                        }
-                    }
-                } else {
-                    items(uiState.alertas, key = { it.alertaId ?: it.hashCode() }) { alert ->
-                        AlertCard(alert, onDelete = {
-                            alert.alertaId?.let { id ->
-                                viewModel.deleteAlerta(id)
-                                scope.launch {
-                                    toastState.show("Alerta eliminada", ToastVariant.Success)
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .background(
+                                            color = RikkaTheme.colors.primary.copy(alpha = 0.12f),
+                                            shape = RoundedCornerShape(8.dp)
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    androidx.compose.material3.Icon(
+                                        imageVector = Icons.Default.Person,
+                                        contentDescription = null,
+                                        tint = RikkaTheme.colors.primary
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(16.dp))
+                                Column {
+                                    Text(
+                                        text = "Usuarios",
+                                        variant = TextVariant.P,
+                                        color = RikkaTheme.colors.onBackground
+                                    )
+                                    Text(
+                                        text = "Administrar usuarios",
+                                        variant = TextVariant.Small,
+                                        color = Color.Gray
+                                    )
                                 }
                             }
-                        })
+                        }
+                    }
+
+                    item {
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { navController.navigate("disputas") }
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .background(
+                                            color = RikkaTheme.colors.warning.copy(alpha = 0.12f),
+                                            shape = RoundedCornerShape(8.dp)
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    androidx.compose.material3.Icon(
+                                        imageVector = Icons.Default.Notifications,
+                                        contentDescription = null,
+                                        tint = RikkaTheme.colors.warning
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(16.dp))
+                                Column {
+                                    Text(
+                                        text = "Disputas",
+                                        variant = TextVariant.P,
+                                        color = RikkaTheme.colors.onBackground
+                                    )
+                                    Text(
+                                        text = "Resolver disputas",
+                                        variant = TextVariant.Small,
+                                        color = Color.Gray
+                                    )
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    // Bank Accounts Header
+                    item {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 8.dp, bottom = 4.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Mis Cuentas Bancarias",
+                                variant = TextVariant.Large,
+                                color = RikkaTheme.colors.onBackground
+                            )
+
+                            Button(
+                                onClick = { showBottomSheet = true },
+                                variant = ButtonVariant.Outline,
+                                size = ButtonSize.Sm
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    androidx.compose.material3.Icon(
+                                        imageVector = Icons.Default.Add,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp),
+                                        tint = RikkaTheme.colors.onBackground
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = "Agregar",
+                                        variant = TextVariant.Small,
+                                        color = RikkaTheme.colors.onBackground
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    if (uiState.cuentas.isEmpty()) {
+                        item {
+                            Card(
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    text = "No tienes cuentas registradas",
+                                    variant = TextVariant.P,
+                                    color = Color.Gray,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                )
+                            }
+                        }
+                    } else {
+                        items(uiState.cuentas, key = { it.metodoPagoId ?: it.hashCode() }) { cuenta ->
+                            BankAccountCard(cuenta)
+                        }
+                    }
+
+                    // Alertas de Tipo de Cambio Header
+                    item {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 16.dp, bottom = 4.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Alertas de Tipo de Cambio",
+                                variant = TextVariant.Large,
+                                color = RikkaTheme.colors.onBackground
+                            )
+
+                            Button(
+                                onClick = { showAlertSheet = true },
+                                variant = ButtonVariant.Outline,
+                                size = ButtonSize.Sm
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    androidx.compose.material3.Icon(
+                                        imageVector = Icons.Default.Add,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp),
+                                        tint = RikkaTheme.colors.onBackground
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = "Agregar",
+                                        variant = TextVariant.Small,
+                                        color = RikkaTheme.colors.onBackground
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    if (uiState.alertas.isEmpty()) {
+                        item {
+                            Card(
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    text = "No tienes alertas configuradas",
+                                    variant = TextVariant.P,
+                                    color = Color.Gray,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                )
+                            }
+                        }
+                    } else {
+                        items(uiState.alertas, key = { it.alertaId ?: it.hashCode() }) { alert ->
+                            AlertCard(alert, onDelete = {
+                                alert.alertaId?.let { id ->
+                                    viewModel.deleteAlerta(id)
+                                    scope.launch {
+                                        toastState.show("Alerta eliminada", ToastVariant.Success)
+                                    }
+                                }
+                            })
+                        }
                     }
                 }
 
