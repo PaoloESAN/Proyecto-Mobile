@@ -41,8 +41,8 @@ class IdentityVerificationViewModel : ViewModel() {
 
     fun submitVerification(context: Context) {
         val current = _uiState.value
-        if (current.selectedFrontImageUri == null || current.selectedBackImageUri == null) {
-            _uiState.update { it.copy(errorMessage = "Debe adjuntar ambas imagenes del documento") }
+        if (current.selectedFrontImageUri == null && current.selectedBackImageUri == null) {
+            _uiState.update { it.copy(errorMessage = "Debe adjuntar al menos una imagen del documento") }
             return
         }
 
@@ -60,34 +60,42 @@ class IdentityVerificationViewModel : ViewModel() {
                 val userId = profile.usuarioId ?: throw Exception("Usuario no identificado")
                 val userEmail = profile.correo
 
-                val frontBytes = context.contentResolver
-                    .openInputStream(current.selectedFrontImageUri)
-                    ?.use { it.readBytes() }
-                    ?: throw Exception("No se pudo leer la imagen frontal")
-
-                val backBytes = context.contentResolver
-                    .openInputStream(current.selectedBackImageUri)
-                    ?.use { it.readBytes() }
-                    ?: throw Exception("No se pudo leer la imagen posterior")
-
                 val bucket = Supabase.client.storage["identities"]
-                val frontPath = "frontal_$userId.jpg"
-                val backPath = "posterior_$userId.jpg"
 
-                bucket.upload(path = frontPath, data = frontBytes) { upsert = true }
-                bucket.upload(path = backPath, data = backBytes) { upsert = true }
+                var frontalUrl: String? = null
+                var posteriorUrl: String? = null
 
-                val frontalUrl = bucket.publicUrl(frontPath)
-                val posteriorUrl = bucket.publicUrl(backPath)
+                if (current.selectedFrontImageUri != null) {
+                    val frontBytes = context.contentResolver
+                        .openInputStream(current.selectedFrontImageUri)
+                        ?.use { it.readBytes() }
+                        ?: throw Exception("No se pudo leer la imagen frontal")
+
+                    val frontPath = "frontal_$userId.jpg"
+                    bucket.upload(path = frontPath, data = frontBytes) { upsert = true }
+                    frontalUrl = bucket.publicUrl(frontPath)
+                }
+
+                if (current.selectedBackImageUri != null) {
+                    val backBytes = context.contentResolver
+                        .openInputStream(current.selectedBackImageUri)
+                        ?.use { it.readBytes() }
+                        ?: throw Exception("No se pudo leer la imagen posterior")
+
+                    val backPath = "posterior_$userId.jpg"
+                    bucket.upload(path = backPath, data = backBytes) { upsert = true }
+                    posteriorUrl = bucket.publicUrl(backPath)
+                }
 
                 Supabase.client.postgrest["usuarios"].update({
-                    set("dni_frontal_url", frontalUrl)
-                    set("dni_posterior_url", posteriorUrl)
+                    if (frontalUrl != null) set("dni_frontal_url", frontalUrl)
+                    if (posteriorUrl != null) set("dni_posterior_url", posteriorUrl)
+                    set("es_verificado", true)
                 }) {
                     filter { eq("correo", userEmail) }
                 }
 
-                SessionManager.saveVerified(context, false)
+                SessionManager.saveVerified(context, true)
 
                 _uiState.update {
                     it.copy(

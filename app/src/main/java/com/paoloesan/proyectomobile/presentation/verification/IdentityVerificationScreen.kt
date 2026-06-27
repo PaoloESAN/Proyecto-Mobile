@@ -177,33 +177,8 @@ fun IdentityVerificationScreen(
             }
         ) { innerPadding ->
             if (state.showSuccess) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding)
-                        .padding(horizontal = 24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Spacer(modifier = Modifier.height(32.dp))
-                    androidx.compose.material3.Icon(
-                        imageVector = Icons.Default.CheckCircle,
-                        contentDescription = null,
-                        modifier = Modifier.size(72.dp),
-                        tint = RikkaTheme.colors.success
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = "Verificacion completada",
-                        variant = TextVariant.H2,
-                        color = RikkaTheme.colors.onBackground
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Tus documentos han sido enviados correctamente",
-                        variant = TextVariant.P,
-                        color = Color.Gray
-                    )
+                LaunchedEffect(Unit) {
+                    navController.popBackStack()
                 }
             } else {
                 LazyColumn(
@@ -375,7 +350,7 @@ fun IdentityVerificationScreen(
                             CircularProgressIndicator(color = RikkaTheme.colors.primary)
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = "Subiendo documentos...",
+                                text = "Verificando...",
                                 variant = TextVariant.P,
                                 color = RikkaTheme.colors.onBackground
                             )
@@ -403,7 +378,7 @@ fun IdentityVerificationScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "Enviar verificacion",
+                                text = "Verificar cuenta",
                                 variant = TextVariant.P,
                                 color = Color.White
                             )
