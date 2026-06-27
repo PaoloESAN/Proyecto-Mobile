@@ -31,11 +31,11 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -44,9 +44,9 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import zed.rainxch.rikkaui.components.ui.button.Button
 import zed.rainxch.rikkaui.components.ui.button.ButtonSize
@@ -62,16 +62,23 @@ import zed.rainxch.rikkaui.foundation.RikkaTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun IdentityVerificationScreen(navController: NavController) {
+fun IdentityVerificationScreen(
+    navController: NavController,
+    viewModel: IdentityVerificationViewModel = viewModel()
+) {
     val context = LocalContext.current
-    var selectedFrontImageUri by remember { mutableStateOf<Uri?>(null) }
-    var selectedBackImageUri by remember { mutableStateOf<Uri?>(null) }
-    var isUploading by remember { mutableStateOf(false) }
-    var showSuccess by remember { mutableStateOf(false) }
+    val state by viewModel.uiState.collectAsState()
 
     val toastState = rememberToastHostState()
     val scope = rememberCoroutineScope()
     val focusManager = LocalFocusManager.current
+
+    LaunchedEffect(state.errorMessage) {
+        state.errorMessage?.let {
+            toastState.show(message = it, variant = ToastVariant.Destructive)
+            viewModel.consumeError()
+        }
+    }
 
     val validateUri: (Uri) -> Boolean = { uri ->
         val mimeType = context.contentResolver.getType(uri)
@@ -99,7 +106,7 @@ fun IdentityVerificationScreen(navController: NavController) {
     ) { uri ->
         if (uri != null) {
             if (validateUri(uri)) {
-                selectedFrontImageUri = uri
+                viewModel.onFrontImageSelected(uri)
             } else {
                 scope.launch {
                     toastState.show(
@@ -116,7 +123,7 @@ fun IdentityVerificationScreen(navController: NavController) {
     ) { uri ->
         if (uri != null) {
             if (validateUri(uri)) {
-                selectedBackImageUri = uri
+                viewModel.onBackImageSelected(uri)
             } else {
                 scope.launch {
                     toastState.show(
@@ -169,7 +176,7 @@ fun IdentityVerificationScreen(navController: NavController) {
                 }
             }
         ) { innerPadding ->
-            if (showSuccess) {
+            if (state.showSuccess) {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -246,9 +253,9 @@ fun IdentityVerificationScreen(navController: NavController) {
                                     ),
                                 contentAlignment = Alignment.Center
                             ) {
-                                if (selectedFrontImageUri != null) {
+                                if (state.selectedFrontImageUri != null) {
                                     AsyncImage(
-                                        model = selectedFrontImageUri,
+                                        model = state.selectedFrontImageUri,
                                         contentDescription = "DNI Frontal Seleccionado",
                                         modifier = Modifier.fillMaxSize(),
                                         contentScale = ContentScale.Crop
@@ -280,7 +287,7 @@ fun IdentityVerificationScreen(navController: NavController) {
                                         PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
                                     )
                                 },
-                                enabled = !isUploading,
+                                enabled = !state.isUploading,
                                 variant = ButtonVariant.Outline,
                                 modifier = Modifier.fillMaxWidth(),
                                 text = "Seleccionar imagen"
@@ -314,9 +321,9 @@ fun IdentityVerificationScreen(navController: NavController) {
                                     ),
                                 contentAlignment = Alignment.Center
                             ) {
-                                if (selectedBackImageUri != null) {
+                                if (state.selectedBackImageUri != null) {
                                     AsyncImage(
-                                        model = selectedBackImageUri,
+                                        model = state.selectedBackImageUri,
                                         contentDescription = "DNI Posterior Seleccionado",
                                         modifier = Modifier.fillMaxSize(),
                                         contentScale = ContentScale.Crop
@@ -348,7 +355,7 @@ fun IdentityVerificationScreen(navController: NavController) {
                                         PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
                                     )
                                 },
-                                enabled = !isUploading,
+                                enabled = !state.isUploading,
                                 variant = ButtonVariant.Outline,
                                 modifier = Modifier.fillMaxWidth(),
                                 text = "Seleccionar imagen"
@@ -357,7 +364,7 @@ fun IdentityVerificationScreen(navController: NavController) {
                     }
                 }
 
-                if (isUploading) {
+                if (state.isUploading) {
                     item {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
@@ -380,26 +387,9 @@ fun IdentityVerificationScreen(navController: NavController) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Button(
                         onClick = {
-                            if (selectedFrontImageUri == null || selectedBackImageUri == null) {
-                                        scope.launch {
-                                            toastState.show(
-                                                message = "Debe adjuntar ambas imagenes del documento",
-                                                variant = ToastVariant.Destructive
-                                            )
-                                        }
-                                    } else {
-                                        scope.launch {
-                                            isUploading = true
-                                            delay(2000)
-                                            isUploading = false
-                                            selectedFrontImageUri = null
-                                            selectedBackImageUri = null
-                                            com.paoloesan.proyectomobile.data.local.SessionManager.saveVerified(context, true)
-                                            showSuccess = true
-                                        }
-                                    }
+                            viewModel.submitVerification(context)
                         },
-                        enabled = !isUploading,
+                        enabled = !state.isUploading,
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Row(
