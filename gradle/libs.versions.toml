@@ -13,6 +13,8 @@ coil = "3.4.0"
 rikkaui = "0.3.0"
 supabase = "3.6.0"
 ktor = "3.0.3"
+googleServices = "4.5.0"
+firebaseBom = "34.15.0"
 
 [libraries]
 rikkaui-components-android = { group = "dev.rikkaui", name = "components-android", version.ref = "rikkaui" }
@@ -43,8 +45,11 @@ supabase-realtime = { group = "io.github.jan-tennert.supabase", name = "realtime
 supabase-functions = { group = "io.github.jan-tennert.supabase", name = "functions-kt" }
 ktor-client-okhttp = { group = "io.ktor", name = "ktor-client-okhttp", version.ref = "ktor" }
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version = "1.7.3" }
+firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
+firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+google-services = { id = "com.google.gms.google-services", version.ref = "googleServices" }

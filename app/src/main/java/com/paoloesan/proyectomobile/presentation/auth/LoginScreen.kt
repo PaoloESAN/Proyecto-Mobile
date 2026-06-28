@@ -90,6 +90,7 @@ fun LoginScreen(
             }
         }
     }
+
     Scaffold(
         containerColor = RikkaTheme.colors.background,
         snackbarHost = {
@@ -168,6 +169,7 @@ fun LoginScreen(
                     Label(
                         text = "Contraseña",
                     )
+                    Spacer(modifier = Modifier.height(4.dp))
 
                     // Password Input with eye icon toggle overlay
                     Box(
@@ -196,29 +198,23 @@ fun LoginScreen(
                                 )
                         )
                     }
-                }
 
-                // Remember Me & Forgot Password Row
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Checkbox(
-                        checked = rememberMe,
-                        onCheckedChange = { rememberMe = it },
-                        enabled = !uiState.isLoading,
-                        label = "Recordarme"
-                    )
+                    Spacer(modifier = Modifier.height(4.dp))
 
-                    Text(
-                        text = "Olvide mi contraseña",
-                        variant = TextVariant.Small,
-                        color = RikkaTheme.colors.primary,
-                        modifier = Modifier.clickable(enabled = !uiState.isLoading) {
-                            navController.navigate(Destination.RecoverPassword.route)
-                        }
-                    )
+                    // Olvidé mi contraseña justo debajo a la derecha de la contraseña, sin padding
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.CenterEnd
+                    ) {
+                        Text(
+                            text = "Olvidé mi contraseña",
+                            variant = TextVariant.Small,
+                            color = RikkaTheme.colors.primary,
+                            modifier = Modifier.clickable(enabled = !uiState.isLoading) {
+                                navController.navigate(Destination.RecoverPassword.route)
+                            }
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(4.dp))
@@ -236,7 +232,7 @@ fun LoginScreen(
                     }
                 } else {
                     Button(
-                        onClick = { viewModel.login(context, rememberMe) },
+                        onClick = { viewModel.login(context, rememberMe = true) },
                         modifier = Modifier.fillMaxWidth(),
                         text = "Iniciar Sesion"
                     )

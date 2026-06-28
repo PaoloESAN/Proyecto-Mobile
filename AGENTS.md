@@ -582,3 +582,43 @@ Esto asegura que ambos usuarios sepan exactamente cuántas unidades de fiat envi
 1. **Envío de Comprobante**: Ambas partes deben realizar su transferencia correspondiente y subir su comprobante de pago (mediante `subirYCrearComprobante`).
 2. **Habilitación de Confirmación**: El botón **"Confirmar Pago Correcto"** (que marca `confirmadoComprador` o `confirmadoVendedor` en `true` en la transacción) está estrictamente condicionado a que la contraparte ya haya subido su comprobante (`contraparteVoucher != null`). Si no lo ha hecho, se muestra un banner de advertencia animando a esperar. Esto previene liberaciones accidentales de fondos antes de verificar el recibo.
 3. **Mecanismo de Disputa**: El botón **"Abrir Disputa"** permanece habilitado e interactivo en todo momento si surge algún inconveniente, y debe contar con un **Modal de Confirmación** para evitar aperturas accidentales.
+
+---
+
+## 7. Sistema de Notificaciones Push Transaccionales
+
+La plataforma implementa notificaciones push automáticas en tiempo real para informar a los usuarios sobre cambios importantes en sus transacciones y nuevos mensajes recibidos. Este sistema se ejecuta a través de triggers en la base de datos de Supabase que invocan la Edge Function `send-push-notification` de forma asíncrona, enviando las alertas a los dispositivos registrados en la tabla `tokens_push`.
+
+### Eventos que Disparan una Notificación
+
+1. **Nueva Solicitud de Intercambio (`INSERT` en `transacciones`)**:
+   - **Destinatario**: El **vendedor** de la oferta.
+   - **Título**: `¡Nueva solicitud de intercambio!`
+   - **Mensaje**: `[Nombre del Comprador] quiere iniciar un intercambio contigo.`
+   - **Redirección**: Al pulsar la notificación, abre la pantalla de **Estado de Transacción** correspondiente.
+
+2. **Mensaje de Chat Recibido (`INSERT` en `mensajes_chat`)**:
+   - **Destinatario**: El usuario **contraparte** de la transacción (comprador o vendedor).
+   - **Título**: `Mensaje de [Nombre del Remitente]`
+   - **Mensaje**: Las primeras 100 caracteres del contenido del mensaje enviado.
+   - **Redirección**: Al pulsar la notificación, abre directamente el **Chat** de la transacción correspondiente.
+
+3. **Transacción Marcada como Pagada (`UPDATE` a estado `'Pagado'` en `transacciones`)**:
+   - **Destinatario**: El **vendedor** de la transacción.
+   - **Título**: `Transacción Marcada como Pagada`
+   - **Mensaje**: `El comprador subió el comprobante. Confirma la recepción en tu cuenta bancaria.`
+   - **Redirección**: Al pulsar la notificación, abre la pantalla de **Estado de Transacción**.
+
+4. **Transacción Finalizada exitosamente (`UPDATE` a estado `'Finalizado'` en `transacciones`)**:
+   - **Destinatario**: El **comprador** de la transacción.
+   - **Título**: `Transacción Finalizada`
+   - **Mensaje**: `El vendedor confirmó tu pago. ¡Intercambio completado con éxito!`
+   - **Redirección**: Al pulsar la notificación, abre la pantalla de **Estado de Transacción**.
+
+5. **Transacción en Conflicto / Disputa (`UPDATE` a estado `'Disputa'` en `transacciones`)**:
+   - **Destinatario**: **Ambos participantes** (comprador y vendedor).
+   - **Título**: `Disputa Iniciada`
+   - **Mensaje**: `La transacción #[id] ha entrado en disputa.`
+   - **Redirección**: Al pulsar la notificación, abre la pantalla de **Estado de Transacción**.
+
+*(Nota: De acuerdo con las reglas de negocio, los fallos de verificación de IA en los comprobantes no se envían como notificaciones push; solo se alertan directamente dentro de la interfaz del usuario en la pantalla de detalles de pago).*

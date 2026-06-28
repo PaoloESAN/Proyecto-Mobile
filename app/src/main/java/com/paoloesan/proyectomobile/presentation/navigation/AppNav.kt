@@ -295,7 +295,16 @@ fun AppNav() {
 
     val showBottomBar = bottomBarDestinations.any { it.route == currentRoute }
 
-    // Escuchar eventos globales de autenticación (ej. Deep Link de recuperación)
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val startDest = androidx.compose.runtime.remember {
+        if (com.paoloesan.proyectomobile.data.local.SessionManager.isLoggedIn(context)) {
+            Destination.Marketplace.route
+        } else {
+            Destination.Login.route
+        }
+    }
+
+    // Escuchar eventos globales de autenticación (ej. Deep Link de recuperación, notificaciones push)
     androidx.compose.runtime.LaunchedEffect(Unit) {
         com.paoloesan.proyectomobile.data.AuthEventChannel.events.collect { event ->
             when (event) {
@@ -304,14 +313,25 @@ fun AppNav() {
                         launchSingleTop = true
                     }
                 }
+                is com.paoloesan.proyectomobile.data.AuthEvent.NavigateToChat -> {
+                    if (com.paoloesan.proyectomobile.data.local.SessionManager.isLoggedIn(context)) {
+                        navController.navigate("chat/${event.transactionId}")
+                    }
+                }
+                is com.paoloesan.proyectomobile.data.AuthEvent.NavigateToTransactionStatus -> {
+                    if (com.paoloesan.proyectomobile.data.local.SessionManager.isLoggedIn(context)) {
+                        navController.navigate("transactionStatus/${event.transactionId}")
+                    }
+                }
             }
+            com.paoloesan.proyectomobile.data.AuthEventChannel.clearEvents()
         }
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
         NavHost(
             navController = navController,
-            startDestination = Destination.Login.route,
+            startDestination = startDest,
             modifier = Modifier.weight(1f)
         ) {
             appDestinations.forEach { destination ->

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "837879231273",
+    "project_id": "interya",
+    "storage_bucket": "interya.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:837879231273:android:2f98d4c9bec53479d53d38",
+        "android_client_info": {
+          "package_name": "com.paoloesan.proyectomobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCaSbnHpnFk2URXm166g9jpY4zbiZzyfNM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

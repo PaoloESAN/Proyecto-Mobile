@@ -83,6 +83,18 @@ object AuthRepository {
         SessionManager.saveToken(context, authId)
         SessionManager.saveProfileInfo(context, perfil.nombres, perfil.apellidos)
 
+        // Sincronizar Token de Firebase Cloud Messaging
+        try {
+            com.google.firebase.messaging.FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    val token = task.result
+                    com.paoloesan.proyectomobile.data.local.MyFirebaseMessagingService.registrarTokenEnSupabase(token)
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
         return perfil
     }
 
