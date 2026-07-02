@@ -378,15 +378,11 @@ fun MyOffersScreen(navController: NavController) {
                                                             color = RikkaTheme.colors.onBackground
                                                         )
                                                         val badgeBgColor = when (tx.status) {
-                                                            "Aceptada", "En Proceso" -> RikkaTheme.colors.primary.copy(
+                                                            "Aceptada", "En Proceso", "Pagado" -> RikkaTheme.colors.primary.copy(
                                                                 alpha = 0.15f
                                                             )
 
                                                             "Rechazada", "Cancelado", "Disputa" -> RikkaTheme.colors.destructive.copy(
-                                                                alpha = 0.15f
-                                                            )
-
-                                                            "Pagado" -> RikkaTheme.colors.success.copy(
                                                                 alpha = 0.15f
                                                             )
 
@@ -395,9 +391,8 @@ fun MyOffersScreen(navController: NavController) {
                                                             )
                                                         }
                                                         val badgeTextColor = when (tx.status) {
-                                                            "Aceptada", "En Proceso" -> RikkaTheme.colors.primary
+                                                            "Aceptada", "En Proceso", "Pagado" -> RikkaTheme.colors.primary
                                                             "Rechazada", "Cancelado", "Disputa" -> RikkaTheme.colors.destructive
-                                                            "Pagado" -> RikkaTheme.colors.success
                                                             else -> RikkaTheme.colors.warning
                                                         }
                                                         Box(

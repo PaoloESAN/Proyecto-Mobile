@@ -74,8 +74,8 @@ enum class TransactionState(
     val bgColor: Color
 ) {
     ESPERANDO_ACEPTACION("Esperando aceptación", Color(0xFFFFB74D), Icons.Default.HourglassEmpty, Color(0xFFFFF8E1)),
-    EN_PROCESO("En proceso (Pendiente de pago)", Color(0xFF1E88E5), Icons.Default.AccessTime, Color(0xFFE3F2FD)),
-    PAGADA_CON_VOUCHER("Pago enviado (Voucher subido)", Color(0xFF4CAF50), Icons.Default.CheckCircle, Color(0xFFE8F5E9)),
+    EN_PROCESO("En proceso", Color(0xFF1E88E5), Icons.Default.AccessTime, Color(0xFFE3F2FD)),
+    PAGADA_CON_VOUCHER("En proceso", Color(0xFF1E88E5), Icons.Default.AccessTime, Color(0xFFE3F2FD)),
     FINALIZADA("Finalizada", Color(0xFF2E7D32), Icons.Default.CheckCircle, Color(0xFFE8F5E9)),
     RECHAZADA("Rechazada", Color(0xFFD32F2F), Icons.Default.Cancel, Color(0xFFFFEBEE)),
     EN_DISPUTA("En disputa", Color(0xFFD32F2F), Icons.Default.Cancel, Color(0xFFFFEBEE))
@@ -121,8 +121,7 @@ fun TransactionStatusScreen(
     // Mapeo de estado de Supabase → TransactionState UI
     val isSeller = uiState.isSeller
     val currentState = when (uiState.transactionStatus) {
-        "Pendiente", "En Proceso" -> TransactionState.EN_PROCESO
-        "Pagado" -> TransactionState.PAGADA_CON_VOUCHER
+        "Pendiente", "En Proceso", "Pagado" -> TransactionState.EN_PROCESO
         "Finalizado", "Finalizada" -> TransactionState.FINALIZADA
         "Disputa" -> TransactionState.EN_DISPUTA
         "Cancelado" -> TransactionState.RECHAZADA
@@ -467,7 +466,6 @@ fun TransactionStatusScreen(
                                     
                                     val step3Status = when {
                                          currentState == TransactionState.FINALIZADA || 
-                                         currentState == TransactionState.PAGADA_CON_VOUCHER ||
                                          (uiState.myVoucherUploaded && uiState.peerVoucherUploaded) -> TimelineStepStatus.COMPLETED
                                          
                                          currentState == TransactionState.RECHAZADA || 
@@ -481,7 +479,6 @@ fun TransactionStatusScreen(
                                      val step4Status = when {
                                          currentState == TransactionState.FINALIZADA -> TimelineStepStatus.COMPLETED
                                          
-                                         currentState == TransactionState.PAGADA_CON_VOUCHER ||
                                          (uiState.myVoucherUploaded && uiState.peerVoucherUploaded) -> TimelineStepStatus.ACTIVE
                                          
                                          else -> TimelineStepStatus.PENDING
