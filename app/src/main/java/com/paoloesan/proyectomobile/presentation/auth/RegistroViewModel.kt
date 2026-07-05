@@ -16,6 +16,7 @@ data class RegistroUiState(
     val correo: String = "",
     val password: String = "",
     val confirmarPassword: String = "",
+    val acceptTerms: Boolean = false,
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
     val isSuccess: Boolean = false
@@ -48,6 +49,10 @@ class RegistroViewModel : ViewModel() {
         _uiState.update { it.copy(confirmarPassword = value, errorMessage = null) }
     }
 
+    fun onAcceptTermsChange(value: Boolean) {
+        _uiState.update { it.copy(acceptTerms = value, errorMessage = null) }
+    }
+
     fun resetSuccess() {
         _uiState.update { it.copy(isSuccess = false) }
     }
@@ -63,6 +68,13 @@ class RegistroViewModel : ViewModel() {
         ) {
             _uiState.update {
                 it.copy(errorMessage = "Complete todos los campos obligatorios")
+            }
+            return
+        }
+
+        if (!current.acceptTerms) {
+            _uiState.update {
+                it.copy(errorMessage = "Debe aceptar los términos y condiciones")
             }
             return
         }

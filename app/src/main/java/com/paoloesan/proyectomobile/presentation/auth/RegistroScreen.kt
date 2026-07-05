@@ -23,9 +23,12 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import android.webkit.WebView
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -50,6 +53,7 @@ import kotlinx.coroutines.launch
 import zed.rainxch.rikkaui.components.ui.button.Button
 import zed.rainxch.rikkaui.components.ui.button.ButtonSize
 import zed.rainxch.rikkaui.components.ui.button.ButtonVariant
+import zed.rainxch.rikkaui.components.ui.checkbox.Checkbox
 import zed.rainxch.rikkaui.components.ui.icon.RikkaIcons
 import zed.rainxch.rikkaui.components.ui.input.Input
 import zed.rainxch.rikkaui.components.ui.label.Label
@@ -72,6 +76,7 @@ fun RegistroScreen(
 
     var passwordVisible by remember { mutableStateOf(false) }
     var confirmPasswordVisible by remember { mutableStateOf(false) }
+    var showTerms by remember { mutableStateOf(false) }
 
     LaunchedEffect(uiState.errorMessage) {
         uiState.errorMessage?.let { message ->
@@ -296,6 +301,25 @@ fun RegistroScreen(
                         }
                     }
 
+                    // Términos y condiciones
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(
+                            checked = uiState.acceptTerms,
+                            onCheckedChange = viewModel::onAcceptTermsChange,
+                            label = "Acepto los "
+                        )
+                        Text(
+                            text = "términos y condiciones",
+                            variant = TextVariant.P,
+                            color = RikkaTheme.colors.primary,
+                            modifier = Modifier.clickable {
+                                showTerms = true
+                            }
+                        )
+                    }
 
                     Spacer(modifier = Modifier.height(4.dp))
 
@@ -342,5 +366,37 @@ fun RegistroScreen(
                 }
             }
         }
+    }
+
+    if (showTerms) {
+        AlertDialog(
+            onDismissRequest = { showTerms = false },
+            title = {
+                Text(
+                    text = "Términos y condiciones",
+                    variant = TextVariant.Large,
+                    color = RikkaTheme.colors.onBackground
+                )
+            },
+            text = {
+                AndroidView(
+                    factory = { context ->
+                        WebView(context).apply {
+                            settings.javaScriptEnabled = true
+                            settings.domStorageEnabled = true
+                            loadUrl("https://www.privacypolicies.com/live/4ad40d9d-c177-417a-b24b-660323acd99e")
+                        }
+                    },
+                    modifier = Modifier.height(400.dp)
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = { showTerms = false },
+                    text = "Cerrar"
+                )
+            },
+            containerColor = RikkaTheme.colors.background
+        )
     }
 }
