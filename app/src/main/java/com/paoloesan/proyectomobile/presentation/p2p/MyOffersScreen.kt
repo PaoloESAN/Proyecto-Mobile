@@ -1,6 +1,7 @@
 package com.paoloesan.proyectomobile.presentation.p2p
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -39,6 +41,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import com.paoloesan.proyectomobile.presentation.navigation.navigateSafe
+import com.paoloesan.proyectomobile.presentation.components.OfflineScreen
+import zed.rainxch.rikkaui.components.ui.skeleton.Skeleton
+import zed.rainxch.rikkaui.components.ui.skeleton.SkeletonAnimation
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -299,12 +304,48 @@ fun MyOffersScreen(navController: NavController) {
                     )
                 }
 
-                if (uiState.isLoading) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
+                if (uiState.isNetworkError) {
+                    OfflineScreen(onRetry = { viewModel.loadData() })
+                } else if (uiState.isLoading) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        CircularProgressIndicator(color = RikkaTheme.colors.primary)
+                        repeat(3) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .border(1.dp, RikkaTheme.colors.muted.copy(alpha = 0.2f), RoundedCornerShape(12.dp))
+                                    .padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Skeleton(
+                                        modifier = Modifier.width(150.dp).height(20.dp),
+                                        animation = SkeletonAnimation.Shimmer
+                                    )
+                                    Skeleton(
+                                        modifier = Modifier.size(24.dp),
+                                        shape = RikkaTheme.shapes.full,
+                                        animation = SkeletonAnimation.Shimmer
+                                    )
+                                }
+                                Skeleton(
+                                    modifier = Modifier.fillMaxWidth(0.6f).height(16.dp),
+                                    animation = SkeletonAnimation.Shimmer
+                                )
+                                Skeleton(
+                                    modifier = Modifier.fillMaxWidth(0.4f).height(16.dp),
+                                    animation = SkeletonAnimation.Shimmer
+                                )
+                            }
+                        }
                     }
                 } else {
                     TabContent {

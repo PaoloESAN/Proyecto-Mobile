@@ -42,6 +42,9 @@ class MarketplaceViewModel : ViewModel() {
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
+    private val _isNetworkError = MutableStateFlow(false)
+    val isNetworkError: StateFlow<Boolean> = _isNetworkError.asStateFlow()
+
     private val _offers = MutableStateFlow<List<P2POffer>>(emptyList())
     val offers: StateFlow<List<P2POffer>> = _offers
 
@@ -55,6 +58,7 @@ class MarketplaceViewModel : ViewModel() {
     fun loadData() {
         viewModelScope.launch {
             _isLoading.value = true
+            _isNetworkError.value = false
             try {
                 // 1. Obtener el perfil del usuario actual (si está logueado) para no mostrar sus propias ofertas
                 val authId = Supabase.client.auth.currentUserAwaitInit()?.id
@@ -124,6 +128,7 @@ class MarketplaceViewModel : ViewModel() {
                 _offers.value = p2pOffers
             } catch (e: Exception) {
                 _offers.value = emptyList()
+                _isNetworkError.value = true
             } finally {
                 _isLoading.value = false
             }

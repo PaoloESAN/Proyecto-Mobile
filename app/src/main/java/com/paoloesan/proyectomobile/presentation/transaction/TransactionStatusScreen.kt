@@ -42,6 +42,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.getValue
+import zed.rainxch.rikkaui.components.ui.skeleton.Skeleton
+import zed.rainxch.rikkaui.components.ui.skeleton.SkeletonAnimation
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -255,23 +257,75 @@ fun TransactionStatusScreen(
 
             // Pantalla de carga
             if (uiState.isLoading) {
-                Box(
+                Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(innerPadding),
-                    contentAlignment = Alignment.Center
+                        .padding(innerPadding)
+                        .padding(24.dp),
+                    verticalArrangement = Arrangement.spacedBy(20.dp)
                 ) {
+                    // Top Card skeleton
                     Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .border(1.dp, RikkaTheme.colors.muted.copy(alpha = 0.2f), RoundedCornerShape(12.dp))
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        CircularProgressIndicator(color = RikkaTheme.colors.primary)
-                        Text(
-                            text = "Cargando transacción...",
-                            variant = TextVariant.P,
-                            color = RikkaTheme.colors.onBackground.copy(alpha = 0.6f)
+                        Skeleton(
+                            modifier = Modifier.fillMaxWidth(0.5f).height(20.dp),
+                            animation = SkeletonAnimation.Shimmer
+                        )
+                        Skeleton(
+                            modifier = Modifier.fillMaxWidth().height(16.dp),
+                            animation = SkeletonAnimation.Shimmer
+                        )
+                        Skeleton(
+                            modifier = Modifier.fillMaxWidth(0.8f).height(16.dp),
+                            animation = SkeletonAnimation.Shimmer
                         )
                     }
+
+                    // Timeline items skeleton
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(24.dp)
+                    ) {
+                        repeat(3) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Skeleton(
+                                    modifier = Modifier.size(32.dp),
+                                    shape = RikkaTheme.shapes.full,
+                                    animation = SkeletonAnimation.Shimmer
+                                )
+                                Column(
+                                    modifier = Modifier.weight(1f),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Skeleton(
+                                        modifier = Modifier.fillMaxWidth(0.4f).height(16.dp),
+                                        animation = SkeletonAnimation.Shimmer
+                                    )
+                                    Skeleton(
+                                        modifier = Modifier.fillMaxWidth(0.7f).height(12.dp),
+                                        animation = SkeletonAnimation.Shimmer
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.weight(1f))
+
+                    // Bottom Button skeleton
+                    Skeleton(
+                        modifier = Modifier.fillMaxWidth().height(48.dp),
+                        animation = SkeletonAnimation.Shimmer
+                    )
                 }
                 return@Scaffold
             }

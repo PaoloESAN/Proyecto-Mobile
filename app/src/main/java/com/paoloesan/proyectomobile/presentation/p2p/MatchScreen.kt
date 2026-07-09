@@ -44,6 +44,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.paoloesan.proyectomobile.presentation.navigation.navigateSafe
+import zed.rainxch.rikkaui.components.ui.skeleton.Skeleton
+import zed.rainxch.rikkaui.components.ui.skeleton.SkeletonAnimation
 import com.paoloesan.proyectomobile.presentation.navigation.popBackStackSafe
 import androidx.navigation.NavController
 import zed.rainxch.rikkaui.components.ui.button.Button
@@ -218,16 +220,42 @@ fun MatchScreen(
 
                     // Sección 2: Resultados del matching
                     if (uiState.isLoading) {
-                        Box(
+                        Column(
                             modifier = Modifier
-                                .fillMaxSize()
-                                .padding(top = 40.dp),
-                            contentAlignment = Alignment.Center
+                                .fillMaxWidth()
+                                .weight(1f)
+                                .padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
-                            CircularProgressIndicator(
-                                color = RikkaTheme.colors.primary,
-                                modifier = Modifier.size(40.dp)
-                            )
+                            repeat(3) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .border(1.dp, RikkaTheme.colors.muted.copy(alpha = 0.2f), RoundedCornerShape(12.dp))
+                                        .padding(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Skeleton(
+                                            modifier = Modifier.width(150.dp).height(20.dp),
+                                            animation = SkeletonAnimation.Shimmer
+                                        )
+                                        Skeleton(
+                                            modifier = Modifier.size(24.dp),
+                                            shape = RikkaTheme.shapes.full,
+                                            animation = SkeletonAnimation.Shimmer
+                                        )
+                                    }
+                                    Skeleton(
+                                        modifier = Modifier.fillMaxWidth(0.7f).height(16.dp),
+                                        animation = SkeletonAnimation.Shimmer
+                                    )
+                                }
+                            }
                         }
                     } else if (uiState.matches.isEmpty()) {
                         Box(

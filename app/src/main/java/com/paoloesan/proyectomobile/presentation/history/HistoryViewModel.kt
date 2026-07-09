@@ -34,7 +34,8 @@ data class HistoryUiState(
     val historyItems: List<HistoryUiItem> = emptyList(),
     val ratedTransactionIds: Set<Int> = emptySet(),
     val errorMessage: String? = null,
-    val successMessage: String? = null
+    val successMessage: String? = null,
+    val isNetworkError: Boolean = false
 )
 
 class HistoryViewModel : ViewModel() {
@@ -50,7 +51,7 @@ class HistoryViewModel : ViewModel() {
 
     fun loadData() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            _uiState.update { it.copy(isLoading = true, errorMessage = null, isNetworkError = false) }
             try {
                 val authId = Supabase.client.auth.currentUserAwaitInit()?.id
                 if (authId == null) {
@@ -152,7 +153,11 @@ class HistoryViewModel : ViewModel() {
                 }
             } catch (e: Exception) {
                 _uiState.update {
-                    it.copy(isLoading = false, errorMessage = "Error al cargar historial: ${e.localizedMessage}")
+                    it.copy(
+                        isLoading = false,
+                        errorMessage = "Error al cargar historial: ${e.localizedMessage}",
+                        isNetworkError = true
+                    )
                 }
             }
         }

@@ -56,7 +56,8 @@ data class MyOffersUiState(
     val incomingTransactions: List<IncomingTransactionItem> = emptyList(),
     val sentTransactions: List<SentTransactionItem> = emptyList(),
     val errorMessage: String? = null,
-    val successMessage: String? = null
+    val successMessage: String? = null,
+    val isNetworkError: Boolean = false
 )
 
 class MyOffersViewModel : ViewModel() {
@@ -72,7 +73,7 @@ class MyOffersViewModel : ViewModel() {
 
     fun loadData() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            _uiState.update { it.copy(isLoading = true, errorMessage = null, isNetworkError = false) }
             try {
                 val authId = Supabase.client.auth.currentUserAwaitInit()?.id
                 if (authId == null) {
@@ -226,7 +227,8 @@ class MyOffersViewModel : ViewModel() {
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        errorMessage = "Error al cargar datos: ${e.localizedMessage}"
+                        errorMessage = "Error al cargar datos: ${e.localizedMessage}",
+                        isNetworkError = true
                     )
                 }
             }

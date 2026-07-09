@@ -39,10 +39,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import com.paoloesan.proyectomobile.presentation.navigation.navigateSafe
+import zed.rainxch.rikkaui.components.ui.skeleton.Skeleton
+import zed.rainxch.rikkaui.components.ui.skeleton.SkeletonAnimation
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import com.paoloesan.proyectomobile.presentation.components.OfflineScreen
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -76,6 +79,7 @@ fun MarketplaceScreen(
     val offers by viewModel.filteredOffers.collectAsState()
     val activeFilters by viewModel.filters.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    val isNetworkError by viewModel.isNetworkError.collectAsState()
 
     var showFilterBottomSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState()
@@ -233,14 +237,48 @@ fun MarketplaceScreen(
                 }
 
                 // Offers List
-                if (isLoading) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
+                if (isNetworkError) {
+                    OfflineScreen(onRetry = { viewModel.loadData() })
+                } else if (isLoading) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        androidx.compose.material3.CircularProgressIndicator(
-                            color = RikkaTheme.colors.primary
-                        )
+                        repeat(3) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .border(1.dp, RikkaTheme.colors.muted.copy(alpha = 0.2f), RoundedCornerShape(12.dp))
+                                    .padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Skeleton(
+                                        modifier = Modifier.width(120.dp).height(20.dp),
+                                        animation = SkeletonAnimation.Shimmer
+                                    )
+                                    Skeleton(
+                                        modifier = Modifier.size(24.dp),
+                                        shape = RikkaTheme.shapes.full,
+                                        animation = SkeletonAnimation.Shimmer
+                                    )
+                                }
+                                Skeleton(
+                                    modifier = Modifier.fillMaxWidth(0.7f).height(16.dp),
+                                    animation = SkeletonAnimation.Shimmer
+                                )
+                                Skeleton(
+                                    modifier = Modifier.fillMaxWidth(0.5f).height(16.dp),
+                                    animation = SkeletonAnimation.Shimmer
+                                )
+                            }
+                        }
                     }
                 } else {
                     LazyColumn(

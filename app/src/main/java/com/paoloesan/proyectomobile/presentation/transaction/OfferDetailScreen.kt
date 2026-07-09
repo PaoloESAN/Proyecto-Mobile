@@ -34,6 +34,8 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AlertDialog
+import zed.rainxch.rikkaui.components.ui.skeleton.Skeleton
+import zed.rainxch.rikkaui.components.ui.skeleton.SkeletonAnimation
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
@@ -247,13 +249,87 @@ fun OfferDetailScreen(
 
             // Pantalla de carga
             if (uiState.isLoading) {
-                Box(
+                Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(innerPadding),
-                    contentAlignment = Alignment.Center
+                        .padding(innerPadding)
+                        .padding(24.dp),
+                    verticalArrangement = Arrangement.spacedBy(20.dp)
                 ) {
-                    CircularProgressIndicator(color = RikkaTheme.colors.primary)
+                    // Creator avatar + name skeleton
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Skeleton(
+                            modifier = Modifier.size(44.dp),
+                            shape = RikkaTheme.shapes.full,
+                            animation = SkeletonAnimation.Shimmer
+                        )
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Skeleton(
+                                modifier = Modifier.width(100.dp).height(16.dp),
+                                animation = SkeletonAnimation.Shimmer
+                            )
+                            Skeleton(
+                                modifier = Modifier.width(60.dp).height(12.dp),
+                                animation = SkeletonAnimation.Shimmer
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Operation info card
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .border(1.dp, RikkaTheme.colors.muted.copy(alpha = 0.2f), RoundedCornerShape(12.dp))
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Skeleton(
+                            modifier = Modifier.fillMaxWidth(0.5f).height(20.dp),
+                            animation = SkeletonAnimation.Shimmer
+                        )
+                        repeat(3) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Skeleton(
+                                    modifier = Modifier.width(80.dp).height(14.dp),
+                                    animation = SkeletonAnimation.Shimmer
+                                )
+                                Skeleton(
+                                    modifier = Modifier.width(120.dp).height(14.dp),
+                                    animation = SkeletonAnimation.Shimmer
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Input form placeholder
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Skeleton(
+                            modifier = Modifier.width(150.dp).height(16.dp),
+                            animation = SkeletonAnimation.Shimmer
+                        )
+                        Skeleton(
+                            modifier = Modifier.fillMaxWidth().height(56.dp),
+                            animation = SkeletonAnimation.Shimmer
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.weight(1f))
+
+                    // Bottom Action Button
+                    Skeleton(
+                        modifier = Modifier.fillMaxWidth().height(48.dp),
+                        animation = SkeletonAnimation.Shimmer
+                    )
                 }
                 return@Scaffold
             }

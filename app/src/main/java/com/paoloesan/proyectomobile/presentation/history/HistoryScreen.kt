@@ -1,6 +1,7 @@
 package com.paoloesan.proyectomobile.presentation.history
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -39,6 +40,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import com.paoloesan.proyectomobile.presentation.navigation.navigateSafe
+import com.paoloesan.proyectomobile.presentation.components.OfflineScreen
+import zed.rainxch.rikkaui.components.ui.skeleton.Skeleton
+import zed.rainxch.rikkaui.components.ui.skeleton.SkeletonAnimation
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -119,14 +123,52 @@ fun HistoryScreen(navController: NavController) {
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                 )
 
-                if (uiState.isLoading) {
+                if (uiState.isNetworkError) {
                     Box(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxWidth(),
                         contentAlignment = Alignment.Center
                     ) {
-                        CircularProgressIndicator(color = RikkaTheme.colors.primary)
+                        OfflineScreen(onRetry = { viewModel.loadData() })
+                    }
+                } else if (uiState.isLoading) {
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        repeat(3) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .border(1.dp, RikkaTheme.colors.muted.copy(alpha = 0.2f), RoundedCornerShape(12.dp))
+                                    .padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Skeleton(
+                                        modifier = Modifier.width(100.dp).height(20.dp),
+                                        animation = SkeletonAnimation.Shimmer
+                                    )
+                                    Skeleton(
+                                        modifier = Modifier.size(24.dp),
+                                        shape = RikkaTheme.shapes.full,
+                                        animation = SkeletonAnimation.Shimmer
+                                    )
+                                }
+                                Skeleton(
+                                    modifier = Modifier.fillMaxWidth(0.8f).height(16.dp),
+                                    animation = SkeletonAnimation.Shimmer
+                                )
+                            }
+                        }
                     }
                 } else if (uiState.historyItems.isEmpty()) {
                     Box(

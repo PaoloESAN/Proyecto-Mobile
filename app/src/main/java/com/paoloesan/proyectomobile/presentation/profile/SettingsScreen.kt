@@ -45,6 +45,10 @@ import com.paoloesan.proyectomobile.presentation.navigation.navigateSafe
 import com.paoloesan.proyectomobile.presentation.navigation.popBackStackSafe
 import zed.rainxch.rikkaui.components.ui.button.Button
 import zed.rainxch.rikkaui.components.ui.button.ButtonSize
+import androidx.compose.ui.viewinterop.AndroidView
+import android.webkit.WebView
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material.icons.filled.Info
 import zed.rainxch.rikkaui.components.ui.button.ButtonVariant
 import zed.rainxch.rikkaui.components.ui.card.Card
 import zed.rainxch.rikkaui.components.ui.icon.RikkaIcons
@@ -59,6 +63,7 @@ fun SettingsScreen(navController: NavController) {
     val currentTheme = SessionManager.themeState.value
     val sheetState = rememberModalBottomSheetState()
     var showThemeSheet by remember { mutableStateOf(false) }
+    var showTerms by remember { mutableStateOf(false) }
 
     Box(
         modifier = Modifier
@@ -133,6 +138,11 @@ fun SettingsScreen(navController: NavController) {
                             },
                             onClick = { showThemeSheet = true }
                         )
+                        SettingsMenuItem(
+                            icon = Icons.Default.Info,
+                            title = "Términos y condiciones",
+                            onClick = { showTerms = true }
+                        )
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -153,6 +163,38 @@ fun SettingsScreen(navController: NavController) {
                     }
                 }
             }
+        }
+
+        if (showTerms) {
+            AlertDialog(
+                onDismissRequest = { showTerms = false },
+                title = {
+                    Text(
+                        text = "Términos y condiciones",
+                        variant = TextVariant.Large,
+                        color = RikkaTheme.colors.onBackground
+                    )
+                },
+                text = {
+                    AndroidView(
+                        factory = { context ->
+                            WebView(context).apply {
+                                settings.javaScriptEnabled = true
+                                settings.domStorageEnabled = true
+                                loadUrl("https://www.privacypolicies.com/live/4ad40d9d-c177-417a-b24b-660323acd99e")
+                            }
+                        },
+                        modifier = Modifier.height(400.dp)
+                    )
+                },
+                confirmButton = {
+                    Button(
+                        onClick = { showTerms = false },
+                        text = "Cerrar"
+                    )
+                },
+                containerColor = RikkaTheme.colors.background
+            )
         }
 
         if (showThemeSheet) {
