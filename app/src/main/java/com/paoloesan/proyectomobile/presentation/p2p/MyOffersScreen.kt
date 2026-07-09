@@ -38,6 +38,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
+import com.paoloesan.proyectomobile.presentation.navigation.navigateSafe
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -86,6 +87,10 @@ fun MyOffersScreen(navController: NavController) {
     val toastState = rememberToastHostState()
     val scope = rememberCoroutineScope()
     val focusManager = LocalFocusManager.current
+
+    LaunchedEffect(Unit) {
+        viewModel.loadData()
+    }
 
     LaunchedEffect(uiState.successMessage) {
         uiState.successMessage?.let {
@@ -260,36 +265,6 @@ fun MyOffersScreen(navController: NavController) {
             containerColor = RikkaTheme.colors.background,
             snackbarHost = {
                 ToastHost(hostState = toastState)
-            },
-            topBar = {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .statusBarsPadding()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Button(
-                        onClick = { navController.popBackStack() },
-                        variant = ButtonVariant.Ghost,
-                        size = ButtonSize.Icon,
-                    ) {
-                        androidx.compose.material3.Icon(
-                            imageVector = RikkaIcons.ArrowLeft,
-                            contentDescription = "Volver",
-                            tint = RikkaTheme.colors.onBackground
-                        )
-                    }
-
-                    Text(
-                        text = "Ofertas",
-                        color = RikkaTheme.colors.onBackground,
-                        variant = TextVariant.Large,
-                    )
-
-                    Spacer(modifier = Modifier.size(40.dp))
-                }
             }
         ) { innerPadding ->
             Column(
@@ -297,6 +272,13 @@ fun MyOffersScreen(navController: NavController) {
                     .fillMaxSize()
                     .padding(innerPadding)
             ) {
+                Text(
+                    text = "Ofertas",
+                    color = RikkaTheme.colors.onBackground,
+                    variant = TextVariant.H1,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                )
+
                 TabList(
                     modifier = Modifier
                         .padding(horizontal = 16.dp)
@@ -313,7 +295,7 @@ fun MyOffersScreen(navController: NavController) {
                         modifier = Modifier.weight(1f),
                         selected = selectedTab == 1,
                         onClick = { selectedTab = 1 },
-                        text = "Solicitudes recibidas",
+                        text = "Mis ofertas",
                     )
                 }
 
@@ -361,7 +343,7 @@ fun MyOffersScreen(navController: NavController) {
                                             key = { it.transactionId }) { tx ->
                                             Card(
                                                 onClick = {
-                                                    navController.navigate("transactionStatus/${tx.transactionId}")
+                                                    navController.navigateSafe("transactionStatus/${tx.transactionId}")
                                                 },
                                                 modifier = Modifier.fillMaxWidth(),
                                                 animation = CardAnimation.Press
@@ -474,7 +456,7 @@ fun MyOffersScreen(navController: NavController) {
                                                 onClick = {
                                                     if (offer.status == "En Proceso") {
                                                         offer.activeTransactionId?.let { txId ->
-                                                            navController.navigate("transactionStatus/$txId")
+                                                            navController.navigateSafe("transactionStatus/$txId")
                                                         }
                                                     } else if (offer.status == "Activa") {
                                                         selectedOffer = offer

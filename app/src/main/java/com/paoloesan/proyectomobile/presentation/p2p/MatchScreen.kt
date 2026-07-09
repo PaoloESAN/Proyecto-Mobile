@@ -43,6 +43,8 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.paoloesan.proyectomobile.presentation.navigation.navigateSafe
+import com.paoloesan.proyectomobile.presentation.navigation.popBackStackSafe
 import androidx.navigation.NavController
 import zed.rainxch.rikkaui.components.ui.button.Button
 import zed.rainxch.rikkaui.components.ui.button.ButtonSize
@@ -81,7 +83,7 @@ fun MatchScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Button(
-                        onClick = { navController.popBackStack() },
+                        onClick = { navController.popBackStackSafe() },
                         variant = ButtonVariant.Ghost,
                         size = ButtonSize.Icon,
                     ) {
@@ -158,7 +160,7 @@ fun MatchScreen(
                             )
                             Button(
                                 onClick = {
-                                    navController.navigate("publish_offer")
+                                    navController.navigateSafe("publish_offer")
                                 },
                                 variant = ButtonVariant.Outline,
                                 text = "Publicar Oferta"
@@ -189,7 +191,7 @@ fun MatchScreen(
                                 Spacer(modifier = Modifier.height(4.dp))
                                 uiState.selectedOffer?.let { offer ->
                                     Text(
-                                        text = "${offer.tipoOperacion} - ${offer.montoTengo} ${offer.monedaTengo} ⇄ ${offer.montoRecibo} ${offer.monedaRecibo} (T.C. ${offer.price})",
+                                        text = "${offer.tipoOperacion} - ${String.format(java.util.Locale.US, "%,.2f", offer.montoTengo)} ${offer.monedaTengo} ⇄ ${String.format(java.util.Locale.US, "%,.2f", offer.montoRecibo)} ${offer.monedaRecibo} (T.C. ${String.format(java.util.Locale.US, "%.4f", offer.price)})",
                                         variant = TextVariant.P,
                                         color = RikkaTheme.colors.onBackground
                                     )
@@ -258,7 +260,7 @@ fun MatchScreen(
                                 val isCompra = match.tipoOperacion == "Compra"
                                 Card(
                                     onClick = {
-                                        navController.navigate("offerDetail/${match.ofertaId}")
+                                        navController.navigateSafe("offerDetail/${match.ofertaId}")
                                     },
                                     modifier = Modifier.fillMaxWidth(),
                                     animation = CardAnimation.Press
@@ -423,17 +425,17 @@ fun MatchScreen(
                                                 color = if (offer.tipoOperacion == "Compra") RikkaTheme.colors.primary else RikkaTheme.colors.destructive
                                             )
                                             Text(
-                                                text = "Tengo: ${offer.montoTengo} ${offer.monedaTengo}",
+                                                text = "Tengo: ${String.format(java.util.Locale.US, "%,.2f", offer.montoTengo)} ${offer.monedaTengo}",
                                                 variant = TextVariant.P,
                                                 color = RikkaTheme.colors.onBackground
                                             )
                                             Text(
-                                                text = "Recibo: ${offer.montoRecibo} ${offer.monedaRecibo}",
+                                                text = "Recibo: ${String.format(java.util.Locale.US, "%,.2f", offer.montoRecibo)} ${offer.monedaRecibo}",
                                                 variant = TextVariant.Small,
                                                 color = Color.Gray
                                             )
                                             Text(
-                                                text = "T.C.: ${offer.price}",
+                                                text = "T.C.: ${String.format(java.util.Locale.US, "%.4f", offer.price)}",
                                                 variant = TextVariant.Small,
                                                 color = Color.Gray
                                             )

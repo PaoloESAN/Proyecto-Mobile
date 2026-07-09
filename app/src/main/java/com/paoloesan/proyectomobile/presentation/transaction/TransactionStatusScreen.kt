@@ -597,25 +597,13 @@ fun TransactionStatusScreen(
                                 text = "Proceder con el pago / Ver comprobantes"
                             )
 
-                            // Botón de confirmar recepción (solo si se subieron ambos vouchers y no confirmé aún)
-                            if (uiState.myVoucherUploaded && uiState.peerVoucherUploaded && !uiState.myConfirmed) {
-                                Button(
-                                    onClick = { viewModel.confirmarRecepcion() },
-                                    variant = ButtonVariant.Outline,
-                                    modifier = Modifier.fillMaxWidth(),
-                                    text = "Confirmar Pago Recibido ✓"
-                                )
-                            }
-
-                            // Botón de disputa
-                            if (uiState.myVoucherUploaded) {
-                                Button(
-                                    onClick = { showDisputeDialog = true },
-                                    variant = ButtonVariant.Destructive,
-                                    modifier = Modifier.fillMaxWidth(),
-                                    text = "Abrir Disputa"
-                                )
-                            }
+                            // Botón de chat
+                            Button(
+                                onClick = { onChat(transactionId) },
+                                variant = ButtonVariant.Outline,
+                                modifier = Modifier.fillMaxWidth(),
+                                text = "Chat"
+                            )
                         }
 
                         TransactionState.ESPERANDO_ACEPTACION -> {

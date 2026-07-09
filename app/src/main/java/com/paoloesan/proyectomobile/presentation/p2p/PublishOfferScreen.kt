@@ -192,6 +192,10 @@ fun PublishOfferScreen(
         }
     }
 
+    LaunchedEffect(Unit) {
+        viewModel.loadData()
+    }
+
     LaunchedEffect(uiState.errorMessage) {
         uiState.errorMessage?.let { message ->
             scope.launch {
@@ -228,36 +232,6 @@ fun PublishOfferScreen(
                 ToastHost(
                     hostState = toastState
                 )
-            },
-            topBar = {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .statusBarsPadding()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Button(
-                        onClick = { navController.popBackStack() },
-                        variant = ButtonVariant.Ghost,
-                        size = ButtonSize.Icon,
-                    ) {
-                        androidx.compose.material3.Icon(
-                            imageVector = RikkaIcons.ArrowLeft,
-                            contentDescription = "Regresar",
-                            tint = RikkaTheme.colors.onBackground
-                        )
-                    }
-
-                    Text(
-                        text = "Publicar",
-                        color = RikkaTheme.colors.onBackground,
-                        variant = TextVariant.Large,
-                    )
-
-                    Spacer(modifier = Modifier.size(40.dp))
-                }
             }
         ) { innerPadding ->
             LazyColumn(
@@ -277,7 +251,7 @@ fun PublishOfferScreen(
                 item {
                     Text(
                         text = "Publicar oferta",
-                        variant = TextVariant.H2,
+                        variant = TextVariant.H1,
                         color = RikkaTheme.colors.onBackground,
                         modifier = Modifier
                             .fillMaxWidth()

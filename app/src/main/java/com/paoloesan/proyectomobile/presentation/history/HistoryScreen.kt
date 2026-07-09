@@ -38,6 +38,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import com.paoloesan.proyectomobile.presentation.navigation.navigateSafe
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -77,6 +78,10 @@ fun HistoryScreen(navController: NavController) {
     val scope = rememberCoroutineScope()
     val focusManager = LocalFocusManager.current
 
+    LaunchedEffect(Unit) {
+        viewModel.loadData()
+    }
+
     LaunchedEffect(uiState.successMessage) {
         uiState.successMessage?.let {
             toastState.show(message = it, variant = ToastVariant.Success)
@@ -100,77 +105,59 @@ fun HistoryScreen(navController: NavController) {
             containerColor = RikkaTheme.colors.background,
             snackbarHost = {
                 ToastHost(hostState = toastState)
-            },
-            topBar = {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .statusBarsPadding()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Button(
-                        onClick = { navController.popBackStack() },
-                        variant = ButtonVariant.Ghost,
-                        size = ButtonSize.Icon,
-                    ) {
-                        androidx.compose.material3.Icon(
-                            imageVector = RikkaIcons.ArrowLeft,
-                            contentDescription = "Volver",
-                            tint = RikkaTheme.colors.onBackground
-                        )
-                    }
-
-                    Text(
-                        text = "Historial",
-                        color = RikkaTheme.colors.onBackground,
-                        variant = TextVariant.Large,
-                    )
-
-                    Spacer(modifier = Modifier.size(40.dp))
-                }
             }
         ) { innerPadding ->
-            if (uiState.isLoading) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator(color = RikkaTheme.colors.primary)
-                }
-            } else if (uiState.historyItems.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding)
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null
-                        ) { focusManager.clearFocus() },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "No tienes transacciones finalizadas",
-                        variant = TextVariant.Large,
-                        color = Color.Gray
-                    )
-                }
-            } else {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding)
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null
-                        ) { focusManager.clearFocus() }
-                        .padding(horizontal = 16.dp),
-                    contentPadding = PaddingValues(vertical = 12.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+            ) {
+                Text(
+                    text = "Historial",
+                    color = RikkaTheme.colors.onBackground,
+                    variant = TextVariant.H1,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                )
+
+                if (uiState.isLoading) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(color = RikkaTheme.colors.primary)
+                    }
+                } else if (uiState.historyItems.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) { focusManager.clearFocus() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "No tienes transacciones finalizadas",
+                            variant = TextVariant.Large,
+                            color = Color.Gray
+                        )
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) { focusManager.clearFocus() }
+                            .padding(horizontal = 16.dp),
+                        contentPadding = PaddingValues(bottom = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
                     items(uiState.historyItems, key = { it.transactionId }) { item ->
                         HistoryItemCard(
                             item = item,
@@ -182,7 +169,7 @@ fun HistoryScreen(navController: NavController) {
                                 mostrarDialogo = true
                             },
                             onCardClick = {
-                                navController.navigate("transactionStatus/${item.transactionId}")
+                                navController.navigateSafe("transactionStatus/${item.transactionId}")
                             }
                         )
                     }
@@ -190,6 +177,7 @@ fun HistoryScreen(navController: NavController) {
             }
         }
     }
+}
 
     if (mostrarDialogo && operacionSeleccionada != null) {
         AlertDialog(

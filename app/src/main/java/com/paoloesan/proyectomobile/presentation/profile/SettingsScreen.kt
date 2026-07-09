@@ -41,6 +41,8 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.paoloesan.proyectomobile.data.local.SessionManager
 import com.paoloesan.proyectomobile.presentation.navigation.Destination
+import com.paoloesan.proyectomobile.presentation.navigation.navigateSafe
+import com.paoloesan.proyectomobile.presentation.navigation.popBackStackSafe
 import zed.rainxch.rikkaui.components.ui.button.Button
 import zed.rainxch.rikkaui.components.ui.button.ButtonSize
 import zed.rainxch.rikkaui.components.ui.button.ButtonVariant
@@ -75,7 +77,7 @@ fun SettingsScreen(navController: NavController) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Button(
-                        onClick = { navController.popBackStack() },
+                        onClick = { navController.popBackStackSafe() },
                         variant = ButtonVariant.Ghost,
                         size = ButtonSize.Icon,
                     ) {
@@ -113,7 +115,7 @@ fun SettingsScreen(navController: NavController) {
                         SettingsMenuItem(
                             icon = Icons.Default.Person,
                             title = "Editar información personal",
-                            onClick = { navController.navigate("edit_profile") }
+                            onClick = { navController.navigateSafe("edit_profile") }
                         )
                         Box(
                             modifier = Modifier
@@ -143,7 +145,7 @@ fun SettingsScreen(navController: NavController) {
                             textColor = RikkaTheme.colors.destructive,
                             onClick = {
                                 SessionManager.clearToken(context)
-                                navController.navigate(Destination.Login.route) {
+                                navController.navigateSafe(Destination.Login.route) {
                                     popUpTo(Destination.Marketplace.route) { inclusive = true }
                                 }
                             }

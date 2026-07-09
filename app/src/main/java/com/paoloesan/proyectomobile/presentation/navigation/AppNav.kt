@@ -5,6 +5,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.core.tween
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.History
@@ -168,11 +173,11 @@ sealed class Destination(
             OfferDetailScreen(
                 offerId = offerId,
                 onStartTransaction = { transactionId ->
-                    navController.navigate("transactionStatus/$transactionId") {
+                    navController.navigateSafe("transactionStatus/$transactionId") {
                         popUpTo("offerDetail/$offerId") { inclusive = true }
                     }
                 },
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStackSafe() }
             )
         }
     )
@@ -185,12 +190,12 @@ sealed class Destination(
             val transactionId = arguments?.getString("transactionId")?.toIntOrNull() ?: 0
             TransactionStatusScreen(
                 transactionId = transactionId,
-                onBack = { navController.popBackStack() },
+                onBack = { navController.popBackStackSafe() },
                 onViewBankDetails = { txId, isSeller ->
-                    navController.navigate("bankDetails/$txId?isSeller=$isSeller")
+                    navController.navigateSafe("bankDetails/$txId?isSeller=$isSeller")
                 },
                 onChat = { txId ->
-                    navController.navigate("chat/$txId")
+                    navController.navigateSafe("chat/$txId")
                 }
             )
         }
@@ -221,8 +226,8 @@ sealed class Destination(
                 uploaded = uploaded,
                 currency = currency,
                 navController = navController,
-                onBack = { navController.popBackStack() },
-                onChat = { navController.navigate("chat/$transactionId") }
+                onBack = { navController.popBackStackSafe() },
+                onChat = { navController.navigateSafe("chat/$transactionId") }
             )
         }
     )
@@ -332,7 +337,43 @@ fun AppNav() {
         NavHost(
             navController = navController,
             startDestination = startDest,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f),
+            enterTransition = {
+                val route = targetState.destination.route
+                val isBottomDest = bottomBarDestinations.any { it.route == route }
+                if (isBottomDest) {
+                    fadeIn(animationSpec = tween(220))
+                } else {
+                    slideInHorizontally(
+                        initialOffsetX = { it },
+                        animationSpec = tween(300)
+                    ) + fadeIn(animationSpec = tween(300))
+                }
+            },
+            exitTransition = {
+                val route = targetState.destination.route
+                val isBottomDest = bottomBarDestinations.any { it.route == route }
+                if (isBottomDest) {
+                    fadeOut(animationSpec = tween(220))
+                } else {
+                    slideOutHorizontally(
+                        targetOffsetX = { -it },
+                        animationSpec = tween(300)
+                    ) + fadeOut(animationSpec = tween(300))
+                }
+            },
+            popEnterTransition = {
+                slideInHorizontally(
+                    initialOffsetX = { -it },
+                    animationSpec = tween(300)
+                ) + fadeIn(animationSpec = tween(300))
+            },
+            popExitTransition = {
+                slideOutHorizontally(
+                    targetOffsetX = { it },
+                    animationSpec = tween(300)
+                ) + fadeOut(animationSpec = tween(300))
+            }
         ) {
             appDestinations.forEach { destination ->
                 composable(destination.route) {

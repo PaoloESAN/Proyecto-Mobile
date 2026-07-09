@@ -14,6 +14,7 @@ import com.paoloesan.proyectomobile.data.model.UserProfileModel
 import com.paoloesan.proyectomobile.data.model.VerificarVoucherRequest
 import com.paoloesan.proyectomobile.data.model.VerificarVoucherResponse
 import com.paoloesan.proyectomobile.data.model.VerificacionIaModel
+import com.paoloesan.proyectomobile.data.model.DisputeModel
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.functions.functions
 import io.github.jan.supabase.postgrest.postgrest
@@ -356,6 +357,40 @@ class BankViewModel : ViewModel() {
                 onSuccess()
             } catch (e: Exception) {
                 _uiState.update { it.copy(errorMessage = "Error al confirmar: ${e.localizedMessage}") }
+            }
+        }
+    }
+
+    fun abrirDisputa(onSuccess: () -> Unit) {
+        val myUserId = _uiState.value.currentUserId ?: return
+        if (transaccionId == 0) return
+
+        viewModelScope.launch {
+            try {
+                val disputa = DisputeModel(
+                    transaccionId = transaccionId,
+                    usuarioReportadorId = myUserId,
+                    estado = "Abierta"
+                )
+                Supabase.client.postgrest["disputas"].insert(disputa)
+
+                Supabase.client.postgrest["transacciones"].update(
+                    mapOf("estado" to "Disputa")
+                ) {
+                    filter { eq("transaccion_id", transaccionId) }
+                }
+
+                _uiState.update {
+                    it.copy(
+                        transactionStatus = "Disputa"
+                    )
+                }
+
+                onSuccess()
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(errorMessage = "Error al abrir disputa: ${e.localizedMessage}")
+                }
             }
         }
     }

@@ -38,6 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
+import com.paoloesan.proyectomobile.presentation.navigation.popBackStackSafe
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -95,7 +96,7 @@ fun ChatScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Button(
-                        onClick = { navController.popBackStack() },
+                        onClick = { navController.popBackStackSafe() },
                         variant = ButtonVariant.Ghost,
                         size = ButtonSize.Icon,
                     ) {

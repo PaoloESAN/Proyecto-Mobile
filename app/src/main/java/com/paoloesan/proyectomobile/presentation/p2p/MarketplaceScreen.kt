@@ -36,7 +36,9 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import com.paoloesan.proyectomobile.presentation.navigation.navigateSafe
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -79,6 +81,10 @@ fun MarketplaceScreen(
     val sheetState = rememberModalBottomSheetState()
     val focusManager = LocalFocusManager.current
 
+    LaunchedEffect(Unit) {
+        viewModel.loadData()
+    }
+
     // Temporary local states for filter controls inside bottom sheet
     var tempCurrency by remember(showFilterBottomSheet) { mutableStateOf(activeFilters.currency) }
     var tempType by remember(showFilterBottomSheet) { mutableStateOf(activeFilters.type) }
@@ -99,38 +105,7 @@ fun MarketplaceScreen(
             .background(RikkaTheme.colors.background)
     ) {
         Scaffold(
-            containerColor = RikkaTheme.colors.background,
-            topBar = {
-                // Transparent Top Bar with Centered Title
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .statusBarsPadding()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Button(
-                        onClick = { navController.popBackStack() },
-                        variant = ButtonVariant.Ghost,
-                        size = ButtonSize.Icon,
-                    ) {
-                        androidx.compose.material3.Icon(
-                            imageVector = RikkaIcons.ArrowLeft,
-                            contentDescription = "Volver",
-                            tint = RikkaTheme.colors.onBackground
-                        )
-                    }
-
-                    Text(
-                        text = "Mercado P2P",
-                        color = RikkaTheme.colors.onBackground,
-                        variant = TextVariant.Large,
-                    )
-
-                    Spacer(modifier = Modifier.size(40.dp))
-                }
-            }
+            containerColor = RikkaTheme.colors.background
         ) { innerPadding ->
             Column(
                 modifier = Modifier
@@ -145,6 +120,13 @@ fun MarketplaceScreen(
                     .padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                Text(
+                    text = "Mercado",
+                    variant = TextVariant.H1,
+                    color = RikkaTheme.colors.onBackground,
+                    modifier = Modifier.padding(top = 16.dp)
+                )
+
                 // Header of listings & filter action
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -269,7 +251,7 @@ fun MarketplaceScreen(
                             // Matching Automático Card
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
-                                onClick = { navController.navigate(Destination.Matches.route) },
+                                onClick = { navController.navigateSafe(Destination.Matches.route) },
                                 animation = CardAnimation.Press
                             ) {
                                 Row(
@@ -343,7 +325,7 @@ fun MarketplaceScreen(
                                 OfferCard(
                                     offer = offer,
                                     onSelect = {
-                                        navController.navigate("offerDetail/${offer.id}")
+                                        navController.navigateSafe("offerDetail/${offer.id}")
                                     }
                                 )
                             }

@@ -43,6 +43,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import com.paoloesan.proyectomobile.presentation.navigation.navigateSafe
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -131,46 +132,6 @@ fun ProfileScreen(
                 ToastHost(
                     hostState = toastState
                 )
-            },
-            topBar = {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .statusBarsPadding()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Button(
-                        onClick = { navController.popBackStack() },
-                        variant = ButtonVariant.Ghost,
-                        size = ButtonSize.Icon,
-                    ) {
-                        androidx.compose.material3.Icon(
-                            imageVector = RikkaIcons.ArrowLeft,
-                            contentDescription = "Regresar",
-                            tint = RikkaTheme.colors.onBackground
-                        )
-                    }
-
-                    Text(
-                        text = "Mi Perfil",
-                        color = RikkaTheme.colors.onBackground,
-                        variant = TextVariant.Large,
-                    )
-
-                    Button(
-                        onClick = { navController.navigate("settings") },
-                        variant = ButtonVariant.Ghost,
-                        size = ButtonSize.Icon,
-                    ) {
-                        androidx.compose.material3.Icon(
-                            imageVector = Icons.Default.Settings,
-                            contentDescription = "Configuracion",
-                            tint = RikkaTheme.colors.onBackground
-                        )
-                    }
-                }
             }
         ) { innerPadding ->
             LazyColumn(
@@ -187,6 +148,35 @@ fun ProfileScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 contentPadding = PaddingValues(vertical = 12.dp)
             ) {
+                // Top Header Row with Title and Settings Icon
+                item {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Mi Perfil",
+                            variant = TextVariant.H1,
+                            color = RikkaTheme.colors.onBackground
+                        )
+
+                        Button(
+                            onClick = { navController.navigateSafe("settings") },
+                            variant = ButtonVariant.Ghost,
+                            size = ButtonSize.Icon,
+                        ) {
+                            androidx.compose.material3.Icon(
+                                imageVector = Icons.Default.Settings,
+                                contentDescription = "Configuracion",
+                                tint = RikkaTheme.colors.onBackground
+                            )
+                        }
+                    }
+                }
+
                 // Header / Avatar Section
                 item {
                     Column(
@@ -301,7 +291,7 @@ fun ProfileScreen(
                                         color = RikkaTheme.colors.warning,
                                         shape = RoundedCornerShape(999.dp)
                                     )
-                                    .clickable { navController.navigate("identity_verification") }
+                                    .clickable { navController.navigateSafe("identity_verification") }
                                     .padding(horizontal = 16.dp, vertical = 6.dp),
                                 contentAlignment = Alignment.Center
                             ) {
@@ -321,7 +311,7 @@ fun ProfileScreen(
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable { navController.navigate("admin_users") }
+                                .clickable { navController.navigateSafe("admin_users") }
                         ) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -363,7 +353,7 @@ fun ProfileScreen(
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable { navController.navigate("disputas") }
+                                .clickable { navController.navigateSafe("disputas") }
                         ) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),

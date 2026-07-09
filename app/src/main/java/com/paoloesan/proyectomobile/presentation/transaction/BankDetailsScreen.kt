@@ -38,6 +38,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
+import com.paoloesan.proyectomobile.presentation.navigation.navigateSafe
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -437,15 +438,17 @@ fun BankDetailsScreen(
                     onClick = {
                         showDisputeDialog = false
                         disputeReason = ""
-                        scope.launch {
-                            toastState.show(
-                                message = "Disputa iniciada correctamente. Soporte revisará el caso.",
-                                variant = ToastVariant.Success
-                            )
-                            kotlinx.coroutines.delay(1000.milliseconds)
-                            navController.navigate("transactionStatus/$transactionId?isSeller=$isSeller&amount=$amount&rate=$rate&bank=$bank&type=$type&status=En disputa&uploaded=$mineUploaded&currency=$currency&isRated=false") {
-                                popUpTo("transactionStatus/$transactionId?isSeller=$isSeller&amount=$amount&rate=$rate&bank=$bank&type=$type&status=$status") {
-                                    inclusive = true
+                        viewModel.abrirDisputa {
+                            scope.launch {
+                                toastState.show(
+                                    message = "Disputa iniciada correctamente. Soporte revisará el caso.",
+                                    variant = ToastVariant.Success
+                                )
+                                kotlinx.coroutines.delay(1000.milliseconds)
+                                navController.navigateSafe("transactionStatus/$transactionId?isSeller=$isSeller&amount=$amount&rate=$rate&bank=$bank&type=$type&status=Disputa&uploaded=$mineUploaded&currency=$currency&isRated=false") {
+                                    popUpTo("transactionStatus/$transactionId?isSeller=$isSeller&amount=$amount&rate=$rate&bank=$bank&type=$type&status=$status") {
+                                        inclusive = true
+                                    }
                                 }
                             }
                         }
@@ -887,23 +890,12 @@ fun BankDetailsScreen(
                         )
                     }
 
-                    Row(
+                    Button(
+                        onClick = { showDisputeDialog = true },
+                        variant = ButtonVariant.Destructive,
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Button(
-                            onClick = onChat,
-                            variant = ButtonVariant.Outline,
-                            modifier = Modifier.weight(1f),
-                            text = "Chat"
-                        )
-                        Button(
-                            onClick = { showDisputeDialog = true },
-                            variant = ButtonVariant.Destructive,
-                            modifier = Modifier.weight(1f),
-                            text = "Abrir disputa"
-                        )
-                    }
+                        text = "Abrir disputa"
+                    )
                 }
             }
         }
