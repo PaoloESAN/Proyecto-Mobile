@@ -28,8 +28,8 @@ import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FilterList
-import androidx.compose.material.icons.filled.Payment
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
@@ -98,6 +98,7 @@ fun MarketplaceScreen(
         )
     }
     var tempPaymentMethod by remember(showFilterBottomSheet) { mutableStateOf(activeFilters.paymentMethod) }
+    var tempMinRating by remember(showFilterBottomSheet) { mutableStateOf(activeFilters.minRating) }
 
     val currencies = listOf("TODOS", "USD", "PEN", "MXN", "EUR", "GBP", "JPY")
     val types = listOf("TODOS", "Compra", "Venta")
@@ -189,7 +190,8 @@ fun MarketplaceScreen(
                                         currency = "TODOS",
                                         type = activeFilters.type,
                                         amount = activeFilters.amount,
-                                        paymentMethod = activeFilters.paymentMethod
+                                        paymentMethod = activeFilters.paymentMethod,
+                                        minRating = activeFilters.minRating
                                     )
                                 }
                             )
@@ -202,7 +204,8 @@ fun MarketplaceScreen(
                                         currency = activeFilters.currency,
                                         type = "TODOS",
                                         amount = activeFilters.amount,
-                                        paymentMethod = activeFilters.paymentMethod
+                                        paymentMethod = activeFilters.paymentMethod,
+                                        minRating = activeFilters.minRating
                                     )
                                 }
                             )
@@ -215,7 +218,8 @@ fun MarketplaceScreen(
                                         currency = activeFilters.currency,
                                         type = activeFilters.type,
                                         amount = null,
-                                        paymentMethod = activeFilters.paymentMethod
+                                        paymentMethod = activeFilters.paymentMethod,
+                                        minRating = activeFilters.minRating
                                     )
                                 }
                             )
@@ -228,7 +232,22 @@ fun MarketplaceScreen(
                                         currency = activeFilters.currency,
                                         type = activeFilters.type,
                                         amount = activeFilters.amount,
-                                        paymentMethod = "TODOS"
+                                        paymentMethod = "TODOS",
+                                        minRating = activeFilters.minRating
+                                    )
+                                }
+                            )
+                        }
+                        if (activeFilters.minRating != null) {
+                            ActiveFilterChip(
+                                label = "★ mín: ${String.format(java.util.Locale.US, "%.1f", activeFilters.minRating)}",
+                                onDismiss = {
+                                    viewModel.applyFilters(
+                                        currency = activeFilters.currency,
+                                        type = activeFilters.type,
+                                        amount = activeFilters.amount,
+                                        paymentMethod = activeFilters.paymentMethod,
+                                        minRating = null
                                     )
                                 }
                             )
@@ -491,6 +510,42 @@ fun MarketplaceScreen(
                     }
                 }
 
+                // Rating Filter
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "Calificación mínima del vendedor",
+                        variant = TextVariant.P,
+                        color = RikkaTheme.colors.onBackground
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // "Todos" option
+                        val isAllSelected = tempMinRating == null
+                        Button(
+                            onClick = { tempMinRating = null },
+                            variant = if (isAllSelected) ButtonVariant.Default else ButtonVariant.Outline,
+                            size = ButtonSize.Sm
+                        ) {
+                            Text(text = "Todos", variant = TextVariant.P)
+                        }
+                        listOf(3.0, 4.0, 4.5).forEach { rating ->
+                            val isSelected = tempMinRating == rating
+                            Button(
+                                onClick = { tempMinRating = rating },
+                                variant = if (isSelected) ButtonVariant.Default else ButtonVariant.Outline,
+                                size = ButtonSize.Sm
+                            ) {
+                                Text(
+                                    text = "${String.format(java.util.Locale.US, "%.1f", rating)}★",
+                                    variant = TextVariant.P
+                                )
+                            }
+                        }
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(8.dp))
 
                 // Apply Action Button
@@ -501,7 +556,8 @@ fun MarketplaceScreen(
                             currency = tempCurrency,
                             type = tempType,
                             amount = amountVal,
-                            paymentMethod = tempPaymentMethod
+                            paymentMethod = tempPaymentMethod,
+                            minRating = tempMinRating
                         )
                         showFilterBottomSheet = false
                     },
@@ -681,7 +737,7 @@ fun OfferCard(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Footer: Rate / Tipo de cambio and Payment bank method name
+            // Footer: T.C. a la izquierda + Calificación en estrellas a la derecha
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -702,16 +758,25 @@ fun OfferCard(
                     )
                 }
 
+                // Calificación en estrellas
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    androidx.compose.material3.Icon(
-                        imageVector = Icons.Default.Payment,
-                        contentDescription = null,
-                        modifier = Modifier.size(14.dp),
-                        tint = Color.Gray
-                    )
+                    val starFull = offer.calificacion.toInt()
+                    val hasHalf = (offer.calificacion - starFull) >= 0.25
+                    repeat(5) { i ->
+                        val tint = if (i < starFull || (i == starFull && hasHalf))
+                            androidx.compose.ui.graphics.Color(0xFFFFBB00)
+                        else
+                            Color.Gray.copy(alpha = 0.3f)
+                        androidx.compose.material3.Icon(
+                            imageVector = Icons.Default.Star,
+                            contentDescription = null,
+                            tint = tint,
+                            modifier = Modifier.size(13.dp)
+                        )
+                    }
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = offer.paymentMethod,
+                        text = String.format(java.util.Locale.US, "%.1f", offer.calificacion),
                         variant = TextVariant.Small,
                         color = Color.Gray
                     )

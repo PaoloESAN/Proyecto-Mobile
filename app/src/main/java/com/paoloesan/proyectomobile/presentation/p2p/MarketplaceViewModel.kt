@@ -27,14 +27,16 @@ data class P2POffer(
     val montoTengo: Double,
     val montoRecibo: Double,
     val rate: Double,
-    val paymentMethod: String
+    val paymentMethod: String,
+    val calificacion: Double = 5.0
 )
 
 data class MarketplaceFilters(
     val currency: String = "TODOS",
     val type: String = "TODOS",
     val amount: Double? = null,
-    val paymentMethod: String = "TODOS"
+    val paymentMethod: String = "TODOS",
+    val minRating: Double? = null
 )
 
 class MarketplaceViewModel : ViewModel() {
@@ -91,12 +93,12 @@ class MarketplaceViewModel : ViewModel() {
                 val paymentMethodIds = activeOffers.map { it.metodoPagoId }.distinct()
 
                 // Mapear a (nombre, avatarUrl) por usuario_id
-                data class UserInfo(val name: String, val avatarUrl: String?)
+                data class UserInfo(val name: String, val avatarUrl: String?, val calificacion: Double)
                 val userProfiles = if (creatorIds.isNotEmpty()) {
                     Supabase.client.postgrest["usuarios"]
                         .select { filter { isIn("usuario_id", creatorIds) } }
                         .decodeList<UserProfileModel>()
-                        .associate { (it.usuarioId ?: -1) to UserInfo("${it.nombres} ${it.apellidos}", it.fotoPerfil) }
+                        .associate { (it.usuarioId ?: -1) to UserInfo("${it.nombres} ${it.apellidos}", it.fotoPerfil, it.calificacion) }
                 } else emptyMap()
 
                 val paymentMethods = if (paymentMethodIds.isNotEmpty()) {
@@ -121,7 +123,8 @@ class MarketplaceViewModel : ViewModel() {
                         montoTengo = offer.montoTengo,
                         montoRecibo = offer.montoRecibo,
                         rate = offer.price,
-                        paymentMethod = paymentMethodLabel
+                        paymentMethod = paymentMethodLabel,
+                        calificacion = creatorInfo?.calificacion ?: 5.0
                     )
                 }
 
@@ -150,7 +153,10 @@ class MarketplaceViewModel : ViewModel() {
             val matchesAmount = activeFilters.amount == null ||
                     offer.montoTengo >= activeFilters.amount
 
-            matchesCurrency && matchesType && matchesPayment && matchesAmount
+            val matchesRating = activeFilters.minRating == null ||
+                    offer.calificacion >= activeFilters.minRating
+
+            matchesCurrency && matchesType && matchesPayment && matchesAmount && matchesRating
         }
     }.stateIn(
         scope = viewModelScope,
@@ -158,7 +164,7 @@ class MarketplaceViewModel : ViewModel() {
         initialValue = emptyList()
     )
 
-    fun applyFilters(currency: String, type: String, amount: Double?, paymentMethod: String) {
-        _filters.value = MarketplaceFilters(currency, type, amount, paymentMethod)
+    fun applyFilters(currency: String, type: String, amount: Double?, paymentMethod: String, minRating: Double?) {
+        _filters.value = MarketplaceFilters(currency, type, amount, paymentMethod, minRating)
     }
 }
