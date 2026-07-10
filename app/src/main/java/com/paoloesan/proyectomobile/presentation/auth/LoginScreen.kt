@@ -1,5 +1,6 @@
 package com.paoloesan.proyectomobile.presentation.auth
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -35,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -42,11 +44,11 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.paoloesan.proyectomobile.R
 import com.paoloesan.proyectomobile.presentation.navigation.Destination
 import kotlinx.coroutines.launch
 import zed.rainxch.rikkaui.components.ui.button.Button
 import zed.rainxch.rikkaui.components.ui.button.ButtonVariant
-import zed.rainxch.rikkaui.components.ui.checkbox.Checkbox
 import zed.rainxch.rikkaui.components.ui.input.Input
 import zed.rainxch.rikkaui.components.ui.label.Label
 import zed.rainxch.rikkaui.components.ui.text.Text
@@ -69,7 +71,6 @@ fun LoginScreen(
     val context = LocalContext.current
 
     var passwordVisible by remember { mutableStateOf(false) }
-    var rememberMe by remember { mutableStateOf(false) }
 
     LaunchedEffect(uiState.errorMessage) {
         uiState.errorMessage?.let { message ->
@@ -114,8 +115,7 @@ fun LoginScreen(
                 .padding(horizontal = 24.dp, vertical = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(
-                24.dp,
-                alignment = Alignment.CenterVertically
+                24.dp
             )
         ) {
 
@@ -126,6 +126,16 @@ fun LoginScreen(
                     .padding(top = 16.dp),
                 horizontalAlignment = Alignment.Start
             ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Image(
+                        painter = painterResource(id = R.drawable.ic_launcher_foreground),
+                        contentDescription = "Logo de la app",
+                        modifier = Modifier.size(200.dp)
+                    )
+                }
                 Text(
                     text = "¡Hola, Bienvenido!",
                     variant = TextVariant.H1,

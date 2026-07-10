@@ -192,6 +192,93 @@ class ProfileViewModel : ViewModel() {
         }
     }
 
+    fun deleteBankAccount(cuentaId: Int) {
+        viewModelScope.launch {
+            try {
+                // Verificar si está vinculada a ofertas activas o en proceso
+                val linkedOffers = Supabase.client.postgrest["ofertas"]
+                    .select {
+                        filter {
+                            eq("metodo_pago_id", cuentaId)
+                            isIn("estado", listOf("Activa", "En Proceso"))
+                        }
+                    }.decodeList<com.paoloesan.proyectomobile.data.model.OfferModel>()
+
+                if (linkedOffers.isNotEmpty()) {
+                    _uiState.update { it.copy(errorMessage = "No se puede eliminar la cuenta: tiene ofertas activas o en proceso vinculadas.") }
+                    return@launch
+                }
+
+                // Soft-delete: desactivar cambiando estado a "Inactivo"
+                Supabase.client.postgrest["metodos_pago"].update({
+                    set("estado", "Inactivo")
+                }) {
+                    filter {
+                        eq("metodo_pago_id", cuentaId)
+                    }
+                }
+                loadProfile()
+            } catch (e: Exception) {
+                Log.e("ProfileViewModel", "Error al eliminar cuenta bancaria", e)
+                _uiState.update { it.copy(errorMessage = "Error de red al desactivar cuenta bancaria: ${e.message}") }
+            }
+        }
+    }
+
+    fun editarBankAccount(cuentaId: Int, banco: String, numeroCuenta: String, titular: String, moneda: String) {
+        viewModelScope.launch {
+            try {
+                // Verificar si está vinculada a ofertas activas o en proceso
+                val linkedOffers = Supabase.client.postgrest["ofertas"]
+                    .select {
+                        filter {
+                            eq("metodo_pago_id", cuentaId)
+                            isIn("estado", listOf("Activa", "En Proceso"))
+                        }
+                    }.decodeList<com.paoloesan.proyectomobile.data.model.OfferModel>()
+
+                if (linkedOffers.isNotEmpty()) {
+                    _uiState.update { it.copy(errorMessage = "No se puede editar la cuenta: tiene ofertas activas o en proceso vinculadas.") }
+                    return@launch
+                }
+
+                Supabase.client.postgrest["metodos_pago"].update({
+                    set("banco", banco)
+                    set("numero_cuenta", numeroCuenta)
+                    set("nombre_titular", titular)
+                    set("tipo_moneda", moneda)
+                }) {
+                    filter {
+                        eq("metodo_pago_id", cuentaId)
+                    }
+                }
+                loadProfile()
+            } catch (e: Exception) {
+                Log.e("ProfileViewModel", "Error al editar cuenta bancaria", e)
+                _uiState.update { it.copy(errorMessage = "Error al editar cuenta: ${e.message}") }
+            }
+        }
+    }
+
+    fun editarAlerta(alertaId: Int, moneda: String, tipoCambio: Double) {
+        viewModelScope.launch {
+            try {
+                Supabase.client.postgrest["alertas_cambio"].update({
+                    set("moneda", moneda)
+                    set("tipo_cambio_deseado", tipoCambio)
+                }) {
+                    filter {
+                        eq("alerta_id", alertaId)
+                    }
+                }
+                loadProfile()
+            } catch (e: Exception) {
+                Log.e("ProfileViewModel", "Error al editar alerta de cambio", e)
+                _uiState.update { it.copy(errorMessage = "Error al editar alerta: ${e.message}") }
+            }
+        }
+    }
+
     /**
      * ACTUALIZAR: Si hay una imagen pendiente, la sube primero al bucket `avatars`
      * y actualiza `foto_perfil_url`. Luego guarda nombres y apellidos.
@@ -255,14 +342,16 @@ class ProfileViewModel : ViewModel() {
         viewModelScope.launch {
             val userId = _uiState.value.usuarioId ?: return@launch
             try {
-                val nuevaAlerta = AlertaCambioModel(
-                    usuarioId = userId,
-                    moneda = moneda,
-                    tipoCambioDeseado = tipoCambio
+                val payload = mapOf(
+                    "usuario_id" to userId,
+                    "moneda" to moneda,
+                    "tipo_cambio_deseado" to tipoCambio,
+                    "estado" to "Activa"
                 )
-                Supabase.client.postgrest["alertas_cambio"].insert(nuevaAlerta)
+                Supabase.client.postgrest["alertas_cambio"].insert(payload)
                 loadProfile()
             } catch (e: Exception) {
+                Log.e("ProfileViewModel", "Error al crear alerta", e)
                 _uiState.update { it.copy(errorMessage = "Error al crear alerta: ${e.message}") }
             }
         }

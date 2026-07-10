@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
@@ -88,6 +89,8 @@ fun ProfileScreen(
     val alertSheetState = rememberModalBottomSheetState()
     var showBottomSheet by remember { mutableStateOf(false) }
     var showAlertSheet by remember { mutableStateOf(false) }
+    var editingBankAccount by remember { mutableStateOf<PaymentMethodModel?>(null) }
+    var editingAlerta by remember { mutableStateOf<AlertaCambioModel?>(null) }
     
     val focusManager = LocalFocusManager.current
     val toastState = rememberToastHostState()
@@ -407,7 +410,10 @@ fun ProfileScreen(
                             )
 
                             Button(
-                                onClick = { showBottomSheet = true },
+                                onClick = {
+                                    editingBankAccount = null
+                                    showBottomSheet = true
+                                },
                                 variant = ButtonVariant.Outline,
                                 size = ButtonSize.Sm
                             ) {
@@ -447,8 +453,22 @@ fun ProfileScreen(
                             }
                         }
                     } else {
-                        items(uiState.cuentas, key = { it.metodoPagoId ?: it.hashCode() }) { cuenta ->
-                            BankAccountCard(cuenta)
+                        items(uiState.cuentas, key = { "cuenta_${it.metodoPagoId ?: it.hashCode()}" }) { cuenta ->
+                            BankAccountCard(
+                                cuenta = cuenta,
+                                onEdit = {
+                                    editingBankAccount = cuenta
+                                    showBottomSheet = true
+                                },
+                                onDelete = {
+                                    cuenta.metodoPagoId?.let { id ->
+                                        viewModel.deleteBankAccount(id)
+                                        scope.launch {
+                                            toastState.show("Cuenta eliminada", ToastVariant.Success)
+                                        }
+                                    }
+                                }
+                            )
                         }
                     }
 
@@ -468,7 +488,10 @@ fun ProfileScreen(
                             )
 
                             Button(
-                                onClick = { showAlertSheet = true },
+                                onClick = {
+                                    editingAlerta = null
+                                    showAlertSheet = true
+                                },
                                 variant = ButtonVariant.Outline,
                                 size = ButtonSize.Sm
                             ) {
@@ -508,15 +531,22 @@ fun ProfileScreen(
                             }
                         }
                     } else {
-                        items(uiState.alertas, key = { it.alertaId ?: it.hashCode() }) { alert ->
-                            AlertCard(alert, onDelete = {
-                                alert.alertaId?.let { id ->
-                                    viewModel.deleteAlerta(id)
-                                    scope.launch {
-                                        toastState.show("Alerta eliminada", ToastVariant.Success)
+                        items(uiState.alertas, key = { "alerta_${it.alertaId ?: it.hashCode()}" }) { alert ->
+                            AlertCard(
+                                alert = alert,
+                                onEdit = {
+                                    editingAlerta = alert
+                                    showAlertSheet = true
+                                },
+                                onDelete = {
+                                    alert.alertaId?.let { id ->
+                                        viewModel.deleteAlerta(id)
+                                        scope.launch {
+                                            toastState.show("Alerta eliminada", ToastVariant.Success)
+                                        }
                                     }
                                 }
-                            })
+                            )
                         }
                     }
                 }
@@ -528,18 +558,36 @@ fun ProfileScreen(
 
     if (showBottomSheet) {
         ModalBottomSheet(
-            onDismissRequest = { showBottomSheet = false },
+            onDismissRequest = {
+                showBottomSheet = false
+                editingBankAccount = null
+            },
             sheetState = sheetState,
             containerColor = RikkaTheme.colors.background
         ) {
             AddBankAccountSheet(
-                onCancel = { showBottomSheet = false },
-                onConfirm = { banco, numero, titular, moneda ->
-                    viewModel.addMetodoPago(banco, numero, titular, moneda)
+                editingAccount = editingBankAccount,
+                onCancel = {
                     showBottomSheet = false
-                    scope.launch {
-                        toastState.show("Cuenta registrada correctamente", ToastVariant.Success)
+                    editingBankAccount = null
+                },
+                onConfirm = { banco, numero, titular, moneda ->
+                    val editing = editingBankAccount
+                    if (editing != null) {
+                        editing.metodoPagoId?.let { id ->
+                            viewModel.editarBankAccount(id, banco, numero, titular, moneda)
+                        }
+                        scope.launch {
+                            toastState.show("Cuenta actualizada correctamente", ToastVariant.Success)
+                        }
+                    } else {
+                        viewModel.addMetodoPago(banco, numero, titular, moneda)
+                        scope.launch {
+                            toastState.show("Cuenta registrada correctamente", ToastVariant.Success)
+                        }
                     }
+                    showBottomSheet = false
+                    editingBankAccount = null
                 }
             )
         }
@@ -547,18 +595,36 @@ fun ProfileScreen(
 
     if (showAlertSheet) {
         ModalBottomSheet(
-            onDismissRequest = { showAlertSheet = false },
+            onDismissRequest = {
+                showAlertSheet = false
+                editingAlerta = null
+            },
             sheetState = alertSheetState,
             containerColor = RikkaTheme.colors.background
         ) {
             AddAlertSheet(
-                onCancel = { showAlertSheet = false },
-                onConfirm = { moneda, tasa ->
-                    viewModel.crearAlerta(moneda, tasa)
+                editingAlerta = editingAlerta,
+                onCancel = {
                     showAlertSheet = false
-                    scope.launch {
-                        toastState.show("Alerta registrada correctamente", ToastVariant.Success)
+                    editingAlerta = null
+                },
+                onConfirm = { moneda, tasa ->
+                    val editing = editingAlerta
+                    if (editing != null) {
+                        editing.alertaId?.let { id ->
+                            viewModel.editarAlerta(id, moneda, tasa)
+                        }
+                        scope.launch {
+                            toastState.show("Alerta actualizada correctamente", ToastVariant.Success)
+                        }
+                    } else {
+                        viewModel.crearAlerta(moneda, tasa)
+                        scope.launch {
+                            toastState.show("Alerta registrada correctamente", ToastVariant.Success)
+                        }
                     }
+                    showAlertSheet = false
+                    editingAlerta = null
                 }
             )
         }
@@ -566,7 +632,11 @@ fun ProfileScreen(
 }
 
 @Composable
-private fun BankAccountCard(cuenta: PaymentMethodModel) {
+private fun BankAccountCard(
+    cuenta: PaymentMethodModel,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
+) {
     Card(
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -607,19 +677,50 @@ private fun BankAccountCard(cuenta: PaymentMethodModel) {
                     color = Color.Gray
                 )
             }
-            Box(
-                modifier = Modifier
-                    .background(
-                        color = RikkaTheme.colors.primary.copy(alpha = 0.15f),
-                        shape = RoundedCornerShape(4.dp)
-                    )
-                    .padding(horizontal = 8.dp, vertical = 4.dp)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text(
-                    text = cuenta.tipoMoneda,
-                    variant = TextVariant.Small,
-                    color = RikkaTheme.colors.primary
-                )
+                Box(
+                    modifier = Modifier
+                        .background(
+                            color = RikkaTheme.colors.primary.copy(alpha = 0.15f),
+                            shape = RoundedCornerShape(4.dp)
+                        )
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = cuenta.tipoMoneda,
+                        variant = TextVariant.Small,
+                        color = RikkaTheme.colors.primary
+                    )
+                }
+
+                Button(
+                    onClick = onEdit,
+                    variant = ButtonVariant.Ghost,
+                    size = ButtonSize.Icon
+                ) {
+                    androidx.compose.material3.Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = "Editar",
+                        tint = RikkaTheme.colors.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                Button(
+                    onClick = onDelete,
+                    variant = ButtonVariant.Ghost,
+                    size = ButtonSize.Icon
+                ) {
+                    androidx.compose.material3.Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Eliminar",
+                        tint = RikkaTheme.colors.destructive,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
         }
     }
@@ -627,6 +728,7 @@ private fun BankAccountCard(cuenta: PaymentMethodModel) {
 
 @Composable
 private fun AddBankAccountSheet(
+    editingAccount: PaymentMethodModel? = null,
     onCancel: () -> Unit,
     onConfirm: (String, String, String, String) -> Unit
 ) {
@@ -639,11 +741,11 @@ private fun AddBankAccountSheet(
         SelectOption("JPY", "JPY")
     )
 
-    var banco by remember { mutableStateOf("") }
-    var monedaSeleccionada by remember { mutableStateOf(monedas.first().value) }
+    var banco by remember { mutableStateOf(editingAccount?.banco ?: "") }
+    var monedaSeleccionada by remember { mutableStateOf(editingAccount?.tipoMoneda ?: monedas.first().value) }
 
-    var numeroCuenta by remember { mutableStateOf("") }
-    var titular by remember { mutableStateOf("") }
+    var numeroCuenta by remember { mutableStateOf(editingAccount?.numeroCuenta ?: "") }
+    var titular by remember { mutableStateOf(editingAccount?.nombreTitular ?: "") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     val focusManager = LocalFocusManager.current
 
@@ -661,7 +763,7 @@ private fun AddBankAccountSheet(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text(
-            text = "Agregar cuenta bancaria",
+            text = if (editingAccount != null) "Editar cuenta bancaria" else "Agregar cuenta bancaria",
             variant = TextVariant.H2,
             color = RikkaTheme.colors.onBackground
         )
@@ -772,7 +874,11 @@ private fun AddBankAccountSheet(
 }
 
 @Composable
-private fun AlertCard(alert: AlertaCambioModel, onDelete: () -> Unit) {
+private fun AlertCard(
+    alert: AlertaCambioModel,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
+) {
     Card(
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -811,13 +917,26 @@ private fun AlertCard(alert: AlertaCambioModel, onDelete: () -> Unit) {
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text(
                     text = "T.C.: ${alert.tipoCambioDeseado}",
                     variant = TextVariant.Large,
                     color = RikkaTheme.colors.primary
                 )
+
+                Button(
+                    onClick = onEdit,
+                    variant = ButtonVariant.Ghost,
+                    size = ButtonSize.Icon
+                ) {
+                    androidx.compose.material3.Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = "Editar",
+                        tint = RikkaTheme.colors.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
                 
                 Button(
                     onClick = onDelete,
@@ -838,6 +957,7 @@ private fun AlertCard(alert: AlertaCambioModel, onDelete: () -> Unit) {
 
 @Composable
 private fun AddAlertSheet(
+    editingAlerta: AlertaCambioModel? = null,
     onCancel: () -> Unit,
     onConfirm: (String, Double) -> Unit
 ) {
@@ -846,8 +966,8 @@ private fun AddAlertSheet(
         SelectOption("PEN", "PEN")
     )
 
-    var currency by remember { mutableStateOf("USD") }
-    var rate by remember { mutableStateOf("") }
+    var currency by remember { mutableStateOf(editingAlerta?.moneda ?: "USD") }
+    var rate by remember { mutableStateOf(editingAlerta?.tipoCambioDeseado?.toString() ?: "") }
     var rateError by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
 
@@ -865,7 +985,7 @@ private fun AddAlertSheet(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text(
-            text = "Configurar alerta de tipo de cambio",
+            text = if (editingAlerta != null) "Editar alerta de tipo de cambio" else "Configurar alerta de tipo de cambio",
             variant = TextVariant.H2,
             color = RikkaTheme.colors.onBackground
         )

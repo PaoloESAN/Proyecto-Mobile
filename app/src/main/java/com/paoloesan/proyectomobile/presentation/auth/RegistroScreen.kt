@@ -1,5 +1,6 @@
 package com.paoloesan.proyectomobile.presentation.auth
 
+import android.webkit.WebView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -13,7 +14,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -23,12 +23,10 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import android.webkit.WebView
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -44,6 +42,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
@@ -51,10 +50,7 @@ import com.paoloesan.proyectomobile.presentation.navigation.Destination
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import zed.rainxch.rikkaui.components.ui.button.Button
-import zed.rainxch.rikkaui.components.ui.button.ButtonSize
-import zed.rainxch.rikkaui.components.ui.button.ButtonVariant
 import zed.rainxch.rikkaui.components.ui.checkbox.Checkbox
-import zed.rainxch.rikkaui.components.ui.icon.RikkaIcons
 import zed.rainxch.rikkaui.components.ui.input.Input
 import zed.rainxch.rikkaui.components.ui.label.Label
 import zed.rainxch.rikkaui.components.ui.text.Text
@@ -63,6 +59,7 @@ import zed.rainxch.rikkaui.components.ui.toast.ToastHost
 import zed.rainxch.rikkaui.components.ui.toast.ToastVariant
 import zed.rainxch.rikkaui.components.ui.toast.rememberToastHostState
 import zed.rainxch.rikkaui.foundation.RikkaTheme
+import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -97,7 +94,7 @@ fun RegistroScreen(
                     variant = ToastVariant.Success
                 )
             }
-            delay(800)
+            delay(800.milliseconds)
             viewModel.resetSuccess()
             navController.popBackStack()
         }
@@ -115,37 +112,6 @@ fun RegistroScreen(
                 ToastHost(
                     hostState = toastState,
                 )
-            },
-            topBar = {
-                // Transparent Top Bar with White Icons
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .statusBarsPadding()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Button(
-                        onClick = { navController.popBackStack() },
-                        variant = ButtonVariant.Ghost,
-                        size = ButtonSize.Icon,
-                    ) {
-                        androidx.compose.material3.Icon(
-                            imageVector = RikkaIcons.ArrowLeft,
-                            contentDescription = "Volver",
-                            tint = RikkaTheme.colors.onBackground
-                        )
-                    }
-
-                    Text(
-                        text = "Crear Cuenta",
-                        color = RikkaTheme.colors.onBackground,
-                        variant = TextVariant.Large,
-                    )
-
-                    Spacer(modifier = Modifier.size(40.dp))
-                }
             }
         ) { innerPadding ->
             val focusManager = LocalFocusManager.current
@@ -162,8 +128,12 @@ fun RegistroScreen(
                     }
                     .padding(horizontal = 24.dp, vertical = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(24.dp)
+                verticalArrangement = Arrangement.spacedBy(
+                    24.dp,
+                    alignment = Alignment.CenterVertically
+                )
             ) {
+
 
                 // Welcome Header
                 Column(
