@@ -396,12 +396,12 @@ fun MyOffersScreen(navController: NavController) {
                                                         verticalAlignment = Alignment.CenterVertically
                                                     ) {
                                                         Text(
-                                                            text = "Solicitud a ${tx.sellerName}",
+                                                            text = if (tx.isMyOffer) "Solicitud de ${tx.sellerName}" else "Solicitud a ${tx.sellerName}",
                                                             variant = TextVariant.Large,
                                                             color = RikkaTheme.colors.onBackground
                                                         )
                                                         val badgeBgColor = when (tx.status) {
-                                                            "Aceptada", "En Proceso", "Pagado" -> RikkaTheme.colors.primary.copy(
+                                                            "Aceptada", "Pagado" -> RikkaTheme.colors.primary.copy(
                                                                 alpha = 0.15f
                                                             )
 
@@ -414,7 +414,7 @@ fun MyOffersScreen(navController: NavController) {
                                                             )
                                                         }
                                                         val badgeTextColor = when (tx.status) {
-                                                            "Aceptada", "En Proceso", "Pagado" -> RikkaTheme.colors.primary
+                                                            "Aceptada", "Pagado" -> RikkaTheme.colors.primary
                                                             "Rechazada", "Cancelado", "Disputa" -> RikkaTheme.colors.destructive
                                                             else -> RikkaTheme.colors.warning
                                                         }
@@ -521,22 +521,32 @@ fun MyOffersScreen(navController: NavController) {
                                                             color = if (isCompra) RikkaTheme.colors.primary else RikkaTheme.colors.destructive
                                                         )
 
-                                                        val badgeBgColor = when (offer.status) {
+                                                        val displayStatus = offer.activeTransactionStatus ?: offer.status
+                                                        val badgeBgColor = when (displayStatus) {
                                                             "Activa" -> RikkaTheme.colors.success.copy(
                                                                 alpha = 0.15f
                                                             )
-
-                                                            "En Proceso" -> RikkaTheme.colors.warning.copy(
+                                                            "En Proceso", "Pendiente" -> RikkaTheme.colors.warning.copy(
                                                                 alpha = 0.15f
                                                             )
-
+                                                            "Pagado" -> RikkaTheme.colors.primary.copy(
+                                                                alpha = 0.15f
+                                                            )
+                                                            "Disputa" -> RikkaTheme.colors.destructive.copy(
+                                                                alpha = 0.15f
+                                                            )
+                                                            "Finalizado" -> RikkaTheme.colors.success.copy(
+                                                                alpha = 0.15f
+                                                            )
                                                             else -> RikkaTheme.colors.muted.copy(
                                                                 alpha = 0.15f
                                                             )
                                                         }
-                                                        val badgeTextColor = when (offer.status) {
-                                                            "Activa" -> RikkaTheme.colors.success
-                                                            "En Proceso" -> RikkaTheme.colors.warning
+                                                        val badgeTextColor = when (displayStatus) {
+                                                            "Activa", "Finalizado" -> RikkaTheme.colors.success
+                                                            "En Proceso", "Pendiente" -> RikkaTheme.colors.warning
+                                                            "Pagado" -> RikkaTheme.colors.primary
+                                                            "Disputa" -> RikkaTheme.colors.destructive
                                                             else -> Color.Gray
                                                         }
                                                         Box(
@@ -551,7 +561,7 @@ fun MyOffersScreen(navController: NavController) {
                                                                 )
                                                         ) {
                                                             Text(
-                                                                text = offer.status,
+                                                                text = displayStatus,
                                                                 variant = TextVariant.Small,
                                                                 color = badgeTextColor
                                                             )
@@ -622,18 +632,18 @@ fun MyOffersScreen(navController: NavController) {
                                                         verticalArrangement = Arrangement.spacedBy(
                                                             8.dp
                                                         )
-                                                    ) {
-                                                        Row(
-                                                            modifier = Modifier.fillMaxWidth(),
-                                                            horizontalArrangement = Arrangement.SpaceBetween,
-                                                            verticalAlignment = Alignment.CenterVertically
-                                                        ) {
-                                                            Text(
-                                                                text = "Solicitud de ${req.buyerName}",
-                                                                variant = TextVariant.P,
+                                                     ) {
+                                                         Row(
+                                                             modifier = Modifier.fillMaxWidth(),
+                                                             horizontalArrangement = Arrangement.SpaceBetween,
+                                                             verticalAlignment = Alignment.CenterVertically
+                                                         ) {
+                                                             Text(
+                                                                 text = "Solicitud de ${req.buyerName}",
+                                                                 variant = TextVariant.P,
                                                                 color = RikkaTheme.colors.onBackground,
                                                                 style = androidx.compose.ui.text.TextStyle(
-                                                                    fontWeight = FontWeight.Bold
+                                                                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
                                                                 )
                                                             )
                                                             Box(

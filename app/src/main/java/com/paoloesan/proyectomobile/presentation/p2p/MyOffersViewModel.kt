@@ -26,7 +26,8 @@ data class MyOfferUiItem(
     val rate: Double,
     val paymentMethod: String,
     val status: String,
-    val activeTransactionId: Int? = null
+    val activeTransactionId: Int? = null,
+    val activeTransactionStatus: String? = null
 )
 
 data class IncomingTransactionItem(
@@ -47,7 +48,8 @@ data class SentTransactionItem(
     val currency: String,
     val amount: Double,
     val rate: Double,
-    val status: String
+    val status: String,
+    val isMyOffer: Boolean = false
 )
 
 data class MyOffersUiState(
@@ -135,7 +137,6 @@ class MyOffersViewModel : ViewModel() {
                         }
                     }
                     .decodeList<TransactionModel>()
-                    .filter { !offerIds.contains(it.offerId) }
                     .sortedByDescending { it.transactionId ?: 0 }
 
                 val sentOfferIds = sentTx.map { it.offerId }.distinct()
@@ -146,9 +147,10 @@ class MyOffersViewModel : ViewModel() {
                 } else emptyList()
                 val sentOfferMap = sentOffers.associateBy { it.offerId }
 
-                val buyerIds = incomingTx.map { it.usuarioCompradorId }
-                val sellerIds = sentOffers.map { it.usuarioCreadorId }
-                val allNeededIds = (buyerIds + sellerIds).filter { it != userId }.distinct()
+                val incomingBuyerIds = incomingTx.map { it.usuarioCompradorId }
+                val sentBuyerIds = sentTx.map { it.usuarioCompradorId }
+                val sentSellerIds = sentOffers.map { it.usuarioCreadorId }
+                val allNeededIds = (incomingBuyerIds + sentBuyerIds + sentSellerIds).filter { it != userId }.distinct()
 
                 val userNames = if (allNeededIds.isNotEmpty()) {
                     Supabase.client.postgrest["usuarios"]
@@ -181,7 +183,8 @@ class MyOffersViewModel : ViewModel() {
                         rate = offer.price,
                         paymentMethod = metodo?.banco ?: "",
                         status = offer.estado,
-                        activeTransactionId = activeTx?.transactionId
+                        activeTransactionId = activeTx?.transactionId,
+                        activeTransactionStatus = activeTx?.status
                     )
                 }
 
@@ -202,16 +205,26 @@ class MyOffersViewModel : ViewModel() {
 
                 val sentItems = sentTx.map { tx ->
                     val offer = sentOfferMap[tx.offerId]
+                    val isMyOffer = offer?.usuarioCreadorId == userId
+                    val titleName = if (isMyOffer) {
+                        userNames[tx.usuarioCompradorId] ?: "Usuario ${tx.usuarioCompradorId}"
+                    } else {
+                        if (offer != null) {
+                            userNames[offer.usuarioCreadorId] ?: "Usuario ${offer.usuarioCreadorId}"
+                        } else "Desconocido"
+                    }
+                    // Si es oferta propia, mostrar montoTengo y precio de la oferta
+                    val displayAmount = if (isMyOffer) offer?.montoTengo ?: tx.amount else tx.amount
+                    val displayRate = if (isMyOffer) offer?.price ?: tx.tipoCambioAplicado else tx.tipoCambioAplicado
                     SentTransactionItem(
                         transactionId = tx.transactionId ?: -1,
-                        sellerName = if (offer != null) {
-                            userNames[offer.usuarioCreadorId] ?: "Usuario ${offer.usuarioCreadorId}"
-                        } else "Desconocido",
+                        sellerName = titleName,
                         type = offer?.tipoOperacion ?: "",
                         currency = offer?.monedaTengo ?: "",
-                        amount = tx.amount,
-                        rate = tx.tipoCambioAplicado,
-                        status = tx.status
+                        amount = displayAmount,
+                        rate = displayRate,
+                        status = tx.status,
+                        isMyOffer = isMyOffer
                     )
                 }
 
