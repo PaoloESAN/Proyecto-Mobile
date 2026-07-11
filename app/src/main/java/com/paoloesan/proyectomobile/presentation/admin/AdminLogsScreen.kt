@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -25,16 +26,20 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AddCircle
+import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CheckboxDefaults
+import zed.rainxch.rikkaui.components.ui.checkbox.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -123,6 +128,31 @@ private val EVENT_CONFIGS = mapOf(
         "VERIFICACIÓN IA",
         Icons.Default.CheckCircle,
         Color(0xFF00838F), Color.White, Color(0xFF80DEEA)
+    ),
+    "oferta_creada" to EventConfig(
+        "OFERTA CREADA",
+        Icons.Default.AddCircle,
+        Color(0xFF2E7D32), Color.White, Color(0xFF81C784)
+    ),
+    "oferta_editada" to EventConfig(
+        "OFERTA EDITADA",
+        Icons.Default.Edit,
+        Color(0xFFF57F17), Color.White, Color(0xFFFFD54F)
+    ),
+    "oferta_cancelada" to EventConfig(
+        "OFERTA CANCELADA",
+        Icons.Default.Delete,
+        Color(0xFFC62828), Color.White, Color(0xFFEF5350)
+    ),
+    "usuario_bloqueado" to EventConfig(
+        "USUARIO BLOQUEADO",
+        Icons.Default.Block,
+        Color(0xFFC62828), Color.White, Color(0xFFEF5350)
+    ),
+    "usuario_desbloqueado" to EventConfig(
+        "USUARIO DESBLOQUEADO",
+        Icons.Default.LockOpen,
+        Color(0xFF2E7D32), Color.White, Color(0xFF81C784)
     )
 )
 
@@ -412,68 +442,64 @@ private fun FilterBottomSheet(
 
         Spacer(modifier = Modifier.height(16.dp))
         HorizontalDivider(color = RikkaTheme.colors.onBackground.copy(alpha = 0.08f))
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
-        // Checkboxes de tipos de evento
-        ALL_EVENT_TYPES.forEach { eventType ->
-            val config = EVENT_CONFIGS[eventType] ?: DEFAULT_CONFIG
-            val isChecked = eventType in selectedFilters
-
+        // Checkboxes de tipos de evento en 2 columnas
+        val chunkedFilters = ALL_EVENT_TYPES.chunked(2)
+        chunkedFilters.forEach { rowFilters ->
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null
-                    ) { onToggle(eventType) }
-                    .padding(vertical = 10.dp, horizontal = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // Ícono con color del evento
-                Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .background(
-                            color = config.dotColor.copy(alpha = 0.15f),
-                            shape = CircleShape
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = config.icon,
-                        contentDescription = null,
-                        tint = config.dotColor,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
+                rowFilters.forEach { eventType ->
+                    val config = EVENT_CONFIGS[eventType] ?: DEFAULT_CONFIG
+                    val isChecked = eventType in selectedFilters
 
-                // Label del evento
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = config.label,
-                        variant = TextVariant.P,
-                        color = RikkaTheme.colors.onBackground
-                    )
+                    Row(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(
+                                if (isChecked) RikkaTheme.colors.primary.copy(alpha = 0.06f)
+                                else Color.Transparent
+                            )
+                            .border(
+                                width = 1.dp,
+                                color = if (isChecked) RikkaTheme.colors.primary
+                                        else RikkaTheme.colors.onBackground.copy(alpha = 0.08f),
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) { onToggle(eventType) }
+                            .padding(horizontal = 10.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Checkbox(
+                            checked = isChecked,
+                            onCheckedChange = { onToggle(eventType) },
+                            label = ""
+                        )
+                        Text(
+                            text = config.label,
+                            variant = TextVariant.Small,
+                            color = RikkaTheme.colors.onBackground,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                 }
-
-                // Checkbox
-                Checkbox(
-                    checked = isChecked,
-                    onCheckedChange = { onToggle(eventType) },
-                    colors = CheckboxDefaults.colors(
-                        checkedColor = RikkaTheme.colors.primary,
-                        uncheckedColor = RikkaTheme.colors.onBackground.copy(alpha = 0.4f),
-                        checkmarkColor = RikkaTheme.colors.onPrimary
-                    )
-                )
+                if (rowFilters.size < 2) {
+                    Spacer(modifier = Modifier.weight(1f))
+                }
             }
-
-            HorizontalDivider(color = RikkaTheme.colors.onBackground.copy(alpha = 0.05f))
+            Spacer(modifier = Modifier.height(8.dp))
         }
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(16.dp))
+        HorizontalDivider(color = RikkaTheme.colors.onBackground.copy(alpha = 0.08f))
+        Spacer(modifier = Modifier.height(16.dp))
 
         // Botón Aplicar
         Button(
@@ -495,8 +521,10 @@ private fun FilterBottomSheet(
 private fun LogTimelineItem(log: TransactionLogModel) {
     val config = EVENT_CONFIGS[log.tipoEvento] ?: DEFAULT_CONFIG
     var expanded by remember { mutableStateOf(false) }
-    val hasExtra =
-        !log.datosExtra.isNullOrBlank() && log.datosExtra != "{}" && log.datosExtra != "null"
+    val hasExtra = log.datosExtra != null && {
+        val str = log.datosExtra.toString()
+        str.isNotBlank() && str != "{}" && str != "null"
+    }()
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -612,7 +640,7 @@ private fun LogTimelineItem(log: TransactionLogModel) {
                     enter = expandVertically(),
                     exit = shrinkVertically()
                 ) {
-                    ExtraDataGrid(datosExtra = log.datosExtra ?: "")
+                    ExtraDataGrid(datosExtra = log.datosExtra?.toString() ?: "")
                 }
 
                 Row(

@@ -2,6 +2,7 @@ package com.paoloesan.proyectomobile.data.model
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonElement
 
 @Serializable
 data class TransactionLogModel(
@@ -10,6 +11,6 @@ data class TransactionLogModel(
     @SerialName("tipo_evento") val tipoEvento: String,
     @SerialName("descripcion") val descripcion: String,
     @SerialName("usuario_id") val usuarioId: Int? = null,
-    @SerialName("datos_extra") val datosExtra: String? = null, // JSON como String
-    @SerialName("fecha_evento") val fechaEvento: String? = null // ISO timestamptz
+    @SerialName("datos_extra") val datosExtra: JsonElement? = null,
+    @SerialName("fecha_evento") val fechaEvento: String? = null
 )

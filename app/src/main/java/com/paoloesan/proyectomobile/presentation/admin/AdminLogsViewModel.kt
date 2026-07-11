@@ -25,7 +25,12 @@ val ALL_LOG_EVENT_TYPES = setOf(
     "disputa_abierta",
     "disputa_resuelta",
     "calificacion_registrada",
-    "verificacion_ia"
+    "verificacion_ia",
+    "oferta_creada",
+    "oferta_editada",
+    "oferta_cancelada",
+    "usuario_bloqueado",
+    "usuario_desbloqueado"
 )
 
 data class AdminLogsUiState(
@@ -46,7 +51,7 @@ data class AdminLogsUiState(
                     log.descripcion.contains(query, ignoreCase = true) ||
                     log.usuarioId?.toString()?.contains(query, ignoreCase = true) == true ||
                     log.tipoEvento.contains(query, ignoreCase = true) ||
-                    (log.datosExtra?.contains(query, ignoreCase = true) == true)
+                    (log.datosExtra?.toString()?.contains(query, ignoreCase = true) == true)
                 }
                 matchesFilter && matchesSearch
             }
