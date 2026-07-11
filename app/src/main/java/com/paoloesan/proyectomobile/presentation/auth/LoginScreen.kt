@@ -48,7 +48,6 @@ import com.paoloesan.proyectomobile.R
 import com.paoloesan.proyectomobile.presentation.navigation.Destination
 import kotlinx.coroutines.launch
 import zed.rainxch.rikkaui.components.ui.button.Button
-import zed.rainxch.rikkaui.components.ui.button.ButtonVariant
 import zed.rainxch.rikkaui.components.ui.input.Input
 import zed.rainxch.rikkaui.components.ui.label.Label
 import zed.rainxch.rikkaui.components.ui.text.Text
@@ -325,40 +324,6 @@ fun LoginScreen(
 //                            }
 //                        }
 //                    }
-
-                // Botones de acceso rápido
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Button(
-                        onClick = {
-                            viewModel.onCorreoChange("julioprofe@email.com")
-                            viewModel.onPasswordChange("123456")
-                        },
-                        variant = ButtonVariant.Outline,
-                        modifier = Modifier.weight(1f),
-                        text = "Usuario 1"
-                    )
-                    Button(
-                        onClick = {
-                            viewModel.onCorreoChange("juanjose@email.com")
-                            viewModel.onPasswordChange("123456")
-                        },
-                        variant = ButtonVariant.Outline,
-                        modifier = Modifier.weight(1f),
-                        text = "Usuario 2"
-                    )
-                    Button(
-                        onClick = {
-                            viewModel.onCorreoChange("admin@exchange.com")
-                            viewModel.onPasswordChange("admin123")
-                        },
-                        variant = ButtonVariant.Outline,
-                        modifier = Modifier.weight(1f),
-                        text = "Admin"
-                    )
-                }
             }
 
 
