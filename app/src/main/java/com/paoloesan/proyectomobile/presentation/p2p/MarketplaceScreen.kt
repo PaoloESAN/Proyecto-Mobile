@@ -681,7 +681,7 @@ fun OfferCard(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Conversion Flow: Entregas -> Recibes
+            // Conversion Flow: Entregas -> Recibes (Perspectiva del observador)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -699,9 +699,9 @@ fun OfferCard(
                             String.format(
                                 java.util.Locale.US,
                                 "%,.2f",
-                                offer.montoTengo
+                                offer.montoRecibo
                             )
-                        } ${offer.monedaTengo}",
+                        } ${offer.monedaRecibo}",
                         variant = TextVariant.H3,
                         color = RikkaTheme.colors.onBackground
                     )
@@ -726,9 +726,9 @@ fun OfferCard(
                             String.format(
                                 java.util.Locale.US,
                                 "%,.2f",
-                                offer.montoRecibo
+                                offer.montoTengo
                             )
-                        } ${offer.monedaRecibo}",
+                        } ${offer.monedaTengo}",
                         variant = TextVariant.H3,
                         color = RikkaTheme.colors.primary
                     )

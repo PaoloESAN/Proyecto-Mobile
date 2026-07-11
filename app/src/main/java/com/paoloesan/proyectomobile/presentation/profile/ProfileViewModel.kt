@@ -11,6 +11,7 @@ import com.paoloesan.proyectomobile.data.local.SessionManager
 import com.paoloesan.proyectomobile.data.model.AlertaCambioModel
 import com.paoloesan.proyectomobile.data.model.CalificacionModel
 import com.paoloesan.proyectomobile.data.model.PaymentMethodModel
+import com.paoloesan.proyectomobile.data.model.TransactionModel
 import com.paoloesan.proyectomobile.data.model.UserProfileModel
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.postgrest
@@ -209,6 +210,20 @@ class ProfileViewModel : ViewModel() {
                     return@launch
                 }
 
+                // Verificar si está vinculada a transacciones activas
+                val linkedTransactions = Supabase.client.postgrest["transacciones"]
+                    .select {
+                        filter {
+                            eq("metodo_pago_comprador_id", cuentaId)
+                            isIn("estado", listOf("Pendiente", "En Proceso", "Pagado", "Disputa"))
+                        }
+                    }.decodeList<com.paoloesan.proyectomobile.data.model.TransactionModel>()
+
+                if (linkedTransactions.isNotEmpty()) {
+                    _uiState.update { it.copy(errorMessage = "No se puede eliminar la cuenta: tiene transacciones activas vinculadas.") }
+                    return@launch
+                }
+
                 // Soft-delete: desactivar cambiando estado a "Inactivo"
                 Supabase.client.postgrest["metodos_pago"].update({
                     set("estado", "Inactivo")
@@ -239,6 +254,20 @@ class ProfileViewModel : ViewModel() {
 
                 if (linkedOffers.isNotEmpty()) {
                     _uiState.update { it.copy(errorMessage = "No se puede editar la cuenta: tiene ofertas activas o en proceso vinculadas.") }
+                    return@launch
+                }
+
+                // Verificar si está vinculada a transacciones activas
+                val linkedTransactions = Supabase.client.postgrest["transacciones"]
+                    .select {
+                        filter {
+                            eq("metodo_pago_comprador_id", cuentaId)
+                            isIn("estado", listOf("Pendiente", "En Proceso", "Pagado", "Disputa"))
+                        }
+                    }.decodeList<com.paoloesan.proyectomobile.data.model.TransactionModel>()
+
+                if (linkedTransactions.isNotEmpty()) {
+                    _uiState.update { it.copy(errorMessage = "No se puede editar la cuenta: tiene transacciones activas vinculadas.") }
                     return@launch
                 }
 

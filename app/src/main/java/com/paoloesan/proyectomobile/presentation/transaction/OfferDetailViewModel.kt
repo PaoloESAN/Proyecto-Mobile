@@ -29,7 +29,8 @@ data class OfferDetailUiState(
     val isCreatingTransaction: Boolean = false,
     // Cuando la transacción se crea exitosamente, emitimos el ID aquí
     val createdTransactionId: Int? = null,
-    val currentUserId: Int? = null
+    val currentUserId: Int? = null,
+    val esVerificado: Boolean = true
 )
 
 class OfferDetailViewModel : ViewModel() {
@@ -97,7 +98,8 @@ class OfferDetailViewModel : ViewModel() {
                         vendorPhotoUrl = vendorPhotoUrl,
                         myPaymentMethods = myMethods,
                         selectedMethodId = initialMethodId,
-                        currentUserId = myPerfil.usuarioId
+                        currentUserId = myPerfil.usuarioId,
+                        esVerificado = myPerfil.esVerificado
                     )
                 }
             } catch (e: Exception) {
@@ -138,6 +140,11 @@ class OfferDetailViewModel : ViewModel() {
         val myUserId = state.currentUserId ?: return
         val selectedMethodId = state.selectedMethodId ?: run {
             _uiState.update { it.copy(errorMessage = "Selecciona un método de pago") }
+            return
+        }
+
+        if (!state.esVerificado) {
+            _uiState.update { it.copy(errorMessage = "Tu cuenta no está verificada. Debes verificar tu identidad para iniciar transacciones.") }
             return
         }
 

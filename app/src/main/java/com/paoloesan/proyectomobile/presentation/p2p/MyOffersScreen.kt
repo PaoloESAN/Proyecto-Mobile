@@ -81,11 +81,15 @@ fun MyOffersScreen(navController: NavController) {
     var selectedOffer by remember { mutableStateOf<MyOfferUiItem?>(null) }
 
     var editAmount by remember { mutableStateOf("") }
-    val editMontoReciboCalculado by remember(editAmount, selectedOffer) {
+    val editCalculatedAmount by remember(editAmount, selectedOffer) {
         derivedStateOf {
-            val rate = selectedOffer?.rate ?: 1.0
             val amt = editAmount.toDoubleOrNull() ?: 0.0
-            amt * rate
+            val offer = selectedOffer ?: return@derivedStateOf 0.0
+            if (offer.type == "Compra") {
+                if (offer.rate > 0.0) amt / offer.rate else 0.0
+            } else {
+                amt * offer.rate
+            }
         }
     }
 
@@ -165,8 +169,13 @@ fun MyOffersScreen(navController: NavController) {
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier.verticalScroll(rememberScrollState())
                 ) {
+                    val inputLabel = if (currentOffer.type == "Compra") {
+                        "Cantidad a Cambiar (${currentOffer.monedaRecibo})"
+                    } else {
+                        "Cantidad a Cambiar (${currentOffer.monedaTengo})"
+                    }
                     Text(
-                        text = "Cantidad a Cambiar (${currentOffer.monedaTengo})",
+                        text = inputLabel,
                         variant = TextVariant.Small,
                         color = RikkaTheme.colors.onBackground
                     )
@@ -197,8 +206,13 @@ fun MyOffersScreen(navController: NavController) {
                         singleLine = true
                     )
 
+                    val estimatedLabel = if (currentOffer.type == "Compra") {
+                        "Entregas (Estimado en ${currentOffer.monedaTengo})"
+                    } else {
+                        "Recibes (Estimado en ${currentOffer.monedaRecibo})"
+                    }
                     Text(
-                        text = "Recibes (Estimado en ${currentOffer.monedaRecibo})",
+                        text = estimatedLabel,
                         variant = TextVariant.Small,
                         color = RikkaTheme.colors.onBackground
                     )
@@ -206,11 +220,11 @@ fun MyOffersScreen(navController: NavController) {
                         value = String.format(
                             java.util.Locale.US,
                             "%,.2f",
-                            editMontoReciboCalculado
+                            editCalculatedAmount
                         ),
                         onValueChange = {},
                         enabled = false,
-                        placeholder = "Recibes",
+                        placeholder = if (currentOffer.type == "Compra") "Entregas" else "Recibes",
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
                     )
@@ -243,11 +257,13 @@ fun MyOffersScreen(navController: NavController) {
                                 offerId = currentOffer.offerId,
                                 cantidad = cantVal,
                                 monedaTengo = currentOffer.monedaTengo,
-                                monedaRecibo = currentOffer.monedaRecibo
+                                monedaRecibo = currentOffer.monedaRecibo,
+                                type = currentOffer.type
                             )
                             showEditDialog = false
                         }
                     },
+
                     text = "Guardar"
                 )
             },
@@ -501,7 +517,11 @@ fun MyOffersScreen(navController: NavController) {
                                                         }
                                                     } else if (offer.status == "Activa") {
                                                         selectedOffer = offer
-                                                        editAmount = offer.montoTengo.toString()
+                                                        editAmount = if (offer.type == "Compra") {
+                                                            offer.montoRecibo.toString()
+                                                        } else {
+                                                            offer.montoTengo.toString()
+                                                        }
                                                         showEditDialog = true
                                                     }
                                                 },

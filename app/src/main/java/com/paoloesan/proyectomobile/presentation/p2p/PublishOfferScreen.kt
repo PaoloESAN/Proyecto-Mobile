@@ -122,47 +122,30 @@ fun PublishOfferScreen(
         }
     }
 
-    // Funciones para calcular el tipo de cambio dinámico
-    fun obtenerTasaBase(moneda: String): Double {
-        return when (moneda.uppercase()) {
-            "USD" -> 1.0
-            "PEN" -> 3.80
-            "MXN" -> 18.00
-            "EUR" -> 0.92
-            "GBP" -> 0.78
-            "JPY" -> 155.00
-            else -> 1.0
-        }
+
+
+    LaunchedEffect(monedaTengo, monedaRecibo) {
+        viewModel.fetchExchangeRate(monedaTengo, monedaRecibo)
     }
 
-    fun obtenerTipoCambio(mTengo: String, mRecibo: String): Double {
-        val tasaTengo = obtenerTasaBase(mTengo)
-        val tasaRecibo = obtenerTasaBase(mRecibo)
-        return tasaRecibo / tasaTengo
-    }
-
-    val tipoCambioCalculado by remember(monedaTengo, monedaRecibo) {
-        derivedStateOf { obtenerTipoCambio(monedaTengo, monedaRecibo) }
-    }
-
-    val montoTengoCalculado by remember(amount, type, tipoCambioCalculado) {
+    val montoTengoCalculado by remember(amount, type, uiState.tipoCambio) {
         derivedStateOf {
             val amt = amount.toDoubleOrNull() ?: 0.0
             if (type == "Compra") {
-                if (tipoCambioCalculado > 0.0) amt / tipoCambioCalculado else 0.0
+                if (uiState.tipoCambio > 0.0) amt / uiState.tipoCambio else 0.0
             } else {
                 amt
             }
         }
     }
 
-    val montoReciboCalculado by remember(amount, type, tipoCambioCalculado) {
+    val montoReciboCalculado by remember(amount, type, uiState.tipoCambio) {
         derivedStateOf {
             val amt = amount.toDoubleOrNull() ?: 0.0
             if (type == "Compra") {
                 amt
             } else {
-                amt * tipoCambioCalculado
+                amt * uiState.tipoCambio
             }
         }
     }
@@ -208,10 +191,13 @@ fun PublishOfferScreen(
         }
     }
 
-    val canPublish by remember {
+    val canPublish by remember(uiState, amount, paymentMethod, monedaTengo, monedaRecibo) {
         derivedStateOf {
             val amt = amount.toDoubleOrNull() ?: 0.0
             !uiState.isLoading &&
+                    !uiState.isFetchingRate &&
+                    uiState.tipoCambio > 0.0 &&
+                    uiState.esVerificado &&
                     amount.isNotBlank() &&
                     amt > 0.0 &&
                     paymentMethod.isNotBlank() &&
@@ -257,6 +243,30 @@ fun PublishOfferScreen(
                             .fillMaxWidth()
                             .padding(bottom = 8.dp)
                     )
+                }
+
+                if (!uiState.esVerificado) {
+                    item {
+                        Card(
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(
+                                    text = "⚠️ Cuenta no verificada",
+                                    variant = TextVariant.P,
+                                    color = RikkaTheme.colors.destructive
+                                )
+                                Text(
+                                    text = "Debes completar la verificación de identidad (KYC) en tu perfil para poder publicar ofertas.",
+                                    variant = TextVariant.Small,
+                                    color = RikkaTheme.colors.onBackground.copy(alpha = 0.8f)
+                                )
+                            }
+                        }
+                    }
                 }
 
                 // 1. Selector Compra/Venta
@@ -390,17 +400,25 @@ fun PublishOfferScreen(
                                         color = Color.Gray
                                     )
                                 } else {
-                                    Text(
-                                        text = "Tipo de cambio actual: ${
-                                            String.format(
-                                                java.util.Locale.US,
-                                                "%.6f",
-                                                tipoCambioCalculado
-                                            )
-                                        }",
-                                        variant = TextVariant.Small,
-                                        color = Color.Gray
-                                    )
+                                    if (uiState.isFetchingRate) {
+                                        Text(
+                                            text = "Obteniendo tipo de cambio en tiempo real...",
+                                            variant = TextVariant.Small,
+                                            color = Color.Gray
+                                        )
+                                    } else {
+                                        Text(
+                                            text = "Tipo de cambio actual: ${
+                                                String.format(
+                                                    java.util.Locale.US,
+                                                    "%.6f",
+                                                    uiState.tipoCambio
+                                                )
+                                            }",
+                                            variant = TextVariant.Small,
+                                            color = Color.Gray
+                                        )
+                                    }
                                     Text(
                                         text = "Tú entregas: ${
                                             String.format(
@@ -444,7 +462,7 @@ fun PublishOfferScreen(
                                     monedaRecibo = monedaRecibo,
                                     montoTengo = montoTengoCalculado,
                                     montoRecibo = montoReciboCalculado,
-                                    tipoCambio = tipoCambioCalculado
+                                    tipoCambio = uiState.tipoCambio
                                 )
                             }
                         },

@@ -644,11 +644,19 @@ fun OfferDetailScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .navigationBarsPadding()
-                        .padding(horizontal = 24.dp, vertical = 16.dp)
+                        .padding(horizontal = 24.dp, vertical = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                    if (!uiState.esVerificado) {
+                        Text(
+                            text = "⚠️ Tu cuenta no está verificada. Debes completar la verificación de identidad (KYC) en tu perfil para poder iniciar transacciones.",
+                            variant = TextVariant.Small,
+                            color = RikkaTheme.colors.destructive
+                        )
+                    }
                     Button(
                         onClick = { showConfirmDialog = true },
-                        enabled = isValidAmount && accountOptions.isNotEmpty() && !uiState.isCreatingTransaction,
+                        enabled = isValidAmount && accountOptions.isNotEmpty() && !uiState.isCreatingTransaction && uiState.esVerificado,
                         modifier = Modifier.fillMaxWidth(),
                         text = if (uiState.isCreatingTransaction) "Creando transacción..." else "Iniciar transacción"
                     )

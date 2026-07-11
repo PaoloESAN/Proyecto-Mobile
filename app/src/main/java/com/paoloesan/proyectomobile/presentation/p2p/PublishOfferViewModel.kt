@@ -19,7 +19,10 @@ data class PublishUiState(
     val isLoading: Boolean = false,
     val paymentMethods: List<PaymentMethodModel> = emptyList(),
     val errorMessage: String? = null,
-    val isSuccess: Boolean = false
+    val isSuccess: Boolean = false,
+    val esVerificado: Boolean = true,
+    val tipoCambio: Double = 1.0,
+    val isFetchingRate: Boolean = false
 )
 
 class PublishOfferViewModel : ViewModel() {
@@ -68,7 +71,8 @@ class PublishOfferViewModel : ViewModel() {
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        paymentMethods = metodos
+                        paymentMethods = metodos,
+                        esVerificado = perfil.esVerificado
                     )
                 }
             } catch (e: Exception) {
@@ -100,6 +104,21 @@ class PublishOfferViewModel : ViewModel() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             try {
+                // Verificar si el usuario está verificado en base de datos
+                val perfil = Supabase.client.postgrest["usuarios"]
+                    .select { filter { eq("usuario_id", userId) } }
+                    .decodeSingle<UserProfileModel>()
+
+                if (!perfil.esVerificado) {
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            errorMessage = "Tu cuenta no está verificada. Debes verificar tu identidad para publicar ofertas."
+                        )
+                    }
+                    return@launch
+                }
+
                 val nuevaOferta = OfferModel(
                     usuarioCreadorId = userId,
                     metodoPagoId = metodoPagoId,
@@ -125,6 +144,27 @@ class PublishOfferViewModel : ViewModel() {
                     it.copy(
                         isLoading = false,
                         errorMessage = "Error al publicar oferta: ${e.localizedMessage}"
+                    )
+                }
+            }
+        }
+    }
+
+    fun fetchExchangeRate(from: String, to: String) {
+        if (from.isBlank() || to.isBlank() || from.equals(to, ignoreCase = true)) {
+            _uiState.update { it.copy(tipoCambio = 1.0, isFetchingRate = false) }
+            return
+        }
+        viewModelScope.launch {
+            _uiState.update { it.copy(isFetchingRate = true, errorMessage = null) }
+            try {
+                val rate = com.paoloesan.proyectomobile.data.ExchangeRateService.getRate(from, to)
+                _uiState.update { it.copy(tipoCambio = rate, isFetchingRate = false) }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        isFetchingRate = false,
+                        errorMessage = "Error al obtener tipo de cambio: ${e.localizedMessage}"
                     )
                 }
             }

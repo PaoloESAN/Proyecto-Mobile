@@ -248,26 +248,20 @@ class MyOffersViewModel : ViewModel() {
         }
     }
 
-    fun editOffer(offerId: Int, cantidad: Double, monedaTengo: String, monedaRecibo: String) {
-        fun obtenerTasaBase(moneda: String): Double {
-            return when (moneda.uppercase()) {
-                "USD" -> 1.0
-                "PEN" -> 3.80
-                "MXN" -> 18.00
-                "EUR" -> 0.92
-                "GBP" -> 0.78
-                "JPY" -> 155.00
-                else -> 1.0
-            }
-        }
-
-        val rate = obtenerTasaBase(monedaRecibo) / obtenerTasaBase(monedaTengo)
-        val montoRecibo = cantidad * rate
-
+    fun editOffer(offerId: Int, cantidad: Double, monedaTengo: String, monedaRecibo: String, type: String) {
         viewModelScope.launch {
             try {
+                val rate = com.paoloesan.proyectomobile.data.ExchangeRateService.getRate(monedaTengo, monedaRecibo)
+                val (montoTengo, montoRecibo) = if (type == "Compra") {
+                    val calculatedTengo = if (rate > 0.0) cantidad / rate else 0.0
+                    calculatedTengo to cantidad
+                } else {
+                    val calculatedRecibo = cantidad * rate
+                    cantidad to calculatedRecibo
+                }
+
                 Supabase.client.postgrest["ofertas"].update({
-                    set("monto_tengo", cantidad)
+                    set("monto_tengo", montoTengo)
                     set("monto_recibo", montoRecibo)
                     set("tipo_cambio", rate)
                 }) {

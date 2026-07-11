@@ -144,8 +144,9 @@ class MarketplaceViewModel : ViewModel() {
                     offer.monedaTengo.equals(activeFilters.currency, ignoreCase = true) ||
                     offer.monedaRecibo.equals(activeFilters.currency, ignoreCase = true)
 
+            val observerType = offer.type
             val matchesType = activeFilters.type == "TODOS" ||
-                    offer.type.equals(activeFilters.type, ignoreCase = true)
+                    observerType.equals(activeFilters.type, ignoreCase = true)
 
             val matchesPayment = activeFilters.paymentMethod == "TODOS" ||
                     offer.paymentMethod.contains(activeFilters.paymentMethod, ignoreCase = true)
