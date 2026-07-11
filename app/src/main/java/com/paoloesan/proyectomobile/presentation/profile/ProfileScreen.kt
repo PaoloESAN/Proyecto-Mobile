@@ -35,6 +35,7 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.AttachMoney
+import androidx.compose.material.icons.filled.List
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
@@ -268,7 +269,7 @@ fun ProfileScreen(
                                     color = Color.Gray
                                 )
                             }
-                        } else {
+                        } else if (uiState.rol != "Administrador") {
                             Box(
                                 modifier = Modifier
                                     .background(
@@ -285,7 +286,7 @@ fun ProfileScreen(
                             }
                         }
 
-                        if (!uiState.isVerified) {
+                        if (!uiState.isVerified && uiState.rol != "Administrador") {
                             Spacer(modifier = Modifier.height(4.dp))
                             Box(
                                 modifier = Modifier
@@ -305,6 +306,7 @@ fun ProfileScreen(
                                 )
                             }
                         }
+
                     }
                 }
 
@@ -386,6 +388,48 @@ fun ProfileScreen(
                                     )
                                     Text(
                                         text = "Resolver disputas",
+                                        variant = TextVariant.Small,
+                                        color = Color.Gray
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    item {
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { navController.navigateSafe("admin_logs") }
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .background(
+                                            color = Color(0xFF00695C).copy(alpha = 0.12f),
+                                            shape = RoundedCornerShape(8.dp)
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    androidx.compose.material3.Icon(
+                                        imageVector = Icons.Default.List,
+                                        contentDescription = null,
+                                        tint = Color(0xFF26A69A)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(16.dp))
+                                Column {
+                                    Text(
+                                        text = "Auditoría de Procesos",
+                                        variant = TextVariant.P,
+                                        color = RikkaTheme.colors.onBackground
+                                    )
+                                    Text(
+                                        text = "Ver logs de transacciones",
                                         variant = TextVariant.Small,
                                         color = Color.Gray
                                     )

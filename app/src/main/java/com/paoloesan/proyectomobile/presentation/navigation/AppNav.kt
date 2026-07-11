@@ -30,6 +30,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.paoloesan.proyectomobile.presentation.admin.AdminLogsScreen
 import com.paoloesan.proyectomobile.presentation.admin.AdminUsersScreen
 import com.paoloesan.proyectomobile.presentation.auth.LoginScreen
 import com.paoloesan.proyectomobile.presentation.auth.RecoverPasswordScreen
@@ -257,6 +258,12 @@ sealed class Destination(
         title = "Administración de Usuarios",
         content = { navController -> AdminUsersScreen(navController) }
     )
+
+    object AdminLogs : Destination(
+        route = "admin_logs",
+        title = "Auditoría de Procesos",
+        content = { navController -> AdminLogsScreen(navController) }
+    )
 }
 
 val appDestinations = listOf(
@@ -279,7 +286,8 @@ val appDestinations = listOf(
     Destination.BankDetails,
     Destination.Chat,
     Destination.DisputaLista,
-    Destination.AdminUsers
+    Destination.AdminUsers,
+    Destination.AdminLogs
 )
 
 val bottomBarDestinations = listOf(
