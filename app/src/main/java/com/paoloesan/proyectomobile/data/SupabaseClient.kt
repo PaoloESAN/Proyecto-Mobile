@@ -18,8 +18,8 @@ import kotlinx.coroutines.flow.first
  * Auth (Autenticación), Storage (Almacenamiento en Buckets), Realtime y Functions.
  */
 object Supabase {
-    const val URL = "https://kakfuayeosauhtzhbotf.supabase.co"
-    const val ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtha2Z1YXllb3NhdWh0emhib3RmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk2NjY4NTAsImV4cCI6MjA5NTI0Mjg1MH0.axjjd1xpVPiLGufxkP3UUNyeuUoFN5X8OUUjXaUYYR4"
+    val URL = com.paoloesan.proyectomobile.BuildConfig.SUPABASE_URL
+    val ANON_KEY = com.paoloesan.proyectomobile.BuildConfig.SUPABASE_ANON_KEY
 
     @OptIn(SupabaseInternal::class)
     val client = createSupabaseClient(

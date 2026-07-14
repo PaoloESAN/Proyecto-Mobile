@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "837879231273",
-    "project_id": "interya",
-    "storage_bucket": "interya.firebasestorage.app"
+    "project_number": "TU_NUMERO_DE_PROYECTO_AQUI",
+    "project_id": "TU_ID_DE_PROYECTO_AQUI",
+    "storage_bucket": "TU_STORAGE_BUCKET_AQUI"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:837879231273:android:2f98d4c9bec53479d53d38",
+        "mobilesdk_app_id": "TU_MOBILESDK_APP_ID_AQUI",
         "android_client_info": {
           "package_name": "com.paoloesan.proyectomobile"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyCaSbnHpnFk2URXm166g9jpY4zbiZzyfNM"
+          "current_key": "TU_API_KEY_DE_GOOGLE_AQUI"
         }
       ],
       "services": {

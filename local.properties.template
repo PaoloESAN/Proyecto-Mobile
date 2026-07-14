@@ -1,0 +1,12 @@
+# Configuración de variables de entorno locales para el proyecto
+# Copia este archivo con el nombre "local.properties" en este mismo directorio
+# y coloca las credenciales reales de Supabase.
+
+# URL de tu base de datos / proyecto de Supabase
+SUPABASE_URL="https://tu-proyecto.supabase.co"
+
+# Clave pública Anon Key de Supabase
+SUPABASE_ANON_KEY="tu-anon-key-aqui"
+
+# Ruta al SDK de Android (normalmente auto-generado por Android Studio)
+# sdk.dir=/ruta/a/tu/android/sdk
